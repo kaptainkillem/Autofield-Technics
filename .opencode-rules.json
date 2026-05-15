@@ -1,0 +1,17 @@
+{
+  "project_type": "Next.js 15 Fullstack",
+  "styling": "Tailwind CSS",
+  "database": "Supabase (PostgreSQL)",
+  "auth": "NextAuth.js",
+  "rules": [
+    "STRICT: Never use hex codes (e.g., #5B9BD5) in components.",
+    "STRICT: Never use arbitrary Tailwind values (e.g., bg-[#5B9BD5]).",
+    "ALWAYS: Use the semantic functional classes: 'bg-primary', 'text-grey', 'btn-primary', etc.",
+    "If a color or spacing value is needed that isn't in Tailwind, check designTokens.ts but apply it via a Tailwind alias.",
+    "Always use the brand colors defined in designTokens.ts",
+    "Primary buttons must use the .btn-primary utility class",
+    "Ensure all API routes are protected by middleware for /admin paths",
+    "Use Server Components by default, add 'use client' only when necessary",
+    "All currency must be formatted in South African Rands (ZAR)"
+  ]
+}

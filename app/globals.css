@@ -1,26 +1,64 @@
 @import "tailwindcss";
+@import "../styles/variables.css"; /* This pulls in your #5B9BD5 etc. */
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Brand Colors */
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-primary-light: var(--color-primary-light);
+  
+  --color-grey: var(--color-grey-deep);
+  --color-grey-light: var(--color-grey-light);
+  --color-grey-medium: var(--color-grey-medium);
+
+  /* Semantic Colors */
+  --color-success: var(--color-success);
+  --color-error: var(--color-error);
+
+  /* Typography */
+  --font-sans: var(--font-primary);
+  --font-mono: var(--font-mono);
+
+  /* Spacing & Radius */
+  --radius-base: var(--radius-base);
+  --shadow-base: var(--shadow-base);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Custom Component Utilities (v4 Style) */
+@utility btn-primary {
+  @apply px-6 py-3 bg-primary text-white font-semibold rounded-base border-2 border-white transition-all duration-200 hover:bg-white hover:text-primary hover:border-primary hover:shadow-md cursor-pointer;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@utility btn-secondary {
+  @apply px-6 py-3 bg-white text-primary font-semibold rounded-base border-2 border-primary transition-all duration-200 hover:bg-primary hover:text-white hover:border-white hover:shadow-md cursor-pointer;
+}
+
+@utility btn-ghost {
+  @apply px-6 py-3 bg-transparent text-grey border-2 border-transparent rounded-base transition-all duration-200 hover:bg-grey-light hover:text-primary hover:border-primary cursor-pointer;
+}
+
+@utility btn-white {
+  @apply px-6 py-3 bg-white text-grey border-2 border-grey-medium rounded-base transition-all duration-200 hover:border-primary hover:text-primary hover:shadow-md cursor-pointer;
+}
+
+@utility heading-1 {
+  @apply text-4xl font-bold text-black leading-tight;
+}
+
+@utility text-body {
+  @apply text-base font-normal text-grey leading-normal;
+}
+
+@utility text-small {
+  @apply text-sm font-normal leading-normal;
+}
+
+@utility card {
+  @apply bg-white rounded-base shadow-base p-6 transition-shadow hover:shadow-md;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-white);
+  color: var(--color-grey-deep);
+  font-family: var(--font-primary);
 }

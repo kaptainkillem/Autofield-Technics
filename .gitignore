@@ -1,48 +1,47 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
+# --- Dependencies ---
 /node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+/.pnpm-debug.log*
 
-# testing
-/coverage
-
-# next.js
+# --- Next.js Build Output ---
 /.next/
 /out/
+/build/
+*.tsbuildinfo
+next-env.d.ts
 
-# production
-/build
+# --- Environment Variables (CRITICAL) ---
+# We keep .env.example, but ignore all actual secret files
+.env
+.env.local
+.env.production
+.env.development.local
+.env.test.local
+.env.production.local
 
-# misc
-.DS_Store
-*.pem
+# --- Docker & Database ---
+# Ignore the actual database storage and local overrides
+.docker-compose.override.yml
+/postgres_data/
+/supabase/.temp/
 
-# debug
+# --- Context & Logs ---
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+.turbo
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-.env*.local
-.pnpm-debug.log*
+# --- Operating System Junk ---
 .DS_Store
-node_modules
-.next
-supabase/.temp
-supabase/.env
+Thumbs.db
+desktop.ini
+
+# --- OneDrive Specific ---
+# Prevents OneDrive temporary sync files from entering Git
+~$*
+.fuse_hidden*
+
+# --- IDE Settings ---
+.vscode/
+.idea/
+*.swp
+*.swo
