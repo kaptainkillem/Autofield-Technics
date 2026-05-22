@@ -30,36 +30,37 @@ export const supabaseServer = createClient<Database>(
 );
 
 // Helper functions
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _supabase = supabase as any;
+
 export const supabaseHelpers = {
   // Auth helpers
   auth: {
     signUp: async (email: string, password: string) => {
-      return supabase.auth.signUp({ email, password });
+      return _supabase.auth.signUp({ email, password });
     },
     signIn: async (email: string, password: string) => {
-      return supabase.auth.signInWithPassword({ email, password });
+      return _supabase.auth.signInWithPassword({ email, password });
     },
     signOut: async () => {
-      return supabase.auth.signOut();
+      return _supabase.auth.signOut();
     },
     getSession: async () => {
-      return supabase.auth.getSession();
+      return _supabase.auth.getSession();
     },
   },
 
   // Quote helpers
   quotes: {
-    // FIXED: Anyone can submit a quote request to a specific mechanic without logging in!
     create: async (mechanicId: string, quoteData: any) => {
-      return supabase.from('quotes').insert({
-        user_id: mechanicId, // Links directly to Osweld's account profile
+      return _supabase.from('quotes').insert({
+        user_id: mechanicId,
         ...quoteData,
       });
     },
 
-    // Get user's quotes
     getUserQuotes: async (userId: string) => {
-      return supabase
+      return _supabase
         .from('quotes')
         .select('*')
         .eq('user_id', userId)
@@ -67,34 +68,30 @@ export const supabaseHelpers = {
         .order('created_at', { ascending: false });
     },
 
-    // Get single quote
     getById: async (quoteId: string) => {
-      return supabase
+      return _supabase
         .from('quotes')
         .select('*')
         .eq('id', quoteId)
         .single();
     },
 
-    // Update quote
     update: async (quoteId: string, updates: any) => {
-      return supabase
+      return _supabase
         .from('quotes')
         .update(updates)
         .eq('id', quoteId);
     },
 
-    // Update quote status
     updateStatus: async (quoteId: string, status: string) => {
-      return supabase
+      return _supabase
         .from('quotes')
         .update({ status })
         .eq('id', quoteId);
     },
 
-    // Delete quote (soft delete)
     delete: async (quoteId: string) => {
-      return supabase
+      return _supabase
         .from('quotes')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', quoteId);
@@ -103,18 +100,24 @@ export const supabaseHelpers = {
 
   // Service helpers
   services: {
-    // Get all active services
     getAll: async () => {
-      return supabase
+      return _supabase
         .from('services')
         .select('*')
         .eq('is_active', true)
         .order('name');
     },
 
-    // Get user's services
+    getById: async (serviceId: string) => {
+      return _supabase
+        .from('services')
+        .select('*')
+        .eq('id', serviceId)
+        .single();
+    },
+
     getUserServices: async (userId: string) => {
-      return supabase
+      return _supabase
         .from('services')
         .select('*')
         .eq('user_id', userId)
@@ -122,31 +125,28 @@ export const supabaseHelpers = {
         .order('name');
     },
 
-    // Create service
     create: async (serviceData: any) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const { data: { user } } = await _supabase.auth.getUser();
+
       if (!user) {
         throw new Error('User not authenticated');
       }
 
-      return supabase.from('services').insert({
+      return _supabase.from('services').insert({
         user_id: user.id,
         ...serviceData,
       });
     },
 
-    // Update service
     update: async (serviceId: string, updates: any) => {
-      return supabase
+      return _supabase
         .from('services')
         .update(updates)
         .eq('id', serviceId);
     },
 
-    // Delete service
     delete: async (serviceId: string) => {
-      return supabase
+      return _supabase
         .from('services')
         .update({ is_active: false })
         .eq('id', serviceId);
@@ -155,9 +155,8 @@ export const supabaseHelpers = {
 
   // Review helpers
   reviews: {
-    // Get approved reviews
     getApproved: async () => {
-      return supabase
+      return _supabase
         .from('reviews')
         .select('*')
         .eq('status', 'approved')
@@ -165,9 +164,8 @@ export const supabaseHelpers = {
         .order('created_at', { ascending: false });
     },
 
-    // Get user's reviews
     getUserReviews: async (userId: string) => {
-      return supabase
+      return _supabase
         .from('reviews')
         .select('*')
         .eq('user_id', userId)
@@ -175,9 +173,8 @@ export const supabaseHelpers = {
         .order('created_at', { ascending: false });
     },
 
-    // Get pending reviews
     getPending: async (userId: string) => {
-      return supabase
+      return _supabase
         .from('reviews')
         .select('*')
         .eq('user_id', userId)
@@ -185,17 +182,15 @@ export const supabaseHelpers = {
         .order('created_at', { ascending: false });
     },
 
-    // FIXED: Pass mechanicId to review context so DB constraint doesn't throw a validation error
     create: async (mechanicId: string, reviewData: any) => {
-      return supabase.from('reviews').insert({
+      return _supabase.from('reviews').insert({
         user_id: mechanicId,
-        ...reviewData
+        ...reviewData,
       });
     },
 
-    // Approve review
     approve: async (reviewId: string) => {
-      return supabase
+      return _supabase
         .from('reviews')
         .update({
           status: 'approved',
@@ -204,9 +199,8 @@ export const supabaseHelpers = {
         .eq('id', reviewId);
     },
 
-    // Reject review
     reject: async (reviewId: string) => {
-      return supabase
+      return _supabase
         .from('reviews')
         .update({ status: 'rejected' })
         .eq('id', reviewId);
@@ -215,9 +209,8 @@ export const supabaseHelpers = {
 
   // Receipt helpers
   receipts: {
-    // Get user's receipts
     getUserReceipts: async (userId: string) => {
-      return supabase
+      return _supabase
         .from('receipts')
         .select('*')
         .eq('user_id', userId)
@@ -225,9 +218,8 @@ export const supabaseHelpers = {
         .order('job_date', { ascending: false });
     },
 
-    // Get receipts for date range
     getByDateRange: async (userId: string, startDate: string, endDate: string) => {
-      return supabase
+      return _supabase
         .from('receipts')
         .select('*')
         .eq('user_id', userId)
@@ -237,31 +229,28 @@ export const supabaseHelpers = {
         .order('job_date', { ascending: false });
     },
 
-    // Create receipt
     create: async (receiptData: any) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const { data: { user } } = await _supabase.auth.getUser();
+
       if (!user) {
         throw new Error('User not authenticated');
       }
 
-      return supabase.from('receipts').insert({
+      return _supabase.from('receipts').insert({
         user_id: user.id,
         ...receiptData,
       });
     },
 
-    // Update receipt
     update: async (receiptId: string, updates: any) => {
-      return supabase
+      return _supabase
         .from('receipts')
         .update(updates)
         .eq('id', receiptId);
     },
 
-    // Delete receipt
     delete: async (receiptId: string) => {
-      return supabase
+      return _supabase
         .from('receipts')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', receiptId);
@@ -270,9 +259,8 @@ export const supabaseHelpers = {
 
   // Analytics helpers
   analytics: {
-    // Get user's monthly analytics
     getMonthlyStats: async (userId: string, month: number, year: number) => {
-      return supabase
+      return _supabase
         .from('analytics')
         .select('*')
         .eq('user_id', userId)
@@ -281,9 +269,8 @@ export const supabaseHelpers = {
         .single();
     },
 
-    // Get all analytics for user
     getAll: async (userId: string) => {
-      return supabase
+      return _supabase
         .from('analytics')
         .select('*')
         .eq('user_id', userId)
@@ -294,36 +281,32 @@ export const supabaseHelpers = {
 
   // View-based helpers (for dashboards)
   views: {
-    // Get dashboard summary
     getDashboardSummary: async (userId: string) => {
-      return supabase
+      return _supabase
         .from('v_dashboard_summary')
         .select('*')
         .eq('user_id', userId)
         .single();
     },
 
-    // Get monthly earnings
     getMonthlyEarnings: async (userId: string) => {
-      return supabase
+      return _supabase
         .from('v_monthly_earnings')
         .select('*')
         .eq('user_id', userId)
         .order('month', { ascending: false });
     },
 
-    // Get quote metrics
     getQuoteMetrics: async (userId: string) => {
-      return supabase
+      return _supabase
         .from('v_quote_metrics')
         .select('*')
         .eq('user_id', userId)
         .single();
     },
 
-    // Get review stats
     getReviewStats: async (userId: string) => {
-      return supabase
+      return _supabase
         .from('v_review_stats')
         .select('*')
         .eq('user_id', userId)

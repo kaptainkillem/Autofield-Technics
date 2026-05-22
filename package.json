@@ -9,13 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.1",
+    "date-fns": "latest",
+    "lucide-react": "latest",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "lucide-react": "^latest",    
-  "recharts": "^latest",        
-  "date-fns": "^latest",        
-  "@supabase/supabase-js": "^latest"
+    "recharts": "latest"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
