@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/common/Header";
 import "./globals.css";
 import { Footer } from '@/components/common/Footer';
+import { SITE_CONFIG } from '@/lib/site-config';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Autofield Technics",
-  description: "Professional Mechanical Care, Wherever You Are",
+  title: SITE_CONFIG.name,
+  description: SITE_CONFIG.tagline,
   icons: { icon: "/icon.svg" },
 };
 

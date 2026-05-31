@@ -1,6 +1,9 @@
 'use client';
 
 import React, { ComponentPropsWithoutRef, useState } from 'react';
+import Link from 'next/link';
+import { LogIn } from 'lucide-react';
+import { SiteLogo } from './SiteLogo';
 
 interface HeaderProps extends ComponentPropsWithoutRef<'header'> {}
 
@@ -85,6 +88,17 @@ export const Header: React.FC<HeaderProps> = ({
             </a>
           ))}
         </nav>
+
+        <div className="px-4 pt-2 pb-4">
+          <Link
+            href="/signin"
+            className="flex items-center justify-center gap-2 bg-white text-primary font-semibold rounded-base px-4 py-3 hover:bg-white/90 transition-colors"
+            onClick={() => setMobileOpen(false)}
+          >
+            <LogIn className="h-4 w-4" />
+            Login
+          </Link>
+        </div>
       </aside>
 
       <header
@@ -94,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
           <div className="flex items-center">
             <a href="/" className="no-underline tracking-widest uppercase text-lg font-bold text-white whitespace-nowrap">
-              Autofield<span className="font-light ml-1">Technics</span>
+              <SiteLogo />
             </a>
           </div>
 
@@ -111,7 +125,15 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           <div className="flex items-center shrink-0">
-            <div className="hidden md:flex w-10 h-10 min-w-10 min-h-10 rounded-full bg-white/20 items-center justify-center overflow-hidden">
+            <Link
+              href="/signin"
+              className="hidden md:inline-flex items-center gap-2 border-2 border-white text-white font-semibold rounded-base px-4 py-2 hover:bg-white hover:text-primary transition-all duration-200"
+            >
+              <LogIn className="h-4 w-4" />
+              Login
+            </Link>
+
+            <div className="hidden md:flex w-10 h-10 min-w-10 min-h-10 rounded-full bg-white/20 items-center justify-center overflow-hidden ml-4">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="20"

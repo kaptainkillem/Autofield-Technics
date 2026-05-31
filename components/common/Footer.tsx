@@ -1,4 +1,6 @@
 import React, { ComponentPropsWithoutRef } from 'react';
+import { SiteLogo } from './SiteLogo';
+import { SITE_CONFIG } from '@/lib/site-config';
 
 interface FooterProps extends ComponentPropsWithoutRef<'footer'> {}
 
@@ -26,7 +28,7 @@ export const Footer: React.FC<FooterProps> = ({
       <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-2 gap-10">
         <div className="flex flex-col gap-4">
           <span className="tracking-widest uppercase text-xl font-bold">
-            Autofield<span className="font-light ml-1">Technics</span>
+            <SiteLogo />
           </span>
           <p className="text-small text-white/80 m-0">
             Qualified mechanic with 15+ years of experience. Specializing in Korean brands (Suzuki, Hyundai) and general repairs across Johannesburg.
@@ -77,7 +79,7 @@ export const Footer: React.FC<FooterProps> = ({
       <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <p className="text-small text-white/60 text-center m-0">
-            &copy; 2026 Autofield Technics. All Rights Reserved.
+            &copy; 2026 {SITE_CONFIG.name}. All Rights Reserved.
           </p>
         </div>
       </div>
