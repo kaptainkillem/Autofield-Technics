@@ -103,6 +103,32 @@ export interface Database {
         Insert: Partial<Database['public']['Tables']['receipts']['Row']> & { user_id: string; job_date: string; amount_paid: number }
         Update: Partial<Database['public']['Tables']['receipts']['Insert']>
       }
+      profiles: {
+        Row: {
+          id: string
+          full_name: string | null
+          phone: string | null
+          role: 'client' | 'admin'
+          onboarding_completed: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Partial<Database['public']['Tables']['profiles']['Row']> & { id: string }
+        Update: Partial<Database['public']['Tables']['profiles']['Insert']>
+      }
+      vehicles: {
+        Row: {
+          id: string
+          user_id: string
+          make: string
+          model: string
+          year: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: Partial<Database['public']['Tables']['vehicles']['Row']> & { user_id: string; make: string; model: string; year: number }
+        Update: Partial<Database['public']['Tables']['vehicles']['Insert']>
+      }
       analytics: {
         Row: {
           id: string

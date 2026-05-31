@@ -18,16 +18,19 @@ export const supabase = createClient<Database>(
 );
 
 // Server-side Supabase client (for API routes - use service role key)
-export const supabaseServer = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
+// Guarded: only created when SUPABASE_SERVICE_ROLE_KEY is available (server-side)
+export const supabaseServer = process.env.SUPABASE_SERVICE_ROLE_KEY
+  ? createClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    )
+  : null;
 
 // Helper functions
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -37,7 +40,13 @@ export const supabaseHelpers = {
   // Auth helpers
   auth: {
     signUp: async (email: string, password: string) => {
-      return _supabase.auth.signUp({ email, password });
+      return _supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
     },
     signIn: async (email: string, password: string) => {
       return _supabase.auth.signInWithPassword({ email, password });
@@ -47,6 +56,47 @@ export const supabaseHelpers = {
     },
     getSession: async () => {
       return _supabase.auth.getSession();
+    },
+    resetPassword: async (email: string) => {
+      return _supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+    },
+    updatePassword: async (password: string) => {
+      return _supabase.auth.updateUser({ password });
+    },
+  },
+
+  // Profile helpers
+  profiles: {
+    get: async () => {
+      const { data: { user } } = await _supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      return _supabase.from('profiles').select('*').eq('id', user.id).single();
+    },
+    upsert: async (updates: Record<string, any>) => {
+      const { data: { user } } = await _supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      return _supabase.from('profiles').upsert({ id: user.id, ...updates });
+    },
+    updateOnboarding: async (completed: boolean) => {
+      const { data: { user } } = await _supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      return _supabase.from('profiles').update({ onboarding_completed: completed }).eq('id', user.id);
+    },
+  },
+
+  // Vehicle helpers
+  vehicles: {
+    create: async (vehicleData: Record<string, any>) => {
+      const { data: { user } } = await _supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      return _supabase.from('vehicles').insert({ user_id: user.id, ...vehicleData });
+    },
+    getUserVehicles: async () => {
+      const { data: { user } } = await _supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      return _supabase.from('vehicles').select('*').eq('user_id', user.id);
     },
   },
 

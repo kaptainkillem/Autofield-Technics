@@ -6,6 +6,7 @@ import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { ServicesHero } from '@/components/features/ServicesHero'
 import { ShieldCheck, Clock, Award, CheckCircle2 } from 'lucide-react'
 import type { Database } from '@/types/database'
+import { SITE_CONFIG } from '@/lib/site-config'
 
 type ServicesRow = Database['public']['Tables']['services']['Row']
 
@@ -49,7 +50,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
     'description': service.description,
     'provider': {
       '@type': 'LocalBusiness',
-      'name': 'Autofield Technics',
+      'name': SITE_CONFIG.name,
       'telephone': '+27784802796',
       'address': {
         '@type': 'PostalAddress',
