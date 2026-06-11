@@ -80,3 +80,33 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+
+CREATE TABLE public.reviews (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    customer_name TEXT NOT NULL,
+    vehicle_serviced TEXT,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    review_text TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    approved_at TIMESTAMP WITH TIME ZONE,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Public can read approved reviews
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read approved reviews"
+ON public.reviews FOR SELECT
+USING (status = 'approved' AND deleted_at IS NULL);
+
+-- Anyone can submit a review (no login required)
+CREATE POLICY "Anyone can submit a review"
+ON public.reviews FOR INSERT
+WITH CHECK (true);
+
+-- Only service role (admin) can update/approve
+CREATE POLICY "Service role can update reviews"
+ON public.reviews FOR UPDATE
+USING (true);

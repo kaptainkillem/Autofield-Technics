@@ -4,10 +4,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database';
 
+
 // Client-side Supabase client (for browser/public usage)
 export const supabase = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  
   {
     auth: {
       autoRefreshToken: true,
