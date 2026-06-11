@@ -6,6 +6,7 @@ import { Mail, Loader2, AlertCircle, MailCheck } from 'lucide-react';
 import { supabaseHelpers } from '@/lib/supabase';
 import { SiteLogo } from '@/components/common/SiteLogo';
 import { SITE_CONFIG } from '@/lib/site-config';
+import { sanitizeAuthError } from '@/lib/auth-utils';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -38,7 +39,7 @@ export default function ForgotPasswordPage() {
     setLoading(false);
 
     if (resetError) {
-      setError(resetError.message);
+      setError(sanitizeAuthError(resetError));
       return;
     }
 

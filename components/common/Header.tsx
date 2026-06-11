@@ -1,30 +1,50 @@
-'use client';
+'use client'
 
-import React, { ComponentPropsWithoutRef, useState } from 'react';
-import Link from 'next/link';
-import { LogIn } from 'lucide-react';
-import { SiteLogo } from './SiteLogo';
+import React, { ComponentPropsWithoutRef, useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { LogIn, LogOut, User } from 'lucide-react'
+import { SiteLogo } from './SiteLogo'
+import { SITE_CONFIG } from '@/lib/site-config'
+import { supabase } from '@/lib/supabase'
 
 interface HeaderProps extends ComponentPropsWithoutRef<'header'> {}
 
 const NAV_LINKS = [
-  { label: 'Services', href: '/services' },
-  { label: 'Emergency Assist', href: 'tel:0123456789' },
-  { label: 'Reviews', href: '/reviews' },
-  { label: 'Get a Quote', href: '/quote' },
-] as const;
+  { label: 'Services', href: '/services', external: false },
+  { label: 'Emergency Assist', href: `tel:${SITE_CONFIG.phone}`, external: true },
+  { label: 'Reviews', href: '/reviews', external: false },
+  { label: 'Get a Quote', href: '/quote', external: false },
+] as const
 
-/**
- * Header - Floating navigation bar with mobile sidebar
- *
- * @example
- * <Header />
- */
 export const Header: React.FC<HeaderProps> = ({
   className,
   ...props
 }) => {
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [user, setUser] = useState<ReturnType<typeof supabase.auth.getUser> extends Promise<{ data: { user: infer U } }> ? U : never | null>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+    }
+    checkSession()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    router.push('/')
+    router.refresh()
+  }
 
   return (
     <>
@@ -56,48 +76,54 @@ export const Header: React.FC<HeaderProps> = ({
 
         <div className="flex flex-col items-center gap-3 px-6 py-6 border-b border-white/10">
           <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              className="text-white"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
+            <User className="text-white" size={24} />
           </div>
-          <span className="text-sm text-white/70">Guest</span>
+          <span className="text-sm text-white/70">{user ? user.email : 'Guest'}</span>
         </div>
 
         <nav className="flex flex-col gap-1 px-4 py-4">
           {NAV_LINKS.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className="text-white no-underline text-base font-bold tracking-wide hover:bg-white/10 rounded-base px-3 py-3 transition-colors duration-200"
-              onClick={() => setMobileOpen(false)}
-            >
-              {link.label}
-            </a>
+            link.external ? (
+              <a
+                key={link.label}
+                href={link.href}
+                className="text-white no-underline text-base font-bold tracking-wide hover:bg-white/10 rounded-base px-3 py-3 transition-colors duration-200"
+                onClick={() => setMobileOpen(false)}
+              >
+                {link.label}
+              </a>
+            ) : (
+              <Link
+                key={link.label}
+                href={link.href}
+                className="text-white no-underline text-base font-bold tracking-wide hover:bg-white/10 rounded-base px-3 py-3 transition-colors duration-200"
+                onClick={() => setMobileOpen(false)}
+              >
+                {link.label}
+              </Link>
+            )
           ))}
         </nav>
 
         <div className="px-4 pt-2 pb-4">
-          <Link
-            href="/signin"
-            className="flex items-center justify-center gap-2 bg-white text-primary font-semibold rounded-base px-4 py-3 hover:bg-white/90 transition-colors"
-            onClick={() => setMobileOpen(false)}
-          >
-            <LogIn className="h-4 w-4" />
-            Login
-          </Link>
+          {user ? (
+            <button
+              onClick={() => { handleLogout(); setMobileOpen(false); }}
+              className="flex w-full items-center justify-center gap-2 bg-white/10 text-white font-semibold rounded-base px-4 py-3 hover:bg-white/20 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          ) : (
+            <Link
+              href="/signin"
+              className="flex items-center justify-center gap-2 bg-white text-primary font-semibold rounded-base px-4 py-3 hover:bg-white/90 transition-colors"
+              onClick={() => setMobileOpen(false)}
+            >
+              <LogIn className="h-4 w-4" />
+              Login
+            </Link>
+          )}
         </div>
       </aside>
 
@@ -107,49 +133,54 @@ export const Header: React.FC<HeaderProps> = ({
       >
         <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
           <div className="flex items-center">
-            <a href="/" className="no-underline tracking-widest uppercase text-lg font-bold text-white whitespace-nowrap">
+            <Link href="/" className="no-underline tracking-widest uppercase text-lg font-bold text-white whitespace-nowrap">
               <SiteLogo />
-            </a>
+            </Link>
           </div>
 
           <nav className="hidden md:flex items-center gap-8">
             {NAV_LINKS.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className="text-white no-underline text-base font-bold tracking-wide hover:text-white/80 transition-colors duration-200"
-              >
-                {link.label}
-              </a>
+              link.external ? (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className="text-white no-underline text-base font-bold tracking-wide hover:text-white/80 transition-colors duration-200"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  className="text-white no-underline text-base font-bold tracking-wide hover:text-white/80 transition-colors duration-200"
+                >
+                  {link.label}
+                </Link>
+              )
             ))}
           </nav>
 
-          <div className="flex items-center shrink-0">
-            <Link
-              href="/signin"
-              className="hidden md:inline-flex items-center gap-2 border-2 border-white text-white font-semibold rounded-base px-4 py-2 hover:bg-white hover:text-primary transition-all duration-200"
-            >
-              <LogIn className="h-4 w-4" />
-              Login
-            </Link>
-
-            <div className="hidden md:flex w-10 h-10 min-w-10 min-h-10 rounded-full bg-white/20 items-center justify-center overflow-hidden ml-4">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-                className="text-white"
+          <div className="flex items-center shrink-0 gap-3">
+            {user ? (
+              <button
+                onClick={handleLogout}
+                className="hidden md:inline-flex items-center gap-2 border-2 border-white text-white font-semibold rounded-base px-4 py-2 hover:bg-white hover:text-primary transition-all duration-200"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            ) : (
+              <Link
+                href="/signin"
+                className="hidden md:inline-flex items-center gap-2 border-2 border-white text-white font-semibold rounded-base px-4 py-2 hover:bg-white hover:text-primary transition-all duration-200"
+              >
+                <LogIn className="h-4 w-4" />
+                Login
+              </Link>
+            )}
+
+            <div className="hidden md:flex w-10 h-10 min-w-10 min-h-10 rounded-full bg-white/20 items-center justify-center overflow-hidden">
+              <User className="text-white" size={20} />
             </div>
 
             <button
@@ -166,7 +197,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
     </>
-  );
-};
+  )
+}
 
-export default Header;
+export default Header

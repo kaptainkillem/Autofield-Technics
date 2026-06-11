@@ -66,12 +66,16 @@ CREATE POLICY "Users can delete own vehicles" ON public.vehicles FOR DELETE USIN
 -- Auto-create profile row on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+    user_role TEXT;
 BEGIN
+    user_role := COALESCE(NEW.raw_user_meta_data->>'role', 'client');
+    
     INSERT INTO public.profiles (id, full_name, role)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-        'client'
+        user_role
     );
     RETURN NEW;
 END;

@@ -20,7 +20,9 @@ export function ReviewForm() {
     reviewText:      '',
   })
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
@@ -35,6 +37,7 @@ export function ReviewForm() {
 
     setLoading(true)
 
+    // Typed insert — matches database.ts exactly
     const payload: ReviewInsert = {
       customer_name:    form.customerName,
       vehicle_serviced: form.vehicleServiced || null,
@@ -43,7 +46,9 @@ export function ReviewForm() {
       status:           'pending',
     }
 
-    const { error: supabaseError } = await supabase.from('reviews').insert(payload)
+    const { error: supabaseError } = await supabase
+      .from('reviews')
+      .insert(payload)
 
     setLoading(false)
 
@@ -60,7 +65,9 @@ export function ReviewForm() {
     return (
       <div className="card text-center py-10">
         <p className="text-2xl mb-3">✅</p>
-        <h3 className="text-lg font-semibold text-black mb-1">Thank you for your review!</h3>
+        <h3 className="text-lg font-semibold text-black mb-1">
+          Thank you for your review!
+        </h3>
         <p className="text-small text-grey">
           Your review has been submitted and will appear once approved by our team.
         </p>
@@ -71,6 +78,7 @@ export function ReviewForm() {
   return (
     <form onSubmit={handleSubmit} className="card flex flex-col gap-5">
 
+      {/* Full Name */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-grey">Full Name</label>
         <input
@@ -84,6 +92,7 @@ export function ReviewForm() {
         />
       </div>
 
+      {/* Vehicle Serviced */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-grey">Vehicle Serviced</label>
         <input
@@ -96,6 +105,7 @@ export function ReviewForm() {
         />
       </div>
 
+      {/* Star Rating */}
       <div className="flex flex-col gap-2">
         <label className="text-sm font-semibold text-grey">Rate Our Service</label>
         <div className="flex gap-1">
@@ -122,6 +132,7 @@ export function ReviewForm() {
         )}
       </div>
 
+      {/* Review Text */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-grey">Your Review</label>
         <textarea
@@ -135,7 +146,9 @@ export function ReviewForm() {
         />
       </div>
 
-      {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
+      {error && (
+        <p className="text-sm text-red-500 font-medium">{error}</p>
+      )}
 
       <Button type="submit" variant="primary" disabled={loading}>
         {loading ? 'Submitting...' : 'Submit Review'}
