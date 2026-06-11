@@ -1,5 +1,4 @@
-<<<<<<< Updated upstream
-=======
+
 'use client'
 
 import { useState } from 'react'
@@ -67,7 +66,7 @@ export function QuoteForm() {
     setLoading(true)
 
     // Save to Supabase using correct column names from database.ts
-    const { error: supabaseError } = await supabase.from('quotes').insert({
+   const { error: supabaseError } = await (supabase.from('quotes') as any).insert({
       user_id: MECHANIC_USER_ID,
       customer_name: form.customerName,
       customer_phone: form.customerPhone,
@@ -219,11 +218,10 @@ export function QuoteForm() {
         {loading ? 'Saving...' : 'Request Quote via WhatsApp 💬'}
       </Button>
 
-      <p className="text-xs text-grey-medium text-center">
+    <p className="text-xs text-grey-medium text-center">
         Your details are saved and WhatsApp will open with your request pre-filled.
       </p>
 
     </form>
   )
 }
->>>>>>> Stashed changes

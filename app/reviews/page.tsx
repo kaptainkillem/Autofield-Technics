@@ -1,12 +1,9 @@
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { ServicesHero } from '@/components/features/ServicesHero'
-<<<<<<< Updated upstream
-=======
-import { ReviewForm } from '@/components/features/ReviewForm'
+import { ReviewForm } from '@/components/features/ReviewForm' 
 import { ReviewCard } from '@/components/ReviewCard'
 import { createClient } from '@supabase/supabase-js'
 
-// Server-side fetch — runs at request time, no mock data
 async function getApprovedReviews() {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,11 +18,7 @@ async function getApprovedReviews() {
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('Failed to fetch reviews:', error)
-      console.log('Error message:', error.message)
-  console.log('Error details:', error.details)
-  console.log('Error hint:', error.hint)
-  console.log('Error code:', error.code)
+    console.error('Failed to fetch reviews:', error.message)
     return []
   }
 
@@ -46,7 +39,6 @@ function timeAgo(dateStr: string) {
 
 export default async function ReviewsPage() {
   const reviews = await getApprovedReviews()
->>>>>>> Stashed changes
 
   return (
     <>
@@ -68,12 +60,6 @@ export default async function ReviewsPage() {
 
       <section className="bg-white px-4 pt-6 pb-24 md:px-20 md:pb-20">
         <div className="mx-auto max-w-6xl">
-<<<<<<< Updated upstream
-          <div className="card text-center py-16">
-            <p className="text-lg text-grey mb-6">
-              Reviews coming soon.
-            </p>
-=======
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
 
             {/* Left: Submit a review */}
@@ -115,7 +101,6 @@ export default async function ReviewsPage() {
               )}
             </div>
 
->>>>>>> Stashed changes
           </div>
         </div>
       </section>
