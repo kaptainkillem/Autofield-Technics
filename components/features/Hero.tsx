@@ -1,36 +1,25 @@
-'use client';
+'use client'
 
-import React, { ComponentPropsWithoutRef } from 'react';
-import Image from 'next/image';
-import { Button } from '@/components/ui/button';
+import React, { ComponentPropsWithoutRef } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { Button } from '@/components/ui/button'
 
 interface CTAProps {
-  label: string;
-  href?: string;
-  onClick?: () => void;
+  label: string
+  href?: string
+  onClick?: () => void
 }
 
 interface HeroProps extends ComponentPropsWithoutRef<'section'> {
-  title: string;
-  description: string;
-  primaryCTA: CTAProps;
-  secondaryCTA?: CTAProps;
-  showImage?: boolean;
-  imageSrc?: string;
+  title: string
+  description: string
+  primaryCTA: CTAProps
+  secondaryCTA?: CTAProps
+  showImage?: boolean
+  imageSrc?: string
 }
 
-/**
- * Hero - Reusable hero section with optional image column
- *
- * @example
- * <Hero
- *   title="Expert Auto Repair"
- *   description="Trusted mechanics delivering quality service."
- *   primaryCTA={{ label: "Get a Quote", href: "/quote" }}
- *   secondaryCTA={{ label: "Our Services", href: "/services" }}
- *   showImage
- * />
- */
 export const Hero: React.FC<HeroProps> = ({
   title,
   description,
@@ -55,13 +44,29 @@ export const Hero: React.FC<HeroProps> = ({
           <h1 className="heading-1">{title}</h1>
           <p className="text-base font-normal text-white leading-normal">{description}</p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button variant="primary" onClick={primaryCTA.onClick}>
-              {primaryCTA.label}
-            </Button>
-            {secondaryCTA && (
-              <Button variant="secondary" onClick={secondaryCTA.onClick}>
-                {secondaryCTA.label}
+            {primaryCTA.href ? (
+              <Link href={primaryCTA.href}>
+                <Button variant="primary" onClick={primaryCTA.onClick}>
+                  {primaryCTA.label}
+                </Button>
+              </Link>
+            ) : (
+              <Button variant="primary" onClick={primaryCTA.onClick}>
+                {primaryCTA.label}
               </Button>
+            )}
+            {secondaryCTA && (
+              secondaryCTA.href ? (
+                <Link href={secondaryCTA.href}>
+                  <Button variant="secondary" onClick={secondaryCTA.onClick}>
+                    {secondaryCTA.label}
+                  </Button>
+                </Link>
+              ) : (
+                <Button variant="secondary" onClick={secondaryCTA.onClick}>
+                  {secondaryCTA.label}
+                </Button>
+              )
             )}
           </div>
         </div>
@@ -80,7 +85,7 @@ export const Hero: React.FC<HeroProps> = ({
         )}
       </div>
     </section>
-  );
-};
+  )
+}
 
-export default Hero;
+export default Hero

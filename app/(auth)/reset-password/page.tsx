@@ -6,6 +6,7 @@ import { Lock, Loader2, AlertCircle, CheckCircle, CheckCircle2, XCircle, Eye, Ey
 import { supabaseHelpers } from '@/lib/supabase';
 import { SiteLogo } from '@/components/common/SiteLogo';
 import { SITE_CONFIG } from '@/lib/site-config';
+import { sanitizeAuthError } from '@/lib/auth-utils';
 
 const PASSWORD_CRITERIA = [
   { label: '8+ characters', met: (p: string) => p.length >= 8 },
@@ -78,7 +79,7 @@ export default function ResetPasswordPage() {
     setLoading(false);
 
     if (updateError) {
-      setError(updateError.message);
+      setError(sanitizeAuthError(updateError));
       return;
     }
 

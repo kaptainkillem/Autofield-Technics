@@ -22,6 +22,19 @@ export interface Database {
         Insert: Partial<Database['public']['Tables']['users']['Row']> & { email: string }
         Update: Partial<Database['public']['Tables']['users']['Insert']>
       }
+      categories: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          icon_name: string | null
+          display_order: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Partial<Database['public']['Tables']['categories']['Row']> & { name: string; slug: string }
+        Update: Partial<Database['public']['Tables']['categories']['Insert']>
+      }
       services: {
         Row: {
           id: string
@@ -29,6 +42,7 @@ export interface Database {
           name: string
           description: string | null
           category: string | null
+          category_id: string | null
           base_price: number | null
           image_url: string | null
           is_active: boolean
@@ -48,23 +62,13 @@ export interface Database {
           vehicle_year: number | null
           vehicle_make: string | null
           vehicle_model: string | null
-          service_type: string | null
-          description: string
-          estimated_quote: number | null
-          status: 'pending' | 'sent' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
-          notes: string | null
-          whatsapp_sent_at: string | null
-          whatsapp_message_id: string | null
+          description: string | null
+          status: string | null
           created_at: string
           updated_at: string
           deleted_at: string | null
         }
-        Insert: Partial<Database['public']['Tables']['quotes']['Row']> & { 
-          user_id: string
-          customer_name: string
-          customer_phone: string
-          description: string 
-        }
+        Insert: Partial<Database['public']['Tables']['quotes']['Row']> & { customer_name: string; customer_phone: string }
         Update: Partial<Database['public']['Tables']['quotes']['Insert']>
       }
       reviews: {
@@ -99,16 +103,12 @@ export interface Database {
           id: string
           user_id: string
           quote_id: string | null
-          job_date: string
           amount_paid: number
           payment_method: string | null
-          notes: string | null
-          invoice_number: string | null
-          created_at: string
-          updated_at: string
+          issued_at: string | null
           deleted_at: string | null
         }
-        Insert: Partial<Database['public']['Tables']['receipts']['Row']> & { user_id: string; job_date: string; amount_paid: number }
+        Insert: Partial<Database['public']['Tables']['receipts']['Row']> & { amount_paid: number }
         Update: Partial<Database['public']['Tables']['receipts']['Insert']>
       }
       profiles: {
@@ -116,10 +116,10 @@ export interface Database {
           id: string
           full_name: string | null
           phone: string | null
-          role: 'client' | 'admin'
+          role: string
           onboarding_completed: boolean
-          created_at: string
-          updated_at: string
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: Partial<Database['public']['Tables']['profiles']['Row']> & { id: string }
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
@@ -131,8 +131,8 @@ export interface Database {
           make: string
           model: string
           year: number
-          created_at: string
-          updated_at: string
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: Partial<Database['public']['Tables']['vehicles']['Row']> & { user_id: string; make: string; model: string; year: number }
         Update: Partial<Database['public']['Tables']['vehicles']['Insert']>
@@ -141,19 +141,14 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          year: number
           month: number
-          total_quotes: number
-          completed_quotes: number
-          quote_conversion_rate: number | null
-          total_earnings: number
-          average_job_price: number | null
-          average_rating: number | null
-          total_reviews: number
-          created_at: string
-          updated_at: string
+          year: number
+          total_revenue: number | null
+          total_jobs: number | null
+          created_at: string | null
+          updated_at: string | null
         }
-        Insert: Partial<Database['public']['Tables']['analytics']['Row']> & { user_id: string; year: number; month: number }
+        Insert: Partial<Database['public']['Tables']['analytics']['Row']> & { user_id: string; month: number; year: number }
         Update: Partial<Database['public']['Tables']['analytics']['Insert']>
       }
       appointments: {
@@ -179,48 +174,27 @@ export interface Database {
 }
     }
     Views: {
+      v_dashboard_summary: {
+        Row: Record<string, unknown>
+      }
       v_monthly_earnings: {
-        Row: {
-          user_id: string
-          month: string
-          num_jobs: number
-          total_earnings: number
-          avg_job_price: number
-          last_job_date: string
-        }
+        Row: Record<string, unknown>
       }
       v_quote_metrics: {
-        Row: {
-          user_id: string
-          total_quotes: number
-          completed_quotes: number
-          accepted_quotes: number
-          rejected_quotes: number
-          conversion_rate: number
-        }
+        Row: Record<string, unknown>
       }
       v_review_stats: {
-        Row: {
-          user_id: string
-          total_reviews: number
-          approved_reviews: number
-          average_rating: number
-          min_rating: number
-          max_rating: number
-        }
-      }
-      v_dashboard_summary: {
-        Row: {
-          user_id: string
-          business_name: string | null
-          total_quotes: number
-          completed_jobs: number
-          total_earnings: number
-        }
+        Row: Record<string, unknown>
       }
     }
-    Functions: Record<string, never>
-    Enums: Record<string, never>
-    CompositeTypes: Record<string, never>
+    Functions: {
+      is_admin: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+    }
+    Enums: {
+      [key: string]: never
+    }
   }
 }

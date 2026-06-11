@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { ServicesHero } from '@/components/features/ServicesHero'
 import { ReviewForm } from '@/components/features/ReviewForm'
