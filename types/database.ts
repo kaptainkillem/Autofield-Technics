@@ -68,24 +68,32 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['quotes']['Insert']>
       }
       reviews: {
-        Row: {
-          id: string
-          user_id: string
-          quote_id: string | null
-          rating: number
-          comment: string | null
-          customer_name: string
-          customer_email: string | null
-          status: 'pending' | 'approved' | 'rejected'
-          moderation_notes: string | null
-          created_at: string
-          updated_at: string
-          approved_at: string | null
-          deleted_at: string | null
-        }
-        Insert: Partial<Database['public']['Tables']['reviews']['Row']> & { user_id: string; rating: number; customer_name: string }
-        Update: Partial<Database['public']['Tables']['reviews']['Insert']>
-      }
+  Row: {
+    id: string
+    user_id: string | null
+    quote_id: string | null
+    customer_name: string
+    vehicle_serviced: string | null
+    rating: number
+    review_text: string
+    status: 'pending' | 'approved' | 'rejected'
+    moderation_notes: string | null
+    approved_at: string | null
+    deleted_at: string | null
+    created_at: string
+    updated_at: string
+  }
+  Insert: {
+    customer_name: string
+    rating: number
+    review_text: string
+    vehicle_serviced?: string | null
+    status?: 'pending' | 'approved' | 'rejected'
+    user_id?: string | null
+    quote_id?: string | null
+  }
+  Update: Partial<Database['public']['Tables']['reviews']['Insert']>
+}
       receipts: {
         Row: {
           id: string
@@ -148,6 +156,27 @@ export interface Database {
         Insert: Partial<Database['public']['Tables']['analytics']['Row']> & { user_id: string; year: number; month: number }
         Update: Partial<Database['public']['Tables']['analytics']['Insert']>
       }
+      appointments: {
+  Row: {
+    id: string
+    user_id: string
+    quote_id: string | null
+    service_type: string
+    scheduled_date: string
+    scheduled_time: string
+    status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+    notes: string | null
+    created_at: string
+    updated_at: string
+  }
+  Insert: Partial<Database['public']['Tables']['appointments']['Row']> & {
+    user_id: string
+    service_type: string
+    scheduled_date: string
+    scheduled_time: string
+  }
+  Update: Partial<Database['public']['Tables']['appointments']['Insert']>
+}
     }
     Views: {
       v_monthly_earnings: {
