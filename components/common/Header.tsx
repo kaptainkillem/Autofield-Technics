@@ -179,9 +179,13 @@ export const Header: React.FC<HeaderProps> = ({
               </Link>
             )}
 
-            <div className="hidden md:flex w-10 h-10 min-w-10 min-h-10 rounded-full bg-white/20 items-center justify-center overflow-hidden">
+            <Link
+              href="/dashboard"
+              className="hidden md:flex w-10 h-10 min-w-10 min-h-10 rounded-full bg-white/20 items-center justify-center overflow-hidden hover:bg-white/30 transition-colors"
+              aria-label="Dashboard"
+            >
               <User className="text-white" size={20} />
-            </div>
+            </Link>
 
             <button
               type="button"

@@ -4,11 +4,9 @@ interface Props { userId: string }
 
 type Receipt = {
   id: string
-  job_date: string
+  issued_at: string | null
   amount_paid: number
   payment_method: string | null
-  notes: string | null
-  invoice_number: string | null
 }
 
 export async function UserInvoices({ userId }: Props) {
@@ -16,10 +14,10 @@ export async function UserInvoices({ userId }: Props) {
 
   const { data: receipts } = await supabase
     .from('receipts')
-    .select('id, job_date, amount_paid, payment_method, notes, invoice_number')
+    .select('id, issued_at, amount_paid, payment_method')
     .eq('user_id', userId)
     .is('deleted_at', null)
-    .order('job_date', { ascending: false })
+    .order('issued_at', { ascending: false })
     .limit(10) as { data: Receipt[] | null }
 
   if (!receipts?.length) {
@@ -36,12 +34,12 @@ export async function UserInvoices({ userId }: Props) {
         <div key={r.id} className="px-6 py-4 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="font-semibold text-sm text-black truncate">
-              {r.invoice_number ? `Invoice #${r.invoice_number}` : r.notes ?? 'Invoice'}
+              Invoice #{r.id.slice(0, 8).toUpperCase()}
             </p>
             <p className="text-xs text-grey mt-0.5">
-              {new Date(r.job_date).toLocaleDateString('en-ZA', {
+              {new Date(r.issued_at ?? Date.now()).toLocaleDateString('en-ZA', {
                 day: 'numeric', month: 'short', year: 'numeric',
-              })}
+              })} 
               {r.payment_method ? ` · ${r.payment_method}` : ''}
             </p>
           </div>

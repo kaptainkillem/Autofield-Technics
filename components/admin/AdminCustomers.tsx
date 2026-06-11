@@ -6,7 +6,8 @@ interface AdminCustomersProps {
   customers: Profile[]
 }
 
-function timeAgo(dateStr: string) {
+function timeAgo(dateStr: string | null) {
+  if (!dateStr) return 'Recently'
   const diff = Date.now() - new Date(dateStr).getTime()
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   if (days === 0) return 'Today'

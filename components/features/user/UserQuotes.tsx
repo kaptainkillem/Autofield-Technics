@@ -4,8 +4,7 @@ interface Props { userId: string }
 
 type Quote = {
   id: string
-  service_type: string | null
-  description: string
+  description: string | null
   status: 'pending' | 'sent' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
   created_at: string
 }
@@ -15,7 +14,7 @@ export async function UserQuotes({ userId }: Props) {
 
   const { data: quotes } = await supabase
     .from('quotes')
-    .select('id, created_at, service_type, status, description')
+    .select('id, created_at, status, description')
     .eq('user_id', userId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
@@ -47,7 +46,7 @@ export async function UserQuotes({ userId }: Props) {
         <div key={q.id} className="px-6 py-4 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="font-semibold text-sm text-black truncate">
-              {q.service_type ?? 'General service'}
+              {q.description?.slice(0, 30) ?? 'General service'}
             </p>
             <p className="text-xs text-grey mt-0.5 truncate">{q.description}</p>
           </div>

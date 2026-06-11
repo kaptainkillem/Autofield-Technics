@@ -56,11 +56,8 @@ export function AdminInvoices({ receipts }: AdminInvoicesProps) {
               >
                 <td className="px-4 py-3">
                   <p className="text-xs font-mono text-grey-medium">
-                    {inv.invoice_number ?? inv.id.slice(0, 8).toUpperCase()}
+                    {inv.id.slice(0, 8).toUpperCase()}
                   </p>
-                  {inv.notes && (
-                    <p className="text-xs text-grey mt-0.5">{inv.notes}</p>
-                  )}
                 </td>
                 <td className="px-4 py-3 text-grey hidden md:table-cell capitalize">
                   {inv.payment_method ?? '—'}
@@ -69,7 +66,7 @@ export function AdminInvoices({ receipts }: AdminInvoicesProps) {
                   R {inv.amount_paid.toLocaleString('en-ZA')}
                 </td>
                 <td className="px-4 py-3 text-grey hidden sm:table-cell">
-                  {timeAgo(inv.job_date)}
+                  {timeAgo(inv.issued_at ?? '')}
                 </td>
               </tr>
             ))}

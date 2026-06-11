@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { Database } from '@/types/database'
 
-type ReviewInsert = Database['public']['Tables']['reviews']['Insert']
+type ReviewRow = Database['public']['Tables']['reviews']['Row']
+type ReviewInsert = {
+  [K in keyof ReviewRow]?: ReviewRow[K]
+} & { customer_name: string; rating: number; review_text: string }
 
 export function ReviewForm() {
   const [rating, setRating]       = useState(0)
@@ -46,9 +49,10 @@ export function ReviewForm() {
       status:           'pending',
     }
 
-    const { error: supabaseError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: supabaseError } = await (supabase as any)
       .from('reviews')
-      .insert(payload)
+      .insert([payload])
 
     setLoading(false)
 

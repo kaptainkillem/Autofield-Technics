@@ -72,32 +72,38 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['quotes']['Insert']>
       }
       reviews: {
-  Row: {
-    id: string
-    user_id: string | null
-    quote_id: string | null
-    customer_name: string
-    vehicle_serviced: string | null
-    rating: number
-    review_text: string
-    status: 'pending' | 'approved' | 'rejected'
-    moderation_notes: string | null
-    approved_at: string | null
-    deleted_at: string | null
-    created_at: string
-    updated_at: string
-  }
-  Insert: {
-    customer_name: string
-    rating: number
-    review_text: string
-    vehicle_serviced?: string | null
-    status?: 'pending' | 'approved' | 'rejected'
-    user_id?: string | null
-    quote_id?: string | null
-  }
-  Update: Partial<Database['public']['Tables']['reviews']['Insert']>
-}
+        Row: {
+          id: string
+          user_id: string | null
+          quote_id: string | null
+          customer_name: string
+          vehicle_serviced: string | null
+          rating: number
+          review_text: string
+          status: 'pending' | 'approved' | 'rejected'
+          moderation_notes: string | null
+          approved_at: string | null
+          deleted_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          quote_id?: string | null
+          customer_name: string
+          vehicle_serviced?: string | null
+          rating: number
+          review_text: string
+          status?: 'pending' | 'approved' | 'rejected'
+          moderation_notes?: string | null
+          approved_at?: string | null
+          deleted_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['reviews']['Insert']>
+      }
       receipts: {
         Row: {
           id: string
@@ -105,6 +111,7 @@ export interface Database {
           quote_id: string | null
           amount_paid: number
           payment_method: string | null
+          job_date: string | null
           issued_at: string | null
           deleted_at: string | null
         }

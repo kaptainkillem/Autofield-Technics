@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Database } from '@/types/database'
 
 type Quote  = Database['public']['Tables']['quotes']['Row']
-type Status = Quote['status']
+type Status = NonNullable<Quote['status']>
 
 interface QuotesInboxProps {
   quotes: Quote[]
@@ -46,7 +46,7 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
       q.customer_name.toLowerCase().includes(term) ||
       (q.vehicle_make  ?? '').toLowerCase().includes(term) ||
       (q.vehicle_model ?? '').toLowerCase().includes(term) ||
-      (q.service_type  ?? '').toLowerCase().includes(term)
+      (q.description ?? '').toLowerCase().includes(term)
     return matchStatus && matchSearch
   })
 
@@ -55,7 +55,7 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
       .filter(Boolean).join(' ')
     const msg = encodeURIComponent(
       `Hi ${quote.customer_name}, this is Autofield Technics regarding your quote request` +
-      `${quote.service_type ? ` for ${quote.service_type}` : ''}` +
+      `${quote.description ? ` for ${quote.description.slice(0, 30)}` : ''}` +
       `${vehicle ? ` on your ${vehicle}` : ''}.`
     )
     window.open(`https://wa.me/${WA_NUMBER}?text=${msg}`, '_blank')
@@ -127,16 +127,14 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
                       .filter(Boolean).join(' ') || '—'}
                   </td>
                   <td className="px-4 py-3 text-grey hidden lg:table-cell">
-                    {quote.service_type ?? '—'}
+                    {quote.description?.slice(0, 30) ?? '—'}
                   </td>
                   <td className="px-4 py-3 font-semibold text-black hidden lg:table-cell">
-                    {quote.estimated_quote
-                      ? `R ${quote.estimated_quote.toLocaleString('en-ZA')}`
-                      : 'TBD'}
+                    {'TBD'}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${STATUS_STYLES[quote.status]}`}>
-                      {quote.status}
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${quote.status ? STATUS_STYLES[quote.status] : 'bg-grey-lightest text-grey'}`}>
+                      {quote.status ?? 'pending'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
