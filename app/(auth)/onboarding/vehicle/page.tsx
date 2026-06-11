@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { supabaseHelpers } from '@/lib/supabase';
 import { SiteLogo } from '@/components/common/SiteLogo';
 import { SITE_CONFIG } from '@/lib/site-config';
+import { sanitizeFormError } from '@/lib/auth-utils';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -44,7 +45,7 @@ export default function OnboardingVehiclePage() {
 
     if (vehicleError) {
       setLoading(false);
-      setError(vehicleError.message);
+      setError(sanitizeFormError(vehicleError));
       return;
     }
 
@@ -52,7 +53,7 @@ export default function OnboardingVehiclePage() {
 
     if (profileError) {
       setLoading(false);
-      setError(profileError.message);
+      setError(sanitizeFormError(profileError));
       return;
     }
 
