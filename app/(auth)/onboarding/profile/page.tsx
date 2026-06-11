@@ -6,6 +6,7 @@ import { User, Phone, Loader2, AlertCircle } from 'lucide-react';
 import { supabaseHelpers } from '@/lib/supabase';
 import { SiteLogo } from '@/components/common/SiteLogo';
 import { SITE_CONFIG } from '@/lib/site-config';
+import { sanitizeFormError } from '@/lib/auth-utils';
 
 export default function OnboardingProfilePage() {
   const router = useRouter();
@@ -39,7 +40,7 @@ export default function OnboardingProfilePage() {
     setLoading(false);
 
     if (upsertError) {
-      setError(upsertError.message);
+      setError(sanitizeFormError(upsertError));
       return;
     }
 

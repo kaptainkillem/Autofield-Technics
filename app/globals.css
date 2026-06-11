@@ -3,26 +3,27 @@
 
 @theme {
   /* Brand Colors */
-  --color-primary: var(--color-primary);
-  --color-primary-dark: var(--color-primary-dark);
-  --color-primary-light: var(--color-primary-light);
+  --color-primary: #5B9BD5;
+  --color-primary-dark: #2E75B6;
+  --color-primary-light: #D5E8F0;
   
-  --color-grey: var(--color-grey-deep);
-  --color-grey-light: var(--color-grey-light);
-  --color-grey-lightest: var(--color-grey-lightest);
-  --color-grey-medium: var(--color-grey-medium);
+  --color-grey: #595959;
+  --color-grey-dark: #333333;
+  --color-grey-light: #E8E8E8;
+  --color-grey-lightest: #F5F5F5;
+  --color-grey-medium: #B3B3B3;
 
   /* Semantic Colors */
-  --color-success: var(--color-success);
-  --color-error: var(--color-error);
+  --color-success: #4CAF50;
+  --color-error: #F44336;
 
   /* Typography */
-  --font-sans: var(--font-primary);
-  --font-mono: var(--font-mono);
+  --font-sans: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Courier New", monospace;
 
   /* Spacing & Radius */
-  --radius-base: var(--radius-base);
-  --shadow-base: var(--shadow-base);
+  --radius-base: 8px;
+  --shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 /* Custom Component Utilities (v4 Style) */
@@ -61,5 +62,14 @@
 body {
   background: var(--color-white);
   color: var(--color-grey-deep);
-  font-family: var(--font-primary);
+  font-family: var(--font-sans);
+}
+
+@layer base {
+  h1, h2, h3 {
+    color: var(--color-black);
+  }
+  h4 {
+    color: var(--color-grey);
+  }
 }

@@ -19,7 +19,9 @@ const config: Config = {
         },
         grey: {
           DEFAULT: colors.neutral.deepGrey,   // #595959
+          dark: '#333333',                     // Dark text, high contrast
           light: colors.neutral.lightGrey,    // #E8E8E8
+          lightest: '#F5F5F5',                // Subtle backgrounds
           medium: colors.neutral.mediumGrey,  // #B3B3B3
         },
         success: colors.semantic.success,     // #4CAF50

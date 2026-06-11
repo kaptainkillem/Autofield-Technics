@@ -1,8 +1,8 @@
 {
-  "project_type": "Next.js 15 Fullstack",
-  "styling": "Tailwind CSS",
+  "project_type": "Next.js 16 Fullstack",
+  "styling": "Tailwind CSS v4",
   "database": "Supabase (PostgreSQL)",
-  "auth": "NextAuth.js",
+  "auth": "NextAuth.js + Supabase Auth",
   "rules": [
     "STRICT: Never use hex codes (e.g., #5B9BD5) in components.",
     "STRICT: Never use arbitrary Tailwind values (e.g., bg-[#5B9BD5]).",
@@ -12,6 +12,14 @@
     "Primary buttons must use the .btn-primary utility class",
     "Ensure all API routes are protected by middleware for /admin paths",
     "Use Server Components by default, add 'use client' only when necessary",
-    "All currency must be formatted in South African Rands (ZAR)"
+    "All currency must be formatted in South African Rands (ZAR)",
+    "All pages with database queries must export 'export const dynamic = 'force-dynamic'' at the top of the file.",
+    "Sanitize all auth errors before rendering to UI — use sanitizeAuthError() from @/lib/auth-utils.",
+    "Sanitize all database/form errors before rendering to UI — use sanitizeFormError() from @/lib/auth-utils.",
+    "Use named imports from lucide-react for tree-shaking. Never import '* as Icons' from lucide-react.",
+    "Never render raw error.message from Supabase directly to the UI.",
+    "All database tables must have RLS enabled in schema.sql with appropriate policies.",
+    "Admin check functions must use SECURITY DEFINER in Postgres.",
+    "When wrapping Button in Link for navigation, pass href to CTA prop and let the component handle the Link wrapper."
   ]
 }

@@ -4,12 +4,16 @@ interface ServicesHeroProps {
   title: string
   description?: string
   showQuoteButton?: boolean
+  ctaText?: string
+  ctaHref?: string
 }
 
 export function ServicesHero({
   title,
   description,
   showQuoteButton = false,
+  ctaText,
+  ctaHref,
 }: ServicesHeroProps) {
   return (
     <section className="bg-grey-light px-4 pt-16 md:px-20 md:pt-20">
@@ -20,9 +24,14 @@ export function ServicesHero({
             {description}
           </p>
         )}
-        {showQuoteButton && (
+        {showQuoteButton && !ctaText && (
           <Link href="/quote" className="btn-primary inline-block">
             Get a Free Quote
+          </Link>
+        )}
+        {ctaText && ctaHref && (
+          <Link href={ctaHref} className="btn-primary inline-block">
+            {ctaText}
           </Link>
         )}
       </div>

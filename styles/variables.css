@@ -10,6 +10,7 @@
   /* Colors - Neutral */
   --color-white: #FFFFFF;
   --color-black: #000000;
+  --color-grey-dark: #333333;
   --color-grey-deep: #595959;
   --color-grey-light: #E8E8E8;
   --color-grey-lightest: #F5F5F5;
@@ -139,7 +140,6 @@ body {
 h1 {
   font-size: var(--text-4xl);
   font-weight: var(--font-bold);
-  color: var(--color-black);
   line-height: var(--line-height-tight);
   margin: var(--space-0) var(--space-0) var(--space-6);
 }
@@ -147,7 +147,6 @@ h1 {
 h2 {
   font-size: var(--text-3xl);
   font-weight: var(--font-bold);
-  color: var(--color-black);
   line-height: var(--line-height-tight);
   margin: var(--space-0) var(--space-0) var(--space-5);
 }
@@ -155,7 +154,6 @@ h2 {
 h3 {
   font-size: var(--text-2xl);
   font-weight: var(--font-semibold);
-  color: var(--color-black);
   line-height: var(--line-height-tight);
   margin: var(--space-0) var(--space-0) var(--space-4);
 }
@@ -163,7 +161,6 @@ h3 {
 h4 {
   font-size: var(--text-xl);
   font-weight: var(--font-semibold);
-  color: var(--color-grey-deep);
   line-height: var(--line-height-normal);
   margin: var(--space-0) var(--space-0) var(--space-3);
 }
@@ -210,7 +207,7 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(91, 155, 213, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 input:disabled,
@@ -366,11 +363,11 @@ li {
 
 /* Gradients */
 .gradient-primary {
-  background: linear-gradient(135deg, #5B9BD5 0%, #2E75B6 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
 }
 
 .gradient-subtle {
-  background: linear-gradient(135deg, #F5F5F5 0%, #FFFFFF 100%);
+  background: linear-gradient(135deg, var(--color-grey-lightest) 0%, var(--color-white) 100%);
 }
 
 /* Animations */
