@@ -1,7 +1,9 @@
+
 'use client'
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { supabase } from '@/lib/supabase'
 
 const SERVICE_OPTIONS = [
   'Oil Change',
@@ -15,71 +17,90 @@ const SERVICE_OPTIONS = [
   'Other',
 ]
 
-const WHATSAPP_NUMBER = '27000000000' // TODO: replace with real number in .env
+const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '27000000000'
+
+// The mechanic's user_id — set this in .env as NEXT_PUBLIC_MECHANIC_USER_ID
+// This is the Supabase auth uid of the admin/mechanic account
+const MECHANIC_USER_ID = process.env.NEXT_PUBLIC_MECHANIC_USER_ID ?? ''
 
 export function QuoteForm() {
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
   const [form, setForm] = useState({
+    customerName: '',
+    customerPhone: '',
     brand: '',
     model: '',
     year: '',
     service: SERVICE_OPTIONS[0],
     description: '',
-    image: null as File | null,
-    video: null as File | null,
   })
 
   function handleChange(
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null
-    setForm((prev) => ({ ...prev, [e.target.name]: file }))
-  }
-
   function buildWhatsAppMessage() {
-    const lines = [
-      `🔧 *Quote Request — Autofield Technics*`,
-      ``,
-      `🚗 *Vehicle:* ${form.brand} ${form.model} (${form.year})`,
-      `🛠️ *Service:* ${form.service}`,
-      ``,
-      `📝 *Description:*`,
-      form.description || 'No description provided.',
-    ]
-    return encodeURIComponent(lines.join('\n'))
+    return encodeURIComponent(
+      [
+        `🔧 *Quote Request — Autofield Technics*`,
+        ``,
+        `👤 *Name:* ${form.customerName}`,
+        `📞 *Phone:* ${form.customerPhone}`,
+        `🚗 *Vehicle:* ${form.brand} ${form.model} (${form.year})`,
+        `🛠️ *Service:* ${form.service}`,
+        ``,
+        `📝 *Description:*`,
+        form.description || 'No description provided.',
+      ].join('\n')
+    )
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    // Save to Supabase using correct column names from database.ts
+   const { error: supabaseError } = await (supabase.from('quotes') as any).insert({
+      user_id: MECHANIC_USER_ID,
+      customer_name: form.customerName,
+      customer_phone: form.customerPhone,
+      vehicle_make: form.brand,
+      vehicle_model: form.model,
+      vehicle_year: form.year ? parseInt(form.year) : null,
+      service_type: form.service,
+      description: form.description || 'No description provided.',
+      status: 'pending',
+    })
+
+    setLoading(false)
+
+    if (supabaseError) {
+      setError('Could not save your request. Please try again.')
+      console.error(supabaseError)
+      return
+    }
+
+    // Open WhatsApp with pre-filled message
     setSubmitted(true)
-    const message = buildWhatsAppMessage()
-    window.open(
-      `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`,
-      '_blank'
-    )
+    window.open(`https://wa.me/${WA_NUMBER}?text=${buildWhatsAppMessage()}`, '_blank')
   }
 
   if (submitted) {
     return (
       <div className="card text-center py-10 flex flex-col items-center gap-4">
         <p className="text-4xl">💬</p>
-        <h3 className="text-lg font-semibold text-black">
-          WhatsApp is opening!
-        </h3>
+        <h3 className="text-lg font-semibold text-black">WhatsApp is opening!</h3>
         <p className="text-small text-grey max-w-xs">
-          Your quote details are pre-filled. Just hit send and we will get
-          back to you within 30 minutes.
+          Your quote details are pre-filled. Just hit send and we will get back
+          to you within 30 minutes.
         </p>
-        <Button
-          variant="secondary"
-          onClick={() => setSubmitted(false)}
-        >
+        <Button variant="secondary" onClick={() => setSubmitted(false)}>
           Submit another quote
         </Button>
       </div>
@@ -89,9 +110,37 @@ export function QuoteForm() {
   return (
     <form onSubmit={handleSubmit} className="card flex flex-col gap-5">
 
-      <h3 className="text-lg font-bold text-black">Vehicle details</h3>
+      <h3 className="text-lg font-bold text-black">Your details</h3>
 
-      {/* Brand + Model side by side */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-grey">Full Name</label>
+          <input
+            name="customerName"
+            type="text"
+            placeholder="John Doe"
+            required
+            value={form.customerName}
+            onChange={handleChange}
+            className="w-full border border-grey-medium rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-primary transition-colors"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-semibold text-grey">WhatsApp Number</label>
+          <input
+            name="customerPhone"
+            type="tel"
+            placeholder="+27 82 000 0000"
+            required
+            value={form.customerPhone}
+            onChange={handleChange}
+            className="w-full border border-grey-medium rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-primary transition-colors"
+          />
+        </div>
+      </div>
+
+      <h3 className="text-lg font-bold text-black pt-1">Vehicle details</h3>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1">
           <label className="text-sm font-semibold text-grey">Car Brand</label>
@@ -119,7 +168,6 @@ export function QuoteForm() {
         </div>
       </div>
 
-      {/* Year */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-grey">Year</label>
         <input
@@ -135,11 +183,8 @@ export function QuoteForm() {
         />
       </div>
 
-      {/* Service */}
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-semibold text-grey">
-          Service Required
-        </label>
+        <label className="text-sm font-semibold text-grey">Service Required</label>
         <select
           name="service"
           required
@@ -148,18 +193,13 @@ export function QuoteForm() {
           className="w-full border border-grey-medium rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-primary transition-colors bg-white"
         >
           {SERVICE_OPTIONS.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
+            <option key={opt} value={opt}>{opt}</option>
           ))}
         </select>
       </div>
 
-      {/* Description */}
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-semibold text-grey">
-          Describe the Problem
-        </label>
+        <label className="text-sm font-semibold text-grey">Describe the Problem</label>
         <textarea
           name="description"
           placeholder="Describe the issue with your car..."
@@ -170,42 +210,16 @@ export function QuoteForm() {
         />
       </div>
 
-      {/* File uploads */}
-      <div className="flex flex-col gap-4 border-t border-grey-medium/30 pt-4">
-        <p className="text-sm font-semibold text-grey">
-          Attach media (optional)
-        </p>
+      {error && (
+        <p className="text-sm text-red-500 font-medium">{error}</p>
+      )}
 
-        <div className="flex flex-col gap-1">
-          <label className="text-sm text-grey">Image of damage</label>
-          <input
-            name="image"
-            type="file"
-            accept="image/*"
-            onChange={handleFile}
-            className="text-sm text-grey file:mr-3 file:py-1.5 file:px-3 file:rounded-base file:border file:border-grey-medium file:text-xs file:font-semibold file:text-grey file:bg-grey-lightest file:cursor-pointer hover:file:border-primary hover:file:text-primary transition-colors"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-sm text-grey">Video of damage</label>
-          <input
-            name="video"
-            type="file"
-            accept="video/*"
-            onChange={handleFile}
-            className="text-sm text-grey file:mr-3 file:py-1.5 file:px-3 file:rounded-base file:border file:border-grey-medium file:text-xs file:font-semibold file:text-grey file:bg-grey-lightest file:cursor-pointer hover:file:border-primary hover:file:text-primary transition-colors"
-          />
-        </div>
-      </div>
-
-      {/* Submit */}
-      <Button type="submit" variant="primary" className="w-full justify-center">
-        Request Quote via WhatsApp 💬
+      <Button type="submit" variant="primary" disabled={loading}>
+        {loading ? 'Saving...' : 'Request Quote via WhatsApp 💬'}
       </Button>
 
-      <p className="text-xs text-grey-medium text-center">
-        Tapping the button will open WhatsApp with your details pre-filled.
+    <p className="text-xs text-grey-medium text-center">
+        Your details are saved and WhatsApp will open with your request pre-filled.
       </p>
 
     </form>

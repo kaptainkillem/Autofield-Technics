@@ -85,49 +85,32 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Admin check function (SECURITY DEFINER to bypass RLS)
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS BOOLEAN AS $$
-BEGIN
-  RETURN (
-    SELECT COALESCE(
-      (SELECT raw_user_meta_data->>'role' = 'admin' 
-       FROM auth.users 
-       WHERE id = auth.uid()),
-      false
-    )
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- RLS for services (public read-only, admin write)
-ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Services are publicly readable" ON public.services FOR SELECT USING (true);
-CREATE POLICY "Only admins can insert services" ON public.services FOR INSERT WITH CHECK (public.is_admin());
-CREATE POLICY "Only admins can update services" ON public.services FOR UPDATE USING (public.is_admin());
-CREATE POLICY "Only admins can delete services" ON public.services FOR DELETE USING (public.is_admin());
+CREATE TABLE public.reviews (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    customer_name TEXT NOT NULL,
+    vehicle_serviced TEXT,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    review_text TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    approved_at TIMESTAMP WITH TIME ZONE,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- RLS for categories (public read-only, admin write)
-ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Categories are publicly readable" ON public.categories FOR SELECT USING (true);
-CREATE POLICY "Only admins can insert categories" ON public.categories FOR INSERT WITH CHECK (public.is_admin());
-CREATE POLICY "Only admins can update categories" ON public.categories FOR UPDATE USING (public.is_admin());
-CREATE POLICY "Only admins can delete categories" ON public.categories FOR DELETE USING (public.is_admin());
-
--- RLS for quotes (user isolation)
-ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view own quotes" ON public.quotes FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own quotes" ON public.quotes FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own quotes" ON public.quotes FOR UPDATE USING (auth.uid() = user_id);
-
--- RLS for reviews (user isolation)
+-- Public can read approved reviews
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view own reviews" ON public.reviews FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own reviews" ON public.reviews FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own reviews" ON public.reviews FOR UPDATE USING (auth.uid() = user_id);
 
--- RLS for receipts (user isolation)
-ALTER TABLE public.receipts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view own receipts" ON public.receipts FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own receipts" ON public.receipts FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own receipts" ON public.receipts FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Anyone can read approved reviews"
+ON public.reviews FOR SELECT
+USING (status = 'approved' AND deleted_at IS NULL);
+
+-- Anyone can submit a review (no login required)
+CREATE POLICY "Anyone can submit a review"
+ON public.reviews FOR INSERT
+WITH CHECK (true);
+
+-- Only service role (admin) can update/approve
+CREATE POLICY "Service role can update reviews"
+ON public.reviews FOR UPDATE
+USING (true);
