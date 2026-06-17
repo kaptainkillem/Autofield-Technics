@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, Lock, Loader2, AlertCircle, CheckCircle, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabaseHelpers } from '@/lib/supabase';
 import { SiteLogo } from '@/components/common/SiteLogo';
 import { SITE_CONFIG } from '@/lib/site-config';
@@ -85,9 +86,11 @@ export default function SignUpPage() {
 
     if (authError) {
       setError(sanitizeAuthError(authError));
+      toast.error(sanitizeAuthError(authError));
       return;
     }
 
+    toast.success('Account created! Check your email to verify.');
     setSuccess(true);
   };
 

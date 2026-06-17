@@ -11,7 +11,7 @@
   --color-grey-dark: #333333;
   --color-grey-light: #E8E8E8;
   --color-grey-lightest: #F5F5F5;
-  --color-grey-medium: #B3B3B3;
+  --color-grey-medium: #767676;
 
   /* Semantic Colors */
   --color-success: #4CAF50;
@@ -55,8 +55,28 @@
   @apply text-sm font-normal leading-normal;
 }
 
+@utility form-input {
+  @apply w-full border border-grey-medium rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 transition-colors;
+}
+
+@utility form-input-error {
+  @apply w-full border border-error rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-error focus-visible:ring-2 focus-visible:ring-error/30 transition-colors;
+}
+
+@utility form-input-success {
+  @apply w-full border border-success rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-success focus-visible:ring-2 focus-visible:ring-success/30 transition-colors;
+}
+
+@utility form-select {
+  @apply w-full border border-grey-medium rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 transition-colors bg-white;
+}
+
+@utility form-textarea {
+  @apply w-full border border-grey-medium rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 transition-colors resize-none;
+}
+
 @utility card {
-  @apply bg-white rounded-base shadow-base p-6 transition-shadow hover:shadow-md;
+  @apply bg-white rounded-base shadow-base p-6 transition-shadow;
 }
 
 body {

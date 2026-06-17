@@ -28,29 +28,36 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-
   const { pathname } = request.nextUrl;
 
+  // Route Classification Bounds Layout Matrix
   const authRoutes = ['/signin', '/signup', '/forgot-password', '/reset-password'];
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
-  const isAdminRoute = pathname.startsWith('/admin');
-  const isDashboardRoute = pathname.startsWith('/dashboard');
+  
+  const isAdminRoute = pathname.startsWith('/dashboard/admin');
+  
+  // 🚀 Fixed: Captures both root /dashboard AND all standalone sub-routes cleanly
+  const isDashboardRoute = pathname.startsWith('/dashboard') && !isAdminRoute;
   const isOnboardingRoute = pathname.startsWith('/onboarding');
 
+  // 🛑 1. ANONYMOUS SESSIONS GATEKEEPING
   if (!user) {
     if (isAdminRoute || isDashboardRoute || isOnboardingRoute) {
+      // Clear out deep paths and send unauthenticated clients straight to check credentials
       return NextResponse.redirect(new URL('/signin', request.url));
     }
     return response;
   }
 
+  // Extract metadata parameters securely from user payload
   const meta = user.user_metadata ?? {};
   const role = meta.role ?? 'client';
   const onboardingCompleted = meta.onboarding_completed ?? false;
 
+  // 🔒 2. AUTHENTICATED ENTRY PROTECTIONS (Prevents logged-in users from seeing signin/signup)
   if (isAuthRoute) {
     if (role === 'admin') {
-      return NextResponse.redirect(new URL('/admin', request.url));
+      return NextResponse.redirect(new URL('/dashboard/admin', request.url));
     }
     if (onboardingCompleted) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
@@ -58,24 +65,31 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/onboarding/profile', request.url));
   }
 
+  // 🛡️ 3. ADMIN ZONE SHIELDING (Blocks regular clients from entry instantly)
   if (isAdminRoute) {
     if (role === 'admin') {
       return response;
     }
+    // Cross-tenant protection: boot malicious or accidental traffic back to customer space
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
+  // 🚗 4. CLIENT DASHBOARD TRACKING (Guarantees onboarding completion)
   if (isDashboardRoute) {
+    if (role === 'admin') {
+      return NextResponse.redirect(new URL('/dashboard/admin', request.url));
+    }
     if (!onboardingCompleted) {
       return NextResponse.redirect(new URL('/onboarding/profile', request.url));
     }
     return response;
   }
 
+  // 📋 5. ONBOARDING REGISTRY CONTROL (Prevents re-running steps if done)
   if (isOnboardingRoute) {
     if (onboardingCompleted) {
       return NextResponse.redirect(
-        role === 'admin' ? new URL('/admin', request.url) : new URL('/dashboard', request.url)
+        role === 'admin' ? new URL('/dashboard/admin', request.url) : new URL('/dashboard', request.url)
       );
     }
     return response;
@@ -85,5 +99,13 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/dashboard/:path*', '/onboarding/:path*', '/signin', '/signup', '/forgot-password', '/reset-password'],
+  matcher: [
+    '/dashboard/:path*', 
+    '/onboarding/:path*', 
+    '/signin', 
+    '/signup', 
+    '/forgot-password', 
+    '/reset-password',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 };

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
 
 export const metadata = {
   title: `Privacy Policy | ${SITE_CONFIG.name}`,
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
 
           <div className="card bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">3. Data Security</h2>
-            <p className="text-grey-dark leading-relaxed">We implement appropriate technical and organisational measures to protect your personal data against unauthorised access, alteration, disclosure, or destruction. All data is processed within South Africa in compliance with POPIA.</p>
+            <p className="text-grey-dark leading-relaxed">We implement appropriate technical and organisational measures to protect your personal data against unauthorised access, alteration, disclosure, or destruction. All data is processed within {SITE_CONFIG.privacy.dataLocation} in compliance with {SITE_CONFIG.privacy.complianceAct}.</p>
           </div>
 
           <div className="card bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">

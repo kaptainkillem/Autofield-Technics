@@ -1,11 +1,6 @@
-type Status = 'Pending' | 'Active' | 'Completed' | 'Cancelled'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
-const STATUS_STYLES: Record<Status, string> = {
-  Pending:   'bg-yellow-100 text-yellow-800',
-  Active:    'bg-blue-100 text-blue-800',
-  Completed: 'bg-green-100 text-green-800',
-  Cancelled: 'bg-red-100 text-red-800',
-}
+type Status = 'Pending' | 'Active' | 'Completed' | 'Cancelled'
 
 const STATUS_DESCRIPTIONS: Record<Status, string> = {
   Pending:   'Awaiting review by our team',
@@ -55,9 +50,7 @@ export function UserQuotes() {
               <p className="font-semibold text-black">{q.service}</p>
               <p className="text-sm text-grey">{q.vehicle}</p>
             </div>
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0 ${STATUS_STYLES[q.status]}`}>
-              {q.status}
-            </span>
+            <StatusBadge status={q.status.toLowerCase()} />
           </div>
 
           {/* Status description */}

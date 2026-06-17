@@ -1,23 +1,14 @@
 // lib/supabase.ts
 // Supabase client setup for Next.js application
 
+import { createBrowserClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/database';
 
-
-// Client-side Supabase client (for browser/public usage)
-export const supabase = createClient<Database>(
+// Client-side Supabase client using @supabase/ssr for cookie-based session sync
+export const supabase = createBrowserClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-    },
-  }
 );
 
 // Server-side Supabase client (for API routes - use service role key)
@@ -54,9 +45,7 @@ export const supabaseHelpers = {
     signIn: async (email: string, password: string) => {
       return _supabase.auth.signInWithPassword({ email, password });
     },
-    signOut: async () => {
-      return _supabase.auth.signOut();
-    },
+
     getSession: async () => {
       return _supabase.auth.getSession();
     },
