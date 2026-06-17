@@ -3,34 +3,31 @@
 import React, { ComponentPropsWithoutRef, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { LogIn, LogOut, User } from 'lucide-react'
+import { LogIn, LogOut, Loader2, User } from 'lucide-react'
 import { SiteLogo } from './SiteLogo'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
 import { supabase } from '@/lib/supabase'
 
 interface HeaderProps extends ComponentPropsWithoutRef<'header'> {}
 
-const NAV_LINKS = [
-  { label: 'Services', href: '/services', external: false },
-  { label: 'Emergency Assist', href: `tel:${SITE_CONFIG.phone}`, external: true },
-  { label: 'Reviews', href: '/reviews', external: false },
-  { label: 'Get a Quote', href: '/quote', external: false },
-] as const
+const NAV_LINKS = SITE_CONFIG.navigation.header.map((link) => ({
+  ...link,
+  href: replaceVars(link.href, { phone: SITE_CONFIG.phone }),
+}))
 
 export const Header: React.FC<HeaderProps> = ({
   className,
   ...props
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [user, setUser] = useState<ReturnType<typeof supabase.auth.getUser> extends Promise<{ data: { user: infer U } }> ? U : never | null>(null)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const [user, setUser] = useState<any>(null)
   const router = useRouter()
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-    }
-    checkSession()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+    })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
@@ -40,11 +37,31 @@ export const Header: React.FC<HeaderProps> = ({
   }, [])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    if (loggingOut) return
+    setLoggingOut(true)
+    try {
+      await fetch('/api/auth/signout', { method: 'POST' })
+    } catch {
+      // Server-side cookie clearing is best-effort
+    }
+    try {
+      await supabase.auth.signOut()
+    } catch {
+      // Client signOut failure is also best-effort
+    }
     setUser(null)
+    setMobileOpen(false)
     router.push('/')
     router.refresh()
   }
+
+  const dashboardHref = user?.user_metadata?.role === 'admin' ? '/dashboard/admin' : '/dashboard'
+  const initial = (() => {
+    if (!user) return ''
+    const name = user.user_metadata?.full_name ?? user.user_metadata?.name ?? ''
+    if (name) return name.charAt(0).toUpperCase()
+    return user.email?.charAt(0).toUpperCase() ?? ''
+  })()
 
   return (
     <>
@@ -75,10 +92,16 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="flex flex-col items-center gap-3 px-6 py-6 border-b border-white/10">
-          <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-            <User className="text-white" size={24} />
-          </div>
-          <span className="text-sm text-white/70">{user ? user.email : 'Guest'}</span>
+          {user ? (
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white text-lg font-bold">
+              {initial || '?'}
+            </div>
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+              <User className="text-white" size={24} />
+            </div>
+          )}
+          <span className="text-sm text-white/70">{user ? (user.user_metadata?.full_name ?? user.email) : 'Guest'}</span>
         </div>
 
         <nav className="flex flex-col gap-1 px-4 py-4">
@@ -109,10 +132,11 @@ export const Header: React.FC<HeaderProps> = ({
           {user ? (
             <button
               onClick={() => { handleLogout(); setMobileOpen(false); }}
-              className="flex w-full items-center justify-center gap-2 bg-white/10 text-white font-semibold rounded-base px-4 py-3 hover:bg-white/20 transition-colors"
+              disabled={loggingOut}
+              className="flex w-full items-center justify-center gap-2 bg-white/10 text-white font-semibold rounded-base px-4 py-3 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <LogOut className="h-4 w-4" />
-              Logout
+              {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+              {loggingOut ? 'Logging out...' : 'Logout'}
             </button>
           ) : (
             <Link
@@ -164,10 +188,11 @@ export const Header: React.FC<HeaderProps> = ({
             {user ? (
               <button
                 onClick={handleLogout}
-                className="hidden md:inline-flex items-center gap-2 border-2 border-white text-white font-semibold rounded-base px-4 py-2 hover:bg-white hover:text-primary transition-all duration-200"
+                disabled={loggingOut}
+                className="hidden md:inline-flex items-center gap-2 border-2 border-white text-white font-semibold rounded-base px-4 py-2 hover:bg-white hover:text-primary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <LogOut className="h-4 w-4" />
-                Logout
+                {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                {loggingOut ? 'Logging out...' : 'Logout'}
               </button>
             ) : (
               <Link
@@ -180,11 +205,15 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
             <Link
-              href="/dashboard"
+              href={user ? dashboardHref : '/signin'}
               className="hidden md:flex w-10 h-10 min-w-10 min-h-10 rounded-full bg-white/20 items-center justify-center overflow-hidden hover:bg-white/30 transition-colors"
-              aria-label="Dashboard"
+              aria-label={user ? 'Dashboard' : 'Login'}
             >
-              <User className="text-white" size={20} />
+              {user && initial ? (
+                <span className="text-white text-sm font-bold">{initial}</span>
+              ) : (
+                <User className="text-white" size={20} />
+              )}
             </Link>
 
             <button

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { SITE_CONFIG } from '@/lib/site-config'
 
 interface ServicesHeroProps {
   title: string
@@ -26,7 +27,7 @@ export function ServicesHero({
         )}
         {showQuoteButton && !ctaText && (
           <Link href="/quote" className="btn-primary inline-block">
-            Get a Free Quote
+            {SITE_CONFIG.services.ctaText || 'Get a Free Quote'}
           </Link>
         )}
         {ctaText && ctaHref && (

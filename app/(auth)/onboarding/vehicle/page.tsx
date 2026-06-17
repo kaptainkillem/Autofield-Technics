@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Car, Calendar, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { supabaseHelpers } from '@/lib/supabase';
+import { Database } from '@/types/database';
 import { SiteLogo } from '@/components/common/SiteLogo';
 import { SITE_CONFIG } from '@/lib/site-config';
 import { sanitizeFormError } from '@/lib/auth-utils';
@@ -20,50 +21,81 @@ export default function OnboardingVehiclePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  // Around line 30, update your handleSubmit method to check and update pending entries:
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError(null);
 
-    if (!make.trim() || !model.trim() || !year.trim()) {
-      setError('Please fill in all fields.');
-      return;
-    }
+  if (!make.trim() || !model.trim() || !year.trim()) {
+    setError('Please fill in all fields.');
+    return;
+  }
 
-    const yearNum = parseInt(year, 10);
-    if (isNaN(yearNum) || yearNum < 1900 || yearNum > 2027) {
-      setError('Year must be between 1900 and 2027.');
-      return;
-    }
+  const yearNum = parseInt(year, 10);
+  if (isNaN(yearNum) || yearNum < 1900 || yearNum > 2027) {
+    setError('Year must be between 1900 and 2027.');
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    const { error: vehicleError } = await supabaseHelpers.vehicles.create({
-      make: make.trim(),
-      model: model.trim(),
-      year: yearNum,
-    });
+  // 1. Write the initial vehicle record to the database matrix
+  const { error: vehicleError } = await supabaseHelpers.vehicles.create({
+    make: make.trim(),
+    model: model.trim(),
+    year: yearNum,
+  });
 
-    if (vehicleError) {
-      setLoading(false);
-      setError(sanitizeFormError(vehicleError));
-      return;
-    }
-
-    const { error: profileError } = await supabaseHelpers.profiles.updateOnboarding(true);
-
-    if (profileError) {
-      setLoading(false);
-      setError(sanitizeFormError(profileError));
-      return;
-    }
-
-    await supabase.auth.updateUser({
-      data: { onboarding_completed: true },
-    });
-
+  if (vehicleError) {
     setLoading(false);
-    router.push('/dashboard');
-  };
+    setError(sanitizeFormError(vehicleError));
+    return;
+  }
+
+  // 2. Clear out the onboarding tracking state flag parameters
+  const { error: profileError } = await supabaseHelpers.profiles.updateOnboarding(true);
+
+  if (profileError) {
+    setLoading(false);
+    setError(sanitizeFormError(profileError));
+    return;
+  }
+
+  // 3. Sync authentication state context tags
+  await supabase.auth.updateUser({
+    data: { onboarding_completed: true },
+  });
+
+  // 🚀 4. NEW: Claim the anonymous quote right before completing setup
+  try {
+    const pendingQuoteId = localStorage.getItem('pending_quote_id');
+    if (pendingQuoteId) {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        // Map the existing quote row directly onto this new customer user ID
+        await (supabase as any)
+          .from('quotes')
+          .update({ 
+            user_id: currentUser.id,
+            customer_email: currentUser.email 
+          })
+          .eq('id', pendingQuoteId);
+          
+        // Flush storage so it never re-triggers on future changes
+        localStorage.removeItem('pending_quote_id');
+      }
+    }
+  } catch (claimError) {
+    console.error('Silent fail on linking background quote:', claimError);
+    // Left un-thrown intentionally so user experience isn't blocked by background operations
+  }
+
+  setLoading(false);
+
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
+  const role = currentUser?.user_metadata?.role ?? 'client';
+  router.push(role === 'admin' ? '/dashboard/admin' : '/dashboard');
+};
 
   return (
     <div className="w-full max-w-4xl md:min-h-[560px] md:grid md:grid-cols-2 rounded-base shadow-lg overflow-hidden">

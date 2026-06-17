@@ -1,3 +1,5 @@
+import { Star } from 'lucide-react'
+
 interface ReviewCardProps {
   id: string
   customerName: string
@@ -21,13 +23,29 @@ export function ReviewCard({
     .toUpperCase()
     .slice(0, 2)
 
+  const AVATAR_COLORS = [
+    'bg-primary',
+    'bg-green-600',
+    'bg-orange-500',
+    'bg-purple-600',
+    'bg-teal-500',
+    'bg-rose-500',
+    'bg-indigo-500',
+    'bg-amber-600',
+  ]
+
+  const colorIndex = customerName
+    .split('')
+    .reduce((acc, c) => acc + c.charCodeAt(0), 0) % AVATAR_COLORS.length
+
+  const avatarColor = AVATAR_COLORS[colorIndex]
+
   return (
     <div className="card flex flex-col gap-3">
 
-      {/* Header: avatar + name + stars */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+          <div className={`w-10 h-10 rounded-full ${avatarColor} flex items-center justify-center text-white text-sm font-semibold flex-shrink-0`}>
             {initials}
           </div>
           <div>
@@ -40,26 +58,20 @@ export function ReviewCard({
           </div>
         </div>
 
-        {/* Star display */}
         <div className="flex gap-0.5">
           {[1, 2, 3, 4, 5].map((star) => (
-            <span
+            <Star
               key={star}
-              className={`text-lg leading-none ${
-                star <= rating ? 'text-yellow-400' : 'text-grey-medium'
-              }`}
-            >
-              ★
-            </span>
+              size={18}
+              className={star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-grey-medium'}
+            />
           ))}
         </div>
       </div>
 
-      {/* Review text */}
       <p className="text-body text-sm">{reviewText}</p>
 
-      {/* Date */}
-      <p className="text-xs text-grey-medium">{date}</p>
+      <p className="text-xs text-grey">{date}</p>
 
     </div>
   )

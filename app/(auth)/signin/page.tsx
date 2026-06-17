@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, Lock, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { toast } from 'sonner';
 import { SiteLogo } from '@/components/common/SiteLogo';
 import { SITE_CONFIG } from '@/lib/site-config';
 
@@ -44,9 +45,12 @@ export default function SignInPage() {
 
       if (!res.ok || data.error) {
         setError(data.error || 'Sign in failed. Please try again.');
+        toast.error(data.error || 'Sign in failed. Please try again.');
         setLoading(false);
         return;
       }
+
+      toast.success('Signed in successfully!');
 
       window.location.href = '/dashboard';
     } catch {
@@ -62,7 +66,7 @@ export default function SignInPage() {
           <SiteLogo />
         </a>
         <h1 className="text-2xl md:text-3xl font-bold leading-tight">
-          Welcome<br />Back
+          {SITE_CONFIG.dashboard.clientTitle}
         </h1>
         <p className="mt-4 text-white/80 text-base leading-relaxed">
           Sign in to manage your services, quotes, and reviews from your {SITE_CONFIG.name} dashboard.

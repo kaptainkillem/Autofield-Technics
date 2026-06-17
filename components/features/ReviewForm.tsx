@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Star, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { Database } from '@/types/database'
@@ -67,8 +68,8 @@ export function ReviewForm() {
 
   if (submitted) {
     return (
-      <div className="card text-center py-10">
-        <p className="text-2xl mb-3">✅</p>
+      <div className="card text-center py-10 bg-green-50 border border-green-200">
+        <CheckCircle2 className="h-10 w-10 text-success mx-auto mb-3" />
         <h3 className="text-lg font-semibold text-black mb-1">
           Thank you for your review!
         </h3>
@@ -92,7 +93,7 @@ export function ReviewForm() {
           required
           value={form.customerName}
           onChange={handleChange}
-          className="w-full border border-grey-medium rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-primary transition-colors"
+          className="form-input"
         />
       </div>
 
@@ -105,7 +106,7 @@ export function ReviewForm() {
           placeholder="e.g. BMW M4 2021"
           value={form.vehicleServiced}
           onChange={handleChange}
-          className="w-full border border-grey-medium rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-primary transition-colors"
+          className="form-input"
         />
       </div>
 
@@ -120,12 +121,13 @@ export function ReviewForm() {
               onClick={() => setRating(star)}
               onMouseEnter={() => setHovered(star)}
               onMouseLeave={() => setHovered(0)}
-              className="text-3xl leading-none transition-colors focus:outline-none"
+              className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-full transition-colors"
               aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
             >
-              <span className={star <= (hovered || rating) ? 'text-yellow-400' : 'text-grey-medium'}>
-                ★
-              </span>
+              <Star
+                size={32}
+                className={star <= (hovered || rating) ? 'text-yellow-400 fill-yellow-400' : 'text-grey-medium'}
+              />
             </button>
           ))}
         </div>
@@ -146,7 +148,7 @@ export function ReviewForm() {
           rows={4}
           value={form.reviewText}
           onChange={handleChange}
-          className="w-full border border-grey-medium rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-primary transition-colors resize-none"
+          className="form-textarea"
         />
       </div>
 

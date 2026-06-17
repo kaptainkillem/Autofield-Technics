@@ -8,7 +8,7 @@ import { ServicesHero } from '@/components/features/ServicesHero'
 import { MobileStickyCTA } from '@/components/ui/MobileStickyCTA'
 import { ShieldCheck, Clock, Award, CheckCircle2 } from 'lucide-react'
 import type { Database } from '@/types/database'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
 
 type ServicesRow = Database['public']['Tables']['services']['Row']
 type CategoryRow = Database['public']['Tables']['categories']['Row']
@@ -157,7 +157,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
               </div>
               <div className="flex items-center gap-3">
                 <Clock className="text-primary" size={20} />
-                <span className="text-grey-dark">Rapid Joburg Roadside Dispatch Response</span>
+                <span className="text-grey-dark">{replaceVars(SITE_CONFIG.services.featureTagline, { city: SITE_CONFIG.city })}</span>
               </div>
             </div>
 

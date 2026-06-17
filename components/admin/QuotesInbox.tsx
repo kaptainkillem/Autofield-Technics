@@ -1,29 +1,22 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Database } from '@/types/database'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { QuoteDetailModal } from '@/components/ui/QuoteDetailModal'
+import { MessageCircle, ArrowUpRight } from 'lucide-react'
 
-type Quote  = Database['public']['Tables']['quotes']['Row']
+type Quote = Database['public']['Tables']['quotes']['Row']
 type Status = NonNullable<Quote['status']>
 
 interface QuotesInboxProps {
   quotes: Quote[]
 }
 
-const STATUS_STYLES: Record<Status, string> = {
-  pending:   'bg-yellow-100 text-yellow-800',
-  sent:      'bg-blue-100   text-blue-800',
-  accepted:  'bg-green-100  text-green-800',
-  rejected:  'bg-red-100    text-red-800',
-  completed: 'bg-green-100  text-green-800',
-  cancelled: 'bg-red-100    text-red-800',
-}
-
 const FILTERS: (Status | 'all')[] = [
   'all', 'pending', 'sent', 'accepted', 'completed', 'cancelled',
 ]
-
-const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '27000000000'
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -38,8 +31,11 @@ function timeAgo(dateStr: string) {
 export function QuotesInbox({ quotes }: QuotesInboxProps) {
   const [filter, setFilter] = useState<Status | 'all'>('all')
   const [search, setSearch] = useState('')
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null)
+  const [allQuotes, setAllQuotes] = useState(quotes)
+  const router = useRouter()
 
-  const visible = quotes.filter((q) => {
+  const visible = allQuotes.filter((q) => {
     const matchStatus = filter === 'all' || q.status === filter
     const term        = search.toLowerCase()
     const matchSearch =
@@ -50,15 +46,37 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
     return matchStatus && matchSearch
   })
 
-  function openWhatsApp(quote: Quote) {
-    const vehicle = [quote.vehicle_make, quote.vehicle_model, quote.vehicle_year]
-      .filter(Boolean).join(' ')
-    const msg = encodeURIComponent(
-      `Hi ${quote.customer_name}, this is Autofield Technics regarding your quote request` +
-      `${quote.description ? ` for ${quote.description.slice(0, 30)}` : ''}` +
-      `${vehicle ? ` on your ${vehicle}` : ''}.`
+  function handleStatusChange(updatedQuote: Quote) {
+    setAllQuotes((prev) =>
+      prev.map((q) => (q.id === updatedQuote.id ? updatedQuote : q))
     )
-    window.open(`https://wa.me/${WA_NUMBER}?text=${msg}`, '_blank')
+    router.refresh()
+  }
+
+  // 🚀 WhatsApp Intent Dispatch URL Builder
+  function triggerWhatsAppQuickReply(e: React.MouseEvent, quote: Quote) {
+    e.stopPropagation() // Prevents opening the QuoteDetailModal layout card concurrently
+
+    // Sanitize phone pattern string rules for clear network routing
+    let cleanPhone = (quote.customer_phone || '').replace(/[^\d]/g, '')
+    if (cleanPhone.startsWith('0') && cleanPhone.length === 10) {
+      cleanPhone = '27' + cleanPhone.substring(1)
+    }
+
+    // Extract integrated description attributes safely
+    const rawDesc = quote.description || ''
+    const serviceTypeMatch = rawDesc.match(/\[Service:\s*([^\]]+)\]/)
+    const serviceType = serviceTypeMatch ? serviceTypeMatch[1] : 'Mechanical Service'
+
+    const messageBody = [
+      `👋 *Hey ${quote.customer_name}!*`,
+      ``,
+      `This is *Prince* from *Fixxr*. I received your quote request on our platform for the *${quote.vehicle_make ?? 'Vehicle'} ${quote.vehicle_model ?? ''}* regarding the *${serviceType}*.`,
+      ``,
+      `I've looked over your vehicle details and put together an estimate breakdown for you. Let me know if you're ready for me to send it over! 🔧`,
+    ].join('\n')
+
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageBody)}`, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -71,7 +89,7 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
           placeholder="Search name, vehicle or service..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 border border-grey-medium rounded-base px-4 py-2 text-sm text-grey focus:outline-none focus:border-primary transition-colors"
+          className="flex-1 form-input"
         />
         <div className="flex gap-2 flex-wrap">
           {FILTERS.map((f) => (
@@ -98,15 +116,14 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
               <th className="text-left px-4 py-3 text-xs font-semibold text-grey uppercase tracking-wide">Customer</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-grey uppercase tracking-wide hidden md:table-cell">Vehicle</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-grey uppercase tracking-wide hidden lg:table-cell">Service</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-grey uppercase tracking-wide hidden lg:table-cell">Quote</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-grey uppercase tracking-wide">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-grey uppercase tracking-wide">Action</th>
+              <th className="text-right px-4 py-3 text-xs font-semibold text-grey uppercase tracking-wide">Action</th>
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-10 text-grey text-sm">
+                <td colSpan={5} className="text-center py-10 text-grey text-sm">
                   No quotes found.
                 </td>
               </tr>
@@ -114,7 +131,8 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
               visible.map((quote) => (
                 <tr
                   key={quote.id}
-                  className="border-b border-grey-medium/20 hover:bg-grey-lightest transition-colors"
+                  onClick={() => setSelectedQuote(quote)}
+                  className="border-b border-grey-medium/20 hover:bg-primary/5 cursor-pointer transition-colors"
                 >
                   <td className="px-4 py-3">
                     <p className="font-medium text-black">{quote.customer_name}</p>
@@ -129,20 +147,19 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
                   <td className="px-4 py-3 text-grey hidden lg:table-cell">
                     {quote.description?.slice(0, 30) ?? '—'}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-black hidden lg:table-cell">
-                    {'TBD'}
-                  </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${quote.status ? STATUS_STYLES[quote.status] : 'bg-grey-lightest text-grey'}`}>
-                      {quote.status ?? 'pending'}
-                    </span>
+                    <StatusBadge status={quote.status ?? 'pending'} />
                   </td>
-                  <td className="px-4 py-3">
+                  {/* 🚀 Dynamic Action Follow-up Cell */}
+                  <td className="px-4 py-3 text-right">
                     <button
-                      onClick={() => openWhatsApp(quote)}
-                      className="text-xs font-semibold text-primary hover:underline whitespace-nowrap"
+                      type="button"
+                      onClick={(e) => triggerWhatsAppQuickReply(e, quote)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] hover:bg-[#20ba56] text-white text-xs font-bold rounded-base shadow-sm transition-all"
                     >
-                      💬 WhatsApp
+                      <MessageCircle size={13} className="fill-white" />
+                      <span className="hidden sm:inline">Follow-up</span>
+                      <ArrowUpRight size={10} className="opacity-70" />
                     </button>
                   </td>
                 </tr>
@@ -153,8 +170,18 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
       </div>
 
       <div className="px-4 py-3 border-t border-grey-medium/20 text-xs text-grey-medium">
-        Showing {visible.length} of {quotes.length} quotes
+        Showing {visible.length} of {allQuotes.length} quotes
       </div>
+
+      {/* Detail Modal */}
+      {selectedQuote && (
+        <QuoteDetailModal
+          quote={selectedQuote}
+          onClose={() => setSelectedQuote(null)}
+          onStatusChange={handleStatusChange}
+          admin
+        />
+      )}
     </div>
   )
 }

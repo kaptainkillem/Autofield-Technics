@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Wrench, Home, AlertTriangle } from 'lucide-react'
+import { SITE_CONFIG } from '@/lib/site-config'
 
 export default function NotFound() {
   return (
@@ -21,7 +22,7 @@ export default function NotFound() {
             Engine Misfire!
           </h1>
           <p className="text-body text-sm leading-relaxed mt-2">
-            We ran a full electronic scan on this URL, but it looks like a dead sensor. The page you are looking for has either been disassembled, moved to another workshop bay, or never rolled off the assembly line.
+            {SITE_CONFIG.notFound.message}
           </p>
         </div>
 

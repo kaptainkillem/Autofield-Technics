@@ -1,6 +1,8 @@
 // tailwind.config.ts
 import type { Config } from 'tailwindcss'
-import { colors, typography, spacing, borderRadius, shadows, breakpoints } from './designTokens'
+import { SITE_CONFIG } from './lib/site-config'
+
+const { colors, typography, spacing, borderRadius, shadows, breakpoints } = SITE_CONFIG.theme
 
 const config: Config = {
   content: [

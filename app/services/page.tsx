@@ -7,7 +7,7 @@ import { ServicesHero } from '@/components/features/ServicesHero'
 import { DynamicIcon } from '@/components/common/DynamicIcon'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MobileStickyCTA } from '@/components/ui/MobileStickyCTA'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
 import { Wrench } from 'lucide-react'
 import type { Database } from '@/types/database'
 
@@ -25,8 +25,8 @@ export default async function ServicesPage() {
     return (
       <>
         <ServicesHero
-          title="Our Services"
-          description="Explore our full range of professional mechanical solutions."
+          title={SITE_CONFIG.services.heroTitle}
+          description={SITE_CONFIG.services.heroDescription}
           showQuoteButton={false}
         />
         <section className="bg-white px-4 py-16 md:px-20">
@@ -46,8 +46,8 @@ export default async function ServicesPage() {
   return (
     <>
       <ServicesHero
-        title="Our Services"
-        description="Choose a category below to explore our full range of mechanical solutions."
+        title={SITE_CONFIG.services.heroTitle}
+        description={SITE_CONFIG.services.heroDescription}
         showQuoteButton
       />
 
@@ -63,7 +63,7 @@ export default async function ServicesPage() {
             <EmptyState
               icon={Wrench}
               title="Custom Mechanical Bookings"
-              description={`Our dynamic response units handle everything from precision brake overhauls to deep computerized diagnostics directly at your location in ${SITE_CONFIG.city}. Let us build a tailored quote for your exact vehicle model instead.`}
+              description={replaceVars(SITE_CONFIG.services.categoryFallbackDescription, { city: SITE_CONFIG.city })}
               actions={[
                 { label: 'Get a Custom Quote', href: '/quote', variant: 'primary' },
                 { label: 'Return Home', href: '/', variant: 'secondary' },
