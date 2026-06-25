@@ -5,7 +5,7 @@ import { SITE_CONFIG } from '@/lib/site-config'
 export default function NotFound() {
   return (
     <div className="min-h-[70vh] bg-grey-lightest flex items-center justify-center px-4 py-16 md:px-20">
-      <div className="card max-w-md w-full text-center flex flex-col items-center gap-6 border border-grey-light/30 shadow-lg">
+      <div className="bg-white max-w-md w-full text-center flex flex-col items-center gap-6 border border-grey-medium/10 rounded-base shadow-sm p-6">
         
         {/* Animated Custom Check Engine Visual */}
         <div className="relative p-5 rounded-full bg-error/10 border border-error/20 text-error animate-pulse">

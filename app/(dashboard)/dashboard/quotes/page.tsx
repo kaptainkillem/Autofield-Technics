@@ -51,7 +51,7 @@ export default function ClientQuotesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-8 max-w-[1200px] mx-auto w-full">
+    <div className="flex flex-col gap-6 p-4 md:p-8 max-w-[1200px] mx-auto w-full mt-4">
       <div className="flex items-center gap-3">
         <Link href="/dashboard" className="p-2 bg-white rounded-base border border-grey-medium/10 text-grey hover:text-primary transition-all shadow-sm">
           <ArrowLeft size={16} />

@@ -64,9 +64,9 @@ export default async function ReviewsPage() {
                       id={review.id}
                       customerName={review.customer_name}
                       rating={review.rating}
-                      reviewText={review.review_text}
+                      reviewText={review.comment}
                       date={new Date(review.created_at).toLocaleDateString()}
-                      vehicleServiced={review.vehicle_serviced}
+                      vehicleServiced={undefined}
                     />
                   ))
                 ) : (

@@ -173,9 +173,9 @@ export interface Database {
           user_id: string | null
           quote_id: string | null
           customer_name: string
-          vehicle_serviced: string | null
+          customer_email: string | null
           rating: number
-          review_text: string
+          comment: string
           status: string
           moderation_notes: string | null
           approved_at: string | null
@@ -188,9 +188,9 @@ export interface Database {
           user_id?: string | null
           quote_id?: string | null
           customer_name: string
-          vehicle_serviced?: string | null
+          customer_email?: string | null
           rating: number
-          review_text: string
+          comment: string
           status?: string
           moderation_notes?: string | null
           approved_at?: string | null
@@ -203,9 +203,9 @@ export interface Database {
           user_id?: string | null
           quote_id?: string | null
           customer_name?: string
-          vehicle_serviced?: string | null
+          customer_email?: string | null
           rating?: number
-          review_text?: string
+          comment?: string
           status?: string
           moderation_notes?: string | null
           approved_at?: string | null
@@ -253,6 +253,27 @@ export interface Database {
           phone: string | null
           role: string
           onboarding_completed: boolean
+          company_name: string | null
+          logo_url: string | null
+          address: string | null
+          whatsapp_number: string | null
+          vat_number: string | null
+          registration_number: string | null
+          bank_name: string | null
+          account_holder: string | null
+          account_number: string | null
+          branch_code: string | null
+          hourly_rate: number | null
+          callout_fee: number | null
+          diagnostic_fee: number | null
+          terms_conditions: string | null
+          default_deposit_percent: number | null
+          alternate_phone: string | null
+          physical_address: string | null
+          prefers_whatsapp: boolean | null
+          service_reminders_opt_in: boolean | null
+          client_status: string | null
+          internal_notes: string | null
           created_at: string | null
           updated_at: string | null
         }
@@ -262,6 +283,27 @@ export interface Database {
           phone?: string | null
           role?: string
           onboarding_completed?: boolean
+          company_name?: string | null
+          logo_url?: string | null
+          address?: string | null
+          whatsapp_number?: string | null
+          vat_number?: string | null
+          registration_number?: string | null
+          bank_name?: string | null
+          account_holder?: string | null
+          account_number?: string | null
+          branch_code?: string | null
+          hourly_rate?: number | null
+          callout_fee?: number | null
+          diagnostic_fee?: number | null
+          terms_conditions?: string | null
+          default_deposit_percent?: number | null
+          alternate_phone?: string | null
+          physical_address?: string | null
+          prefers_whatsapp?: boolean | null
+          service_reminders_opt_in?: boolean | null
+          client_status?: string | null
+          internal_notes?: string | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -271,6 +313,27 @@ export interface Database {
           phone?: string | null
           role?: string
           onboarding_completed?: boolean
+          company_name?: string | null
+          logo_url?: string | null
+          address?: string | null
+          whatsapp_number?: string | null
+          vat_number?: string | null
+          registration_number?: string | null
+          bank_name?: string | null
+          account_holder?: string | null
+          account_number?: string | null
+          branch_code?: string | null
+          hourly_rate?: number | null
+          callout_fee?: number | null
+          diagnostic_fee?: number | null
+          terms_conditions?: string | null
+          default_deposit_percent?: number | null
+          alternate_phone?: string | null
+          physical_address?: string | null
+          prefers_whatsapp?: boolean | null
+          service_reminders_opt_in?: boolean | null
+          client_status?: string | null
+          internal_notes?: string | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -282,6 +345,8 @@ export interface Database {
           make: string
           model: string
           year: number
+          license_plate: string | null
+          mileage: string | null
           created_at: string | null
           updated_at: string | null
         }
@@ -291,6 +356,8 @@ export interface Database {
           make: string
           model: string
           year: number
+          license_plate?: string | null
+          mileage?: string | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -300,6 +367,8 @@ export interface Database {
           make?: string
           model?: string
           year?: number
+          license_plate?: string | null
+          mileage?: string | null
           created_at?: string | null
           updated_at?: string | null
         }

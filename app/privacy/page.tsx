@@ -25,32 +25,32 @@ export default function PrivacyPage() {
 
       <section className="bg-white px-4 pt-8 pb-24 md:px-20">
         <div className="mx-auto max-w-4xl flex flex-col gap-8">
-          <div className="card bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
+          <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">1. Information We Collect</h2>
             <p className="text-grey-dark leading-relaxed">We collect information you provide directly, such as your name, email address, phone number, vehicle details, and service requests. We also collect usage data through cookies and analytics to improve our services.</p>
           </div>
 
-          <div className="card bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
+          <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">2. How We Use Your Information</h2>
             <p className="text-grey-dark leading-relaxed">We use your information to provide and improve our mechanical services, process quotes and bookings, communicate about appointments, and send service reminders. We do not sell your personal information to third parties.</p>
           </div>
 
-          <div className="card bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
+          <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">3. Data Security</h2>
             <p className="text-grey-dark leading-relaxed">We implement appropriate technical and organisational measures to protect your personal data against unauthorised access, alteration, disclosure, or destruction. All data is processed within {SITE_CONFIG.privacy.dataLocation} in compliance with {SITE_CONFIG.privacy.complianceAct}.</p>
           </div>
 
-          <div className="card bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
+          <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">4. Your Rights</h2>
             <p className="text-grey-dark leading-relaxed">Under the Protection of Personal Information Act (POPIA), you have the right to access, correct, or delete your personal information. You may also object to the processing of your data or withdraw consent at any time.</p>
           </div>
 
-          <div className="card bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
+          <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">5. Cookies</h2>
             <p className="text-grey-dark leading-relaxed">Our website uses cookies to enhance your browsing experience and analyse site traffic. You can manage cookie preferences through your browser settings.</p>
           </div>
 
-          <div className="card bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
+          <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">6. Contact</h2>
             <p className="text-grey-dark leading-relaxed">For privacy-related enquiries, contact us at <a href={`tel:${SITE_CONFIG.phone}`} className="text-primary no-underline hover:underline">{SITE_CONFIG.phone}</a> or visit our <Link href="/quote" className="text-primary no-underline hover:underline">quote page</Link>.</p>
           </div>

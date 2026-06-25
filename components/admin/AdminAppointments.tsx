@@ -8,23 +8,23 @@ const APPOINTMENTS = [
 
 export function AdminAppointments() {
   return (
-    <div className="card p-0 overflow-hidden">
-      <div className="p-4 border-b border-grey-medium/30 flex items-center justify-between">
-        <span className="text-sm font-semibold text-black">Upcoming</span>
+    <div className="bg-white border border-grey-medium/10 rounded-base shadow-sm overflow-hidden">
+      <div className="p-4 border-b border-grey-medium/10 flex items-center justify-between">
+        <span className="text-sm font-semibold text-grey-dark">Upcoming</span>
         <span className="text-xs bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-full">
           {APPOINTMENTS.length} booked
         </span>
       </div>
       <ul className="divide-y divide-grey-medium/20">
         {APPOINTMENTS.map((apt) => (
-          <li key={apt.id} className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-grey-lightest transition-colors">
+          <li key={apt.id} className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-primary/5 transition-colors">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-base bg-primary/10 flex flex-col items-center justify-center flex-shrink-0">
                 <span className="text-xs font-bold text-primary leading-none">{apt.time}</span>
                 <span className="text-[10px] text-grey-medium leading-none mt-0.5">{apt.date}</span>
               </div>
               <div>
-                <p className="text-sm font-medium text-black">{apt.customer}</p>
+                <p className="text-sm font-medium text-grey-dark">{apt.customer}</p>
                 <p className="text-xs text-grey">{apt.service}</p>
               </div>
             </div>

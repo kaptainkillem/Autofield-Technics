@@ -14,7 +14,7 @@ type Quote = Database['public']['Tables']['quotes']['Row']
 type ClientReview = {
   id: string
   rating: number
-  review_text: string
+  comment: string
   status: string
   created_at: string
 }
@@ -73,7 +73,7 @@ export default function ClientDashboardPage() {
             .order('created_at', { ascending: false }),
           supabase
             .from('reviews')
-            .select('id, rating, review_text, status, created_at')
+            .select('id, rating, comment, status, created_at')
             .eq('user_id', user.id)
             .is('deleted_at', null)
             .order('created_at', { ascending: false })
@@ -176,7 +176,7 @@ export default function ClientDashboardPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {allReviews.map((r) => (
-                  <div key={r.id} className="flex flex-col gap-1.5 p-4 rounded-base bg-grey-lightest border border-grey-medium/5">
+                  <div key={r.id} className="flex flex-col gap-1.5 p-4 rounded-base bg-white border border-grey-medium/10">
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center gap-0.5">
                         {[1, 2, 3, 4, 5].map((star) => (
@@ -189,7 +189,7 @@ export default function ClientDashboardPage() {
                       </div>
                       <StatusBadge status={r.status} />
                     </div>
-                    <p className="text-xs text-grey mt-1 flex-1 leading-normal">{r.review_text}</p>
+                    <p className="text-xs text-grey mt-1 flex-1 leading-normal">{r.comment}</p>
                     <span className="text-[10px] text-grey-medium text-right mt-2 block w-full">
                       {new Date(r.created_at).toLocaleDateString('en-ZA', {
                         day: 'numeric', month: 'short', year: 'numeric',
@@ -223,7 +223,7 @@ export default function ClientDashboardPage() {
               href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '27000000000'}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between p-3 rounded-base bg-grey-lightest border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all"
+              className="flex items-center justify-between p-3 rounded-base bg-white border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all"
             >
               <div className="flex items-center gap-3">
                 <MessageCircle size={18} className="text-primary" />

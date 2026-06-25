@@ -64,7 +64,7 @@ export function SearchableList<T extends Record<string, unknown>>({
         />
       </div>
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-grey bg-grey-lightest border border-dashed rounded-base">
+        <div className="text-center py-16 text-grey bg-white border border-dashed rounded-base">
           {emptyIcon}
           <p className="font-semibold">{emptyTitle}</p>
           <p className="text-sm text-grey-medium mt-1">{emptyDescription}</p>

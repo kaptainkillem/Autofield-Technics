@@ -63,9 +63,9 @@ export function AdminStats({
   return (
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
       {stats.map(({ label, value, note, icon: Icon, positive }) => (
-        <div key={label} className="card flex flex-col gap-2">
+        <div key={label} className="bg-white border border-grey-medium/10 rounded-base shadow-sm p-6 flex flex-col gap-2">
           <Icon className="h-6 w-6 text-primary" />
-          <p className="text-2xl font-bold text-black leading-none">{value}</p>
+          <p className="text-2xl font-bold text-grey-dark leading-none">{value}</p>
           <p className="text-sm text-grey">{label}</p>
           <p className={`text-xs font-medium ${positive ? 'text-green-600' : 'text-red-500'}`}>
             {note}

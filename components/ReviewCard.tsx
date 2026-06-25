@@ -41,7 +41,7 @@ export function ReviewCard({
   const avatarColor = AVATAR_COLORS[colorIndex]
 
   return (
-    <div className="card flex flex-col gap-3">
+    <div className="bg-white border border-grey-medium/10 rounded-base shadow-sm p-6 flex flex-col gap-3">
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -49,7 +49,7 @@ export function ReviewCard({
             {initials}
           </div>
           <div>
-            <p className="text-sm font-semibold text-black leading-tight">
+            <p className="text-sm font-semibold text-grey-dark leading-tight">
               {customerName}
             </p>
             {vehicleServiced && (
@@ -69,7 +69,7 @@ export function ReviewCard({
         </div>
       </div>
 
-      <p className="text-body text-sm">{reviewText}</p>
+      <p className="text-body text-sm break-words">{reviewText}</p>
 
       <p className="text-xs text-grey">{date}</p>
 

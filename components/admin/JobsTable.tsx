@@ -41,7 +41,7 @@ export function JobsTable({ appointments }: JobsTableProps) {
 
   if (appointments.length === 0) {
     return (
-      <div className="text-center py-16 text-grey bg-grey-lightest border border-dashed rounded-base">
+      <div className="text-center py-16 text-grey bg-white border border-dashed rounded-base">
         <Wrench size={32} className="mx-auto mb-2 text-grey-medium" />
         <p className="font-semibold">No active jobs right now.</p>
         <p className="text-sm text-grey-medium mt-1">Confirmed quote requests will appear here as jobs.</p>
@@ -70,51 +70,59 @@ export function JobsTable({ appointments }: JobsTableProps) {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-grey-medium/20 text-grey uppercase tracking-wider text-xs bg-grey-lightest">
-              <th className="py-3 px-4 font-bold">Service Type</th>
-              <th className="py-3 px-4 font-bold">Scheduled Date</th>
-              <th className="py-3 px-4 font-bold">Time</th>
-              <th className="py-3 px-4 font-bold">Status</th>
-              <th className="py-3 px-4 font-bold">Notes</th>
-              <th className="py-3 px-4 font-bold text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-grey-light">
-            {filtered.map((job) => (
-              <tr key={job.id} className="hover:bg-grey-lightest/40 transition">
-                <td className="py-4 px-4 font-medium text-grey-dark">
-                  <div className="flex items-center gap-2">
-                    <Wrench size={14} className="text-primary" />
-                    {job.service_type}
-                  </div>
-                </td>
-                <td className="py-4 px-4 text-grey-dark text-xs whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <Calendar size={12} />
-                    {new Date(job.scheduled_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </div>
-                </td>
-                <td className="py-4 px-4 text-grey text-xs">{job.scheduled_time}</td>
-                <td className="py-4 px-4">
-                  <StatusBadge status={job.status ?? 'pending'} />
-                </td>
-                <td className="py-4 px-4 text-grey text-xs max-w-xs truncate">{job.notes ?? '—'}</td>
-                <td className="py-4 px-4 text-right whitespace-nowrap">
-                  <Link
-                    href={`/dashboard/admin/quotes?highlight=${job.quote_id ?? ''}`}
-                    className="inline-flex items-center gap-1.5 bg-primary text-white text-xs px-3 py-2 rounded-base font-bold no-underline hover:bg-primary-dark transition shadow-sm"
-                  >
-                    View Quote
-                    <ArrowRight size={12} />
-                  </Link>
-                </td>
+      <div className="border border-grey-medium/10 rounded-base overflow-hidden">
+        <div className="p-4 border-b border-grey-medium/20 bg-white flex items-center justify-between">
+          <span className="text-sm font-semibold text-grey-dark">All jobs</span>
+          <span className="text-xs bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-full">
+            {filtered.length} shown
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-grey-medium/20 text-grey uppercase tracking-wider text-xs bg-white">
+                <th className="py-3 px-4 font-bold">Service Type</th>
+                <th className="py-3 px-4 font-bold">Scheduled Date</th>
+                <th className="py-3 px-4 font-bold">Time</th>
+                <th className="py-3 px-4 font-bold">Status</th>
+                <th className="py-3 px-4 font-bold">Notes</th>
+                <th className="py-3 px-4 font-bold text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-grey-light">
+              {filtered.map((job) => (
+                <tr key={job.id} className="hover:bg-primary/5 transition-colors">
+                  <td className="py-4 px-4 font-medium text-grey-dark">
+                    <div className="flex items-center gap-2">
+                      <Wrench size={14} className="text-primary" />
+                      {job.service_type}
+                    </div>
+                  </td>
+                  <td className="py-4 px-4 text-grey-dark text-xs whitespace-nowrap">
+                    <div className="flex items-center gap-1">
+                      <Calendar size={12} />
+                      {new Date(job.scheduled_date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                  </td>
+                  <td className="py-4 px-4 text-grey text-xs">{job.scheduled_time}</td>
+                  <td className="py-4 px-4">
+                    <StatusBadge status={job.status ?? 'pending'} />
+                  </td>
+                  <td className="py-4 px-4 text-grey text-xs max-w-xs truncate">{job.notes ?? '—'}</td>
+                  <td className="py-4 px-4 text-right whitespace-nowrap">
+                    <Link
+                      href={`/dashboard/admin/quotes?highlight=${job.quote_id ?? ''}`}
+                      className="inline-flex items-center gap-1.5 bg-primary text-white text-xs px-3 py-2 rounded-base font-bold no-underline hover:bg-primary-dark transition shadow-sm"
+                    >
+                      View Quote
+                      <ArrowRight size={12} />
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

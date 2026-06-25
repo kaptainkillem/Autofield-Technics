@@ -42,12 +42,12 @@ export function UserQuotes() {
   return (
     <div className="flex flex-col gap-4">
       {MOCK_QUOTES.map((q) => (
-        <div key={q.id} className="card flex flex-col gap-3">
+        <div key={q.id} className="bg-white border border-grey-medium/10 rounded-base shadow-sm p-6 flex flex-col gap-3">
 
           {/* Top row: service + status */}
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="font-semibold text-black">{q.service}</p>
+              <p className="font-semibold text-grey-dark">{q.service}</p>
               <p className="text-sm text-grey">{q.vehicle}</p>
             </div>
             <StatusBadge status={q.status.toLowerCase()} />
@@ -59,7 +59,7 @@ export function UserQuotes() {
           {/* Bottom row: amount + date + action */}
           <div className="flex items-center justify-between pt-2 border-t border-grey-medium/20">
             <div>
-              <p className="text-base font-bold text-black">{q.amount}</p>
+              <p className="text-base font-bold text-grey-dark">{q.amount}</p>
               <p className="text-xs text-grey-medium">{q.date} · #{q.id}</p>
             </div>
             {q.status === 'Pending' || q.status === 'Active' ? (

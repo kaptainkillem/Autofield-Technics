@@ -45,12 +45,14 @@ const CLIENT_NAV = [
 const ADMIN_NAV = [
   { label: 'Overview', href: '/dashboard/admin', icon: LayoutDashboard },
   { label: 'Quotes Inbox', href: '/dashboard/admin/quotes', icon: FileText },
-  { label: 'Leads', href: '/dashboard/admin/leads', icon: Wrench }, 
+  { label: 'Leads', href: '/dashboard/admin/leads', icon: Wrench },
   { label: 'Jobs', href: '/dashboard/admin/jobs', icon: CalendarClock },
+  { label: 'Reviews', href: '/dashboard/admin/reviews', icon: Star },
   { label: 'Services', href: '/dashboard/admin/services', icon: Settings2 },
   { label: 'Finances', href: '/dashboard/admin/finance', icon: Star },
   { label: 'Customers', href: '/dashboard/admin/customers', icon: Users },
   { label: 'SEO Engine', href: '/dashboard/admin/seo', icon: Globe },
+  { label: 'Account Settings', href: '/dashboard/admin/settings', icon: Settings },
 ]
 
 export function DashboardSidebar() {
@@ -103,7 +105,7 @@ export function DashboardSidebar() {
               className={`flex items-center gap-3 px-3 py-2.5 rounded-base text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-primary/10 text-primary font-bold'
-                  : 'text-grey hover:bg-grey-lightest hover:text-primary'
+                  : 'text-grey hover:text-primary'
               }`}
             >
               <Icon size={18} />
@@ -118,7 +120,7 @@ export function DashboardSidebar() {
         <button
           onClick={handleLogout}
           disabled={loggingOut}
-          className="flex w-full items-center gap-3 px-3 py-2.5 rounded-base text-sm font-medium text-grey hover:bg-grey-lightest hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex w-full items-center gap-3 px-3 py-2.5 rounded-base text-sm font-medium text-grey hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loggingOut ? <Loader2 size={18} className="animate-spin" /> : <LogOut size={18} />}
           {loggingOut ? 'Logging out...' : 'Logout'}
@@ -160,7 +162,7 @@ export function DashboardSidebar() {
           )}
           <button
             type="button"
-            className="text-grey hover:text-black transition-colors"
+            className="text-grey hover:text-grey-dark transition-colors"
             onClick={() => setMobileOpen(false)}
             aria-label="Close menu"
           >
@@ -175,7 +177,7 @@ export function DashboardSidebar() {
               {user && initial ? initial : '?'}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-black truncate">
+              <p className="text-sm font-semibold text-grey-dark truncate">
                 {user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'User'}
               </p>
               <p className="text-xs text-grey truncate">{user?.email ?? ''}</p>
@@ -191,7 +193,7 @@ export function DashboardSidebar() {
         <div className="h-14 flex items-center justify-between px-4">
           <button
             type="button"
-            className="text-grey hover:text-black transition-colors"
+            className="text-grey hover:text-grey-dark transition-colors"
             onClick={() => setMobileOpen(true)}
             aria-label="Open menu"
           >
