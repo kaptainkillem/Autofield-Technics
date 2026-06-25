@@ -20,7 +20,7 @@ export function ClientQuoteList({ quotes }: ClientQuoteListProps) {
 
   return (
     <>
-      <div className="bg-white rounded-base shadow-base divide-y divide-grey-medium/20">
+      <div className="bg-white rounded-base shadow-sm divide-y divide-grey-medium/20">
         {quotes.map((q) => (
           <button
             key={q.id}
@@ -28,7 +28,7 @@ export function ClientQuoteList({ quotes }: ClientQuoteListProps) {
             className="w-full text-left px-6 py-4 flex items-center justify-between gap-4 hover:bg-primary/5 transition-colors cursor-pointer"
           >
             <div className="min-w-0">
-              <p className="font-semibold text-sm text-black truncate">
+              <p className="font-semibold text-sm text-grey-dark truncate">
                 {q.description?.slice(0, 40) ?? 'General service'}
               </p>
               <p className="text-xs text-grey mt-0.5">

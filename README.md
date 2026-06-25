@@ -47,6 +47,7 @@ NEXT_PUBLIC_MECHANIC_USER_ID=your_admin_uid    # Supabase auth uid of admin acco
 ### 2. Launch the Engine
 ```powershell
 .\start-project.ps1
+```
 Choose **Option 1** to start the dev server at [http://localhost:3000](http://localhost:3000).
 
 ### 🎨 Styling Protocol (Tailwind v4)
@@ -66,14 +67,27 @@ To ensure the AI code (Vibe Coding) and Manual code (Human Coding) don't conflic
 * **Update SQL:** If you change the database in the Supabase Dashboard, manually update `schema.sql` so the AI knows the new structure.
 * **No Hardcoding:** Never use hex codes in `.tsx` files. Use the brand variable classes.
 
-### 🛣️ Roadmap
-- [x] Project scaffolding & Docker setup
-- [x] Design Tokens & Brand Identity
-- [x] Floating Header & Reusable Button
-- [x] Hero Section Widget (with/without image)
-- [ ] Services Data Layer (`lib/data/services.ts`)
-- [ ] Quote Request Form (with WhatsApp redirect)
-- [ ] Admin Dashboard (Quote tracking & Receipts)
+---
+
+## 🛣️ Homepage Sections
+
+The homepage (`app/page.tsx`) is built from reusable widget components in this order:
+
+| Component | Purpose |
+|---|---|
+| `Hero` | Full-width hero with centered text on mobile, CTAs stacked |
+| `ScrollingReviews` | Horizontal scrollable reviews (mobile + desktop), fetches approved reviews from Supabase |
+| `FeatureShowcase` | 3 alternating image/text feature sections |
+| `HowItWorks` | 3-step process grid, horizontal scroll on mobile |
+| `ServicesGrid` | Category cards fetched from Supabase, horizontal scroll on mobile |
+| `BottomCTA` | Dark CTA section with quote button |
+
+**Mobile behavior:**
+- `ScrollingReviews`, `HowItWorks`, `ServicesGrid` all use horizontal scroll with snap points on mobile
+- Hero centers text and stacks CTAs vertically on mobile
+- BottomCTA sits flush against the footer (no margin gap)
+
+---
 
 ## 🧠 Architecture & Methodology
 
@@ -84,15 +98,13 @@ We follow a **Widget-based architecture**. This means the UI is broken down into
 2. **AI-Friendly:** OpenCode works best with small, focused files. It is less likely to make mistakes when editing a single widget than when editing a 500-line page.
 3. **Decoupled Logic:** You can change the "Look" of the Hero in one file, and it updates across the entire site instantly.
 
----
-
-### 📂 File-Specific Logic (The "Why")
+### 📂 File-Folder Responsibility Map
 
 | File / Folder | Responsibility | Why it exists |
 | :--- | :--- | :--- |
 | `components/ui/` | **Atomic Components** | Base elements like `Button.tsx` and `Input.tsx`. These are the "bricks" of the house. |
-| `components/features/` | **Widgets** | Complex sections like `Hero.tsx` or `QuoteForm.tsx`. These are the "rooms" of the house. |
-| `lib/data/` | **Mock/Static Data** | Centralized files like `services.ts`. It ensures the AI and Humans use the same names/prices. |
+| `components/features/` | **Widgets** | Complex sections like `Hero.tsx`, `ReviewForm.tsx`, `ServicesGrid.tsx`. These are the "rooms" of the house. |
+| `lib/site-config.ts` | **Business Config** | Centralized site-wide settings (name, phone, city, navigation, SEO). |
 | `designTokens.ts` | **The Brain** | Holds our brand colors and spacing. It prevents "Color Creep" (using 5 different shades of blue). |
 | `app/globals.css` | **The Style Bridge** | Connects our Design Tokens to Tailwind v4 utilities. This is where `@utility` lives. |
 
@@ -103,3 +115,4 @@ We follow a **Widget-based architecture**. This means the UI is broken down into
 2. **Mobile First:** Every widget must look perfect on a phone before we check the desktop view.
 3. **Prop-Driven:** Widgets should accept props (e.g., `title`, `showImage`) so they can adapt to different pages.
 4. **No Side-Effects:** A widget should focus on UI. Keep database calls in "Server Components" at the page level when possible.
+5. **Schema Sync:** If the live Supabase DB schema changes, update both `schema.sql` AND `types/database.ts`.

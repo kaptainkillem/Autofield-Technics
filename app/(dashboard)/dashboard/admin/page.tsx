@@ -49,7 +49,7 @@ export default async function AdminDashboardArchivePage() {
   const recentQuotesGlimpse = quotes.slice(0, 5)
 
   return (
-    <div className="flex flex-col gap-8 p-1 md:p-4 max-w-[1600px] mx-auto w-full">
+    <div className="flex flex-col gap-8 p-4 md:p-6 max-w-[1600px] mx-auto w-full mt-4">
       {/* Executive Archive Header Block */}
       <div className="flex flex-col gap-1 border-b border-grey-medium/10 pb-4">
         <h1 className="text-3xl font-extrabold tracking-tight text-grey-dark">{SITE_CONFIG.dashboard.adminTitle}</h1>
@@ -92,7 +92,7 @@ export default async function AdminDashboardArchivePage() {
             <p className="text-xs text-grey">Fast workspace routing modules control map shortcuts.</p>
           </div>
 
-          <Link href="/dashboard/admin/leads" className="flex items-center justify-between p-3 rounded-base bg-grey-lightest border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
+          <Link href="/dashboard/admin/leads" className="flex items-center justify-between p-3 rounded-base bg-white border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
   <div className="flex items-center gap-3">
     <Users size={18} className="text-primary" />
     <span className="text-sm font-semibold">Leads Pipeline Portal</span>
@@ -101,7 +101,7 @@ export default async function AdminDashboardArchivePage() {
 </Link>
 
           <div className="flex flex-col gap-2.5">
-            <Link href="/dashboard/admin/quotes" className="flex items-center justify-between p-3 rounded-base bg-grey-lightest border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
+            <Link href="/dashboard/admin/quotes" className="flex items-center justify-between p-3 rounded-base bg-white border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
               <div className="flex items-center gap-3">
                 <FileText size={18} className="text-primary" />
                 <span className="text-sm font-semibold">Quotes Pipeline ({totalQuotes})</span>
@@ -109,7 +109,7 @@ export default async function AdminDashboardArchivePage() {
               <ArrowRight size={14} className="text-grey" />
             </Link>
 
-            <Link href="/dashboard/admin/finance" className="flex items-center justify-between p-3 rounded-base bg-grey-lightest border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
+            <Link href="/dashboard/admin/finance" className="flex items-center justify-between p-3 rounded-base bg-white border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
               <div className="flex items-center gap-3">
                 <Landmark size={18} className="text-primary" />
                 <span className="text-sm font-semibold">Money Keeper Ledger</span>
@@ -117,7 +117,7 @@ export default async function AdminDashboardArchivePage() {
               <ArrowRight size={14} className="text-grey" />
             </Link>
 
-            <Link href="/dashboard/admin/services" className="flex items-center justify-between p-3 rounded-base bg-grey-lightest border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
+            <Link href="/dashboard/admin/services" className="flex items-center justify-between p-3 rounded-base bg-white border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
               <div className="flex items-center gap-3">
                 <Settings2 size={18} className="text-primary" />
                 <span className="text-sm font-semibold">Service Catalog</span>
@@ -125,7 +125,7 @@ export default async function AdminDashboardArchivePage() {
               <ArrowRight size={14} className="text-grey" />
             </Link>
 
-            <Link href="/dashboard/admin/customers" className="flex items-center justify-between p-3 rounded-base bg-grey-lightest border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
+            <Link href="/dashboard/admin/customers" className="flex items-center justify-between p-3 rounded-base bg-white border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
               <div className="flex items-center gap-3">
                 <Users size={18} className="text-primary" />
                 <span className="text-sm font-semibold">Customer Base Tracker ({customersCount})</span>
@@ -133,7 +133,7 @@ export default async function AdminDashboardArchivePage() {
               <ArrowRight size={14} className="text-grey" />
             </Link>
 
-            <Link href="/dashboard/admin/jobs" className="flex items-center justify-between p-3 rounded-base bg-grey-lightest border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
+            <Link href="/dashboard/admin/jobs" className="flex items-center justify-between p-3 rounded-base bg-white border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
               <div className="flex items-center gap-3">
                 <Wrench size={18} className="text-primary" />
                 <span className="text-sm font-semibold">Active Mechanical Jobs</span>

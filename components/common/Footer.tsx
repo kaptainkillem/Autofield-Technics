@@ -17,7 +17,7 @@ export const Footer: React.FC<FooterProps> = ({
 
   return (
     <footer
-      className={`bg-primary text-white mt-8 ${className ?? ''}`}
+      className={`bg-primary text-white ${className ?? ''}`}
       {...props}
     >
       <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-2 gap-10">

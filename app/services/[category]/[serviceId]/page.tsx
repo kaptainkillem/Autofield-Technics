@@ -105,7 +105,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           
           {/* Main Structural Breakdown Details */}
           <div className="lg:col-span-2 flex flex-col gap-8">
-            <div className="card bg-grey-lightest border border-primary/20 p-6 rounded-base shadow-sm flex flex-col gap-4">
+            <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
               <h2 className="text-2xl font-bold text-primary">Service Overview</h2>
               <p className="text-grey-dark leading-relaxed">{service.description}</p>
               
@@ -132,7 +132,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           </div>
 
           {/* High Conversion Booking Action Sidebar Menu */}
-          <div className="hidden lg:flex card lg:col-span-1 border border-primary/20 p-6 rounded-base sticky top-24 flex-col gap-6 bg-grey-lightest">
+          <div className="hidden lg:flex lg:col-span-1 border border-primary/20 p-6 rounded-base sticky top-24 flex-col gap-6 bg-grey-lightest">
             <div>
               <span className="text-xs text-grey uppercase font-semibold tracking-wider">{categoryTitle} Group</span>
               <h3 className="text-xl font-bold text-primary mt-1">{service.name}</h3>

@@ -126,6 +126,15 @@ export const Header: React.FC<HeaderProps> = ({
               </Link>
             )
           ))}
+          {user && (
+            <Link
+              href="/dashboard"
+              className="text-primary no-underline text-base font-bold tracking-wide bg-white rounded-base px-3 py-3 mt-2 transition-colors duration-200 text-center"
+              onClick={() => setMobileOpen(false)}
+            >
+              Dashboard
+            </Link>
+          )}
         </nav>
 
         <div className="px-4 pt-2 pb-4">

@@ -21,7 +21,7 @@ export default async function AdminServicesPage() {
   const categoryMap = new Map(cats.map((c) => [c.id, c.name]))
 
   return (
-    <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm max-w-[1600px] mx-auto w-full">
+    <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm max-w-[1600px] mx-auto w-full mt-4">
       <div className="mb-6 border-b border-grey-light pb-3">
         <h1 className="text-2xl font-bold text-grey-dark">{SITE_CONFIG.services.heroTitle} Management</h1>
         <p className="text-sm text-grey">Create, edit, and manage your service catalog. Toggle visibility and set pricing.</p>

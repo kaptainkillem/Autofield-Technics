@@ -36,34 +36,34 @@ export const Hero: React.FC<HeroProps> = ({
       {...props}
     >
       <div
-        className={`mx-auto max-w-6xl items-center ${
-          showImage ? 'grid grid-cols-1 md:grid-cols-2 gap-8' : 'max-w-4xl'
+        className={`mx-auto max-w-6xl flex flex-col items-center text-center justify-center gap-6 ${
+          showImage ? 'md:grid md:grid-cols-2 md:text-left md:items-start md:justify-normal' : ''
         }`}
       >
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col items-center md:items-start gap-6 w-full">
           <h1 className="heading-1">{title}</h1>
           <p className="text-base font-normal text-white leading-normal">{description}</p>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             {primaryCTA.href ? (
-              <Link href={primaryCTA.href}>
-                <Button variant="primary" onClick={primaryCTA.onClick}>
+              <Link href={primaryCTA.href} className="w-full sm:w-auto">
+                <Button variant="primary" onClick={primaryCTA.onClick} className="w-full sm:w-auto">
                   {primaryCTA.label}
                 </Button>
               </Link>
             ) : (
-              <Button variant="primary" onClick={primaryCTA.onClick}>
+              <Button variant="primary" onClick={primaryCTA.onClick} className="w-full sm:w-auto">
                 {primaryCTA.label}
               </Button>
             )}
             {secondaryCTA && (
               secondaryCTA.href ? (
-                <Link href={secondaryCTA.href}>
-                  <Button variant="secondary" onClick={secondaryCTA.onClick}>
+                <Link href={secondaryCTA.href} className="w-full sm:w-auto">
+                  <Button variant="secondary" onClick={secondaryCTA.onClick} className="w-full sm:w-auto">
                     {secondaryCTA.label}
                   </Button>
                 </Link>
               ) : (
-                <Button variant="secondary" onClick={secondaryCTA.onClick}>
+                <Button variant="secondary" onClick={secondaryCTA.onClick} className="w-full sm:w-auto">
                   {secondaryCTA.label}
                 </Button>
               )

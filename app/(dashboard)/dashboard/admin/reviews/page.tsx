@@ -28,7 +28,6 @@ export default function AdminReviewsPage() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
   const [actioningId, setActioningId] = useState<string | null>(null)
 
-  // Fetch reviews along with customer profile data via relational join
   async function fetchAllReviews() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -60,7 +59,6 @@ export default function AdminReviewsPage() {
     fetchAllReviews()
   }, [router])
 
-  // Moderate review status handler
   async function updateReviewStatus(id: string, nextStatus: 'approved' | 'rejected') {
     setActioningId(id)
     const { error } = await (supabase as any)
@@ -79,10 +77,9 @@ export default function AdminReviewsPage() {
     setActioningId(null)
   }
 
-  // Soft delete review handler
   async function handleDeleteReview(id: string) {
     if (!confirm('Are you sure you want to remove this review from the workspace?')) return
-    
+
     setActioningId(id)
     const { error } = await (supabase as any)
       .from('reviews')
@@ -113,19 +110,19 @@ export default function AdminReviewsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-8 max-w-[1400px] mx-auto w-full mt-4">
-      
+
       {/* Header Block */}
       <div className="flex items-center gap-3">
         <Link href="/dashboard/admin" className="p-2 bg-white rounded-base border border-grey-medium/10 text-grey hover:text-primary transition-all shadow-sm">
           <ArrowLeft size={16} />
         </Link>
         <div>
-          <h1 className="text-2xl font-black text-grey-dark tracking-tight">Testimonials & Reviews Moderation</h1>
-          <p className="text-xs text-grey">Approve customer feedback entries to broadcast them live on the public landing page pipeline.</p>
+          <h1 className="text-2xl font-black text-grey-dark tracking-tight">Reviews & Approvals</h1>
+          <p className="text-xs text-grey">Review and moderate customer testimonials before they go live.</p>
         </div>
       </div>
 
-      {/* Filter Status Tabs Grid */}
+      {/* Filter Status Tabs */}
       <div className="flex gap-2 border-b border-grey-light pb-px overflow-x-auto whitespace-nowrap">
         {(['pending', 'approved', 'rejected', 'all'] as const).map((status) => {
           const count = reviews.filter(r => status === 'all' || r.status === status).length
@@ -134,8 +131,8 @@ export default function AdminReviewsPage() {
               key={status}
               onClick={() => setFilterStatus(status)}
               className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
-                filterStatus === status 
-                  ? 'border-primary text-primary font-black' 
+                filterStatus === status
+                  ? 'border-primary text-primary font-black'
                   : 'border-transparent text-grey hover:text-grey-dark'
               }`}
             >
@@ -150,7 +147,7 @@ export default function AdminReviewsPage() {
         })}
       </div>
 
-      {/* Main Reviews Queue Layout Container */}
+      {/* Reviews Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
         {filteredReviews.length === 0 ? (
           <div className="col-span-full bg-white border border-grey-medium/10 rounded-base p-12 text-center text-grey text-sm shadow-sm flex flex-col items-center justify-center gap-4">
@@ -160,28 +157,26 @@ export default function AdminReviewsPage() {
             <div className="flex flex-col gap-1 max-w-xs">
               <p className="font-bold text-grey-dark text-base">No Reviews Found</p>
               <p className="text-xs text-grey leading-normal">
-                There are currently no customer testimonials matching the &quot;{filterStatus}&quot; parameter scope filter.
+                There are currently no customer testimonials matching the &quot;{filterStatus}&quot; filter.
               </p>
             </div>
-            
-            {/* 🚀 Dynamic Create Review CTA Button Layout */}
             <Link href="/reviews" className="no-underline mt-2">
               <Button size="sm" className="bg-primary text-white font-bold px-4 py-2 rounded-base shadow-sm hover:bg-primary-dark transition-colors flex items-center gap-1.5">
                 <Star size={14} className="fill-white" />
-                <span>Leave a review</span>
+                <span>View Live Reviews</span>
               </Button>
             </Link>
           </div>
         ) : (
           filteredReviews.map((review) => (
-            <div 
-              key={review.id} 
+            <div
+              key={review.id}
               className={`bg-white border rounded-base p-5 shadow-sm flex flex-col justify-between gap-4 transition-all ${
                 review.status === 'pending' ? 'border-primary/20 bg-primary/[0.01]' : 'border-grey-medium/10'
               }`}
             >
               <div className="flex flex-col gap-2">
-                {/* Review Meta Info Header */}
+                {/* Review Meta Header */}
                 <div className="flex items-start justify-between w-full gap-2">
                   <div className="flex flex-col">
                     <span className="font-bold text-grey-dark text-sm">
@@ -199,7 +194,7 @@ export default function AdminReviewsPage() {
                   </span>
                 </div>
 
-                {/* Rating Stars Array */}
+                {/* Star Rating */}
                 <div className="flex items-center gap-0.5">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star
@@ -210,13 +205,13 @@ export default function AdminReviewsPage() {
                   ))}
                 </div>
 
-                {/* Testimonial Text */}
+                {/* Review Text */}
                 <p className="text-xs text-grey-dark leading-relaxed italic bg-white p-3 rounded-base border border-grey-medium/10 mt-1">
                   &ldquo;{review.comment}&rdquo;
                 </p>
               </div>
 
-              {/* Action Toolbar Matrix Block */}
+              {/* Action Toolbar */}
               <div className="flex items-center justify-between border-t border-grey-light pt-3 mt-1">
                 <span className="text-[10px] font-semibold text-grey">
                   {new Date(review.created_at).toLocaleDateString('en-ZA', {
@@ -256,7 +251,7 @@ export default function AdminReviewsPage() {
                     onClick={() => handleDeleteReview(review.id)}
                     disabled={actioningId === review.id}
                     className="text-grey hover:text-error p-1.5 h-7"
-                    aria-label="Delete permanent log entry"
+                    aria-label="Delete review"
                   >
                     {actioningId === review.id ? (
                       <Loader2 size={14} className="animate-spin" />

@@ -88,14 +88,14 @@ export function QuoteDetailModal({ quote, onClose, onStatusChange, admin = false
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-grey-light">
           <div>
-            <h2 className="text-lg font-bold text-black">Quote Details</h2>
+            <h2 className="text-lg font-bold text-grey-dark">Quote Details</h2>
             <p className="text-xs text-grey-medium mt-0.5">
               Created {new Date(quote.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-grey-medium hover:text-black transition-colors"
+            className="text-grey-medium hover:text-grey-dark transition-colors"
             aria-label="Close"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -125,9 +125,9 @@ export function QuoteDetailModal({ quote, onClose, onStatusChange, admin = false
           </div>
 
           {/* Customer */}
-          <div className="flex flex-col gap-2 bg-grey-lightest rounded-base p-4">
+          <div className="flex flex-col gap-2 bg-white border border-grey-medium/10 rounded-base p-4">
             <h3 className="text-xs font-semibold text-grey-medium uppercase tracking-wide">Customer</h3>
-            <p className="text-sm font-semibold text-black">{quote.customer_name}</p>
+            <p className="text-sm font-semibold text-grey-dark">{quote.customer_name}</p>
             {quote.customer_email && (
               <a href={`mailto:${quote.customer_email}`} className="text-sm text-primary hover:underline">{quote.customer_email}</a>
             )}
@@ -135,9 +135,9 @@ export function QuoteDetailModal({ quote, onClose, onStatusChange, admin = false
           </div>
 
           {/* Vehicle */}
-          <div className="flex flex-col gap-2 bg-grey-lightest rounded-base p-4">
+          <div className="flex flex-col gap-2 bg-white border border-grey-medium/10 rounded-base p-4">
             <h3 className="text-xs font-semibold text-grey-medium uppercase tracking-wide">Vehicle</h3>
-            <p className="text-sm font-semibold text-black">{vehicle}</p>
+            <p className="text-sm font-semibold text-grey-dark">{vehicle}</p>
           </div>
 
           {/* Description */}

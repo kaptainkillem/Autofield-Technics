@@ -122,7 +122,7 @@ export function QuoteForm() {
 
   if (submitted) {
     return (
-      <div className="card text-center py-10 flex flex-col items-center gap-4 bg-green-50/50 border border-green-200 rounded-base p-6 shadow-sm">
+      <div className="bg-white border border-green-200 rounded-base shadow-sm p-6 flex flex-col items-center gap-4 text-center">
         <MessageCircle className="h-10 w-10 text-success" />
         <h3 className="text-lg font-bold text-grey-dark">WhatsApp is opening!</h3>
         <p className="text-xs text-grey max-w-sm leading-relaxed">
