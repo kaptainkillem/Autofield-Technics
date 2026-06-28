@@ -4,7 +4,7 @@ interface Props { userId: string }
 
 type Receipt = {
   id: string
-  issued_at: string | null
+  created_at: string | null
   amount_paid: number
   payment_method: string | null
 }
@@ -14,10 +14,10 @@ export async function UserInvoices({ userId }: Props) {
 
   const { data: receipts } = await supabase
     .from('receipts')
-    .select('id, issued_at, amount_paid, payment_method')
+    .select('id, created_at, amount_paid, payment_method')
     .eq('user_id', userId)
     .is('deleted_at', null)
-    .order('issued_at', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(10) as { data: Receipt[] | null }
 
   if (!receipts?.length) {
@@ -37,9 +37,9 @@ export async function UserInvoices({ userId }: Props) {
               Invoice #{r.id.slice(0, 8).toUpperCase()}
             </p>
             <p className="text-xs text-grey mt-0.5">
-              {new Date(r.issued_at ?? Date.now()).toLocaleDateString('en-ZA', {
+              {r.created_at ? new Date(r.created_at).toLocaleDateString('en-ZA', {
                 day: 'numeric', month: 'short', year: 'numeric',
-              })} 
+              }) : '—'} 
               {r.payment_method ? ` · ${r.payment_method}` : ''}
             </p>
           </div>

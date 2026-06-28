@@ -87,7 +87,7 @@ export function LeadsTable({ leads }: LeadsTableProps) {
                   <td className="py-4 px-4 text-grey text-xs whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <Clock size={12} />
-                      {new Date(request.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      {request.created_at ? new Date(request.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
                     </div>
                   </td>
                   <td className="py-4 px-4 text-right whitespace-nowrap">

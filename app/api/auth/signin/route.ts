@@ -1,20 +1,26 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { z } from 'zod';
+
+const SignInSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
 
 export async function POST(request: Request) {
-  let body: { email?: string; password?: string };
+  let body: z.infer<typeof SignInSchema>;
 
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+    const raw = await request.json();
+    body = SignInSchema.parse(raw);
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.errors?.[0]?.message || 'Invalid request body.' },
+      { status: 400 }
+    );
   }
 
   const { email, password } = body;
-
-  if (!email || !password) {
-    return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
-  }
 
   const response = NextResponse.json({ success: true });
 

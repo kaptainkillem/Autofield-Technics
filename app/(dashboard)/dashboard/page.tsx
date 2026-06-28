@@ -14,9 +14,9 @@ type Quote = Database['public']['Tables']['quotes']['Row']
 type ClientReview = {
   id: string
   rating: number
-  comment: string
-  status: string
-  created_at: string
+  comment: string | null
+  status: string | null
+  created_at: string | null
 }
 
 export default function ClientDashboardPage() {
@@ -187,13 +187,13 @@ export default function ClientDashboardPage() {
                           />
                         ))}
                       </div>
-                      <StatusBadge status={r.status} />
+                      <StatusBadge status={r.status ?? 'pending'} />
                     </div>
                     <p className="text-xs text-grey mt-1 flex-1 leading-normal">{r.comment}</p>
                     <span className="text-[10px] text-grey-medium text-right mt-2 block w-full">
-                      {new Date(r.created_at).toLocaleDateString('en-ZA', {
+                      {r.created_at ? new Date(r.created_at).toLocaleDateString('en-ZA', {
                         day: 'numeric', month: 'short', year: 'numeric',
-                      })}
+                      }) : '—'}
                     </span>
                   </div>
                 ))}

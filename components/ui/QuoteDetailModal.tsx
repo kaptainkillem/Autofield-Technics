@@ -90,7 +90,7 @@ export function QuoteDetailModal({ quote, onClose, onStatusChange, admin = false
           <div>
             <h2 className="text-lg font-bold text-grey-dark">Quote Details</h2>
             <p className="text-xs text-grey-medium mt-0.5">
-              Created {new Date(quote.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
+              Created {quote.created_at ? new Date(quote.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
             </p>
           </div>
           <button

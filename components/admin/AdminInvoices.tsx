@@ -67,7 +67,7 @@ export function AdminInvoices({ receipts }: AdminInvoicesProps) {
                     R {inv.amount_paid.toLocaleString('en-ZA')}
                   </td>
                   <td className="px-4 py-3 text-grey hidden sm:table-cell">
-                    {timeAgo(inv.issued_at ?? '')}
+                    {inv.created_at ? timeAgo(inv.created_at) : '—'}
                   </td>
                 </tr>
               ))}

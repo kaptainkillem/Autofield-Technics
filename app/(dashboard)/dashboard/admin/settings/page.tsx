@@ -3,15 +3,17 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Settings, ArrowLeft, Loader2, Building2, Banknote, FileText } from 'lucide-react'
+import { Settings, ArrowLeft, Loader2, Building2, Banknote, FileText, Clock, CalendarX } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { BusinessForm } from '@/components/settings/BusinessForm'
 import { FinancialForm } from '@/components/settings/FinancialForm'
 import { QuoteSettingsForm } from '@/components/settings/QuoteSettingsForm'
+import { WorkingHoursForm } from '@/components/settings/WorkingHoursForm'
+import { BlockedSlotsForm } from '@/components/settings/BlockedSlotsForm'
 
-type Tab = 'business' | 'financials' | 'quotes'
+type Tab = 'business' | 'financials' | 'quotes' | 'working_hours' | 'blocked_slots'
 
 interface FormData {
   full_name: string
@@ -57,6 +59,8 @@ const tabs = [
   { id: 'business' as Tab, label: 'Business Identity', icon: Building2 },
   { id: 'financials' as Tab, label: 'Financials', icon: Banknote },
   { id: 'quotes' as Tab, label: 'Quote Settings', icon: FileText },
+  { id: 'working_hours' as Tab, label: 'Working Hours', icon: Clock },
+  { id: 'blocked_slots' as Tab, label: 'Blocked Slots', icon: CalendarX },
 ]
 
 export default function AdminSettingsPage() {
@@ -177,7 +181,7 @@ export default function AdminSettingsPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-black text-grey-dark tracking-tight">Workspace Settings</h1>
-          <p className="text-xs text-grey">Manage your business identity, financials, and quote defaults.</p>
+          <p className="text-xs text-grey">Manage your business identity, financials, quote defaults, and availability.</p>
         </div>
       </div>
 
@@ -204,45 +208,52 @@ export default function AdminSettingsPage() {
         })}
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-0">
-        <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5 min-h-[400px]">
-          {activeTab === 'business' && (
-            <BusinessForm
-              values={formData}
-              onChange={handleChange}
-              userId={userId}
-            />
-          )}
-          {activeTab === 'financials' && (
-            <FinancialForm
-              values={formData}
-              onChange={handleChange}
-            />
-          )}
-          {activeTab === 'quotes' && (
-            <QuoteSettingsForm
-              values={formData}
-              onChange={handleChange}
-            />
-          )}
-        </div>
-
-        {/* Sticky Save Button */}
-        <div className="sticky bottom-4 mt-6 bg-white border border-grey-medium/10 rounded-base p-4 shadow-lg flex items-center justify-between z-10">
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-grey-dark">Unsaved changes?</span>
-            <span className="text-xs text-grey">Make sure to save your updates</span>
+      {['business', 'financials', 'quotes'].includes(activeTab) ? (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-0">
+          <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5 min-h-[400px]">
+            {activeTab === 'business' && (
+              <BusinessForm
+                values={formData}
+                onChange={handleChange}
+                userId={userId}
+              />
+            )}
+            {activeTab === 'financials' && (
+              <FinancialForm
+                values={formData}
+                onChange={handleChange}
+              />
+            )}
+            {activeTab === 'quotes' && (
+              <QuoteSettingsForm
+                values={formData}
+                onChange={handleChange}
+              />
+            )}
           </div>
-          <Button
-            type="submit"
-            disabled={saving}
-            className="bg-primary text-white font-bold py-2.5 px-6 rounded-base shadow-sm hover:bg-primary-dark transition-all flex items-center justify-center gap-2"
-          >
-            {saving ? <Loader2 size={16} className="animate-spin" /> : null}
-            <span>{saving ? 'Saving...' : 'Save Changes'}</span>
-          </Button>
+
+          {/* Sticky Save Button */}
+          <div className="sticky bottom-4 mt-6 bg-white border border-grey-medium/10 rounded-base p-4 shadow-lg flex items-center justify-between z-10">
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-grey-dark">Unsaved changes?</span>
+              <span className="text-xs text-grey">Make sure to save your updates</span>
+            </div>
+            <Button
+              type="submit"
+              disabled={saving}
+              className="bg-primary text-white font-bold py-2.5 px-6 rounded-base shadow-sm hover:bg-primary-dark transition-all flex items-center justify-center gap-2"
+            >
+              {saving ? <Loader2 size={16} className="animate-spin" /> : null}
+              <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5 min-h-[400px]">
+          {activeTab === 'working_hours' && <WorkingHoursForm />}
+          {activeTab === 'blocked_slots' && <BlockedSlotsForm />}
         </div>
-      </form>
+      )}
     </div>
   )
 }

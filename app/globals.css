@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../styles/variables.css"; /* This pulls in your #5B9BD5 etc. */
+@import "react-datepicker/dist/react-datepicker.css";
 
 @theme {
   /* Brand Colors */

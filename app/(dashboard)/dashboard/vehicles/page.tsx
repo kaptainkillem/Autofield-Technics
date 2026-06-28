@@ -12,8 +12,9 @@ type Vehicle = {
   make: string
   model: string
   year: number
-  vin?: string
-  created_at: string
+  license_plate?: string | null
+  mileage?: string | null
+  created_at: string | null
 }
 
 export default function ClientGaragePage() {
@@ -83,9 +84,9 @@ export default function ClientGaragePage() {
                 <div className="flex flex-col">
                   <span className="font-bold text-grey-dark text-base">{car.year} {car.make}</span>
                   <span className="text-sm text-grey font-medium">{car.model}</span>
-                  {car.vin && (
+                  {car.license_plate && (
                     <span className="text-[11px] font-mono tracking-wider text-grey-medium mt-1 bg-white px-1.5 py-0.5 rounded border border-grey-medium/10 w-fit">
-                      {car.vin}
+                      {car.license_plate}
                     </span>
                   )}
                 </div>

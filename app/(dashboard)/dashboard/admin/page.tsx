@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { Database } from '@/types/database'
 import { AdminStats } from '@/components/AdminStats' // Ensure tiles inside this are wrapped in <Link> matching the sub-routes below!
 import { QuotesInbox } from '@/components/admin/QuotesInbox'
+import { UpcomingJobsWidget } from '@/components/admin/UpcomingJobsWidget'
 import { ArrowRight, Users, FileText, Landmark, Wrench, Settings2 } from 'lucide-react'
 import { SITE_CONFIG } from '@/lib/site-config'
 
@@ -39,7 +40,7 @@ export default async function AdminDashboardArchivePage() {
 
   const monthlyRevenue = receiptsCount
     .filter((r) => {
-      const jobDate = new Date(r.issued_at ?? Date.now())
+      const jobDate = r.job_date ? new Date(r.job_date) : new Date()
       const now     = new Date()
       return jobDate.getMonth() === now.getMonth() && jobDate.getFullYear() === now.getFullYear()
     })
@@ -141,6 +142,9 @@ export default async function AdminDashboardArchivePage() {
               <ArrowRight size={14} className="text-grey" />
             </Link>
           </div>
+
+          {/* Upcoming Jobs Widget */}
+          <UpcomingJobsWidget />
         </div>
 
       </div>

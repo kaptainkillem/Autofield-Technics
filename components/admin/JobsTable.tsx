@@ -5,9 +5,16 @@ import Link from 'next/link'
 import { ArrowRight, Clock, Wrench, CheckCircle, XCircle, Calendar } from 'lucide-react'
 import { TableSearch } from '@/components/ui/TableSearch'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { Database } from '@/types/database'
-
-type AppointmentRow = Database['public']['Tables']['appointments']['Row']
+interface AppointmentRow {
+  id: string
+  scheduled_date: string
+  scheduled_time: string | null
+  status: string
+  service_type?: string
+  notes?: string | null
+  customer_name?: string
+  [key: string]: any
+}
 
 interface JobsTableProps {
   appointments: AppointmentRow[]
@@ -31,7 +38,7 @@ export function JobsTable({ appointments }: JobsTableProps) {
   const filtered = appointments.filter((job) => {
     const term = search.toLowerCase()
     const matchesSearch =
-      job.service_type.toLowerCase().includes(term) ||
+      (job.service_type ?? '').toLowerCase().includes(term) ||
       (job.notes ?? '').toLowerCase().includes(term)
 
     const matchesFilter = statusFilter === '' || job.status === statusFilter
