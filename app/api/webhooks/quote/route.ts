@@ -1,10 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { SITE_CONFIG } from '@/lib/site-config'
+import { z } from 'zod'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const EMAIL_FROM = process.env.EMAIL_FROM ?? 'Autofield Alerts <onboarding@resend.dev>'
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL ?? SITE_CONFIG.contact.email
+
+const WebhookPayloadSchema = z.object({
+  record: z.object({
+    customer_name: z.string().optional(),
+    customer_phone: z.string().optional(),
+    vehicle_make: z.string().optional(),
+    vehicle_model: z.string().optional(),
+    vehicle_year: z.union([z.number(), z.string()]).optional(),
+    description: z.string().optional(),
+  }).optional(),
+  new: z.object({
+    customer_name: z.string().optional(),
+    customer_phone: z.string().optional(),
+    vehicle_make: z.string().optional(),
+    vehicle_model: z.string().optional(),
+    vehicle_year: z.union([z.number(), z.string()]).optional(),
+    description: z.string().optional(),
+  }).optional(),
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,11 +34,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized network dispatch' }, { status: 401 })
     }
 
-    // 2. Extract payload snapshot directly from the database engine insert transaction
-    const payload = await request.json()
-    
+    // 2. Validate payload structure with Zod
+    const rawPayload = await request.json()
+    const parsed = WebhookPayloadSchema.safeParse(rawPayload)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Malformed webhook payload' }, { status: 400 })
+    }
+
     // Supabase payload data maps the raw row inside the 'record' or 'new' parameter fields
-    const quote = payload.record || payload.new
+    const quote = parsed.data.record || parsed.data.new
 
     if (!quote) {
       return NextResponse.json({ error: 'No data records found in transaction body' }, { status: 400 })

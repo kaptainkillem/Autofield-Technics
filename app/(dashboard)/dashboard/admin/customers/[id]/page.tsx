@@ -243,7 +243,7 @@ export default function CustomerDetailPage() {
                   </span>
                   <span className="text-xs text-grey-medium flex items-center gap-1">
                     <Clock size={12} />
-                    {new Date(q.created_at).toLocaleDateString('en-ZA')}
+                    {q.created_at ? new Date(q.created_at).toLocaleDateString('en-ZA') : '—'}
                   </span>
                 </div>
               </div>

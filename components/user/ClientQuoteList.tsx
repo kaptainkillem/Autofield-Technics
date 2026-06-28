@@ -32,9 +32,9 @@ export function ClientQuoteList({ quotes }: ClientQuoteListProps) {
                 {q.description?.slice(0, 40) ?? 'General service'}
               </p>
               <p className="text-xs text-grey mt-0.5">
-                {new Date(q.created_at).toLocaleDateString('en-ZA', {
+                {q.created_at ? new Date(q.created_at).toLocaleDateString('en-ZA', {
                   day: 'numeric', month: 'short', year: 'numeric',
-                })}
+                }) : '—'}
               </p>
             </div>
             <StatusBadge status={q.status ?? 'pending'} />

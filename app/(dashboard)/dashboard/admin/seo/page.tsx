@@ -10,15 +10,15 @@ import { TableSearch } from '@/components/ui/TableSearch'
 type SEORecord = {
   id: string
   path_url: string
-  page_type: 'static_core' | 'geographic_node'
+  page_type: string
   meta_title: string
   meta_description: string
-  meta_keywords: string
-  h1_heading: string
-  province?: string
-  city?: string
-  suburb?: string
-  is_active: boolean
+  meta_keywords: string | null
+  h1_heading: string | null
+  province?: string | null
+  city?: string | null
+  suburb?: string | null
+  is_active: boolean | null
 }
 
 const SYSTEM_CORE_ROUTES = [
@@ -90,8 +90,8 @@ export default function AdminSEOCommandPage() {
       .update({
         meta_title: editingRecord.meta_title.trim(),
         meta_description: editingRecord.meta_description.trim(),
-        meta_keywords: editingRecord.meta_keywords.trim(),
-        h1_heading: editingRecord.h1_heading.trim(),
+        meta_keywords: editingRecord.meta_keywords?.trim() ?? '',
+        h1_heading: editingRecord.h1_heading?.trim() ?? '',
         updated_at: new Date().toISOString()
       })
       .eq('id', editingRecord.id)
@@ -332,12 +332,12 @@ export default function AdminSEOCommandPage() {
 
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-black text-grey uppercase tracking-wide">H1 Viewport Main Heading</label>
-                <input type="text" required value={editingRecord.h1_heading} onChange={(e)=>setEditingRecord(p => p ? ({...p, h1_heading: e.target.value}) : null)} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark" />
+                <input type="text" required value={editingRecord.h1_heading ?? ''} onChange={(e)=>setEditingRecord(p => p ? ({...p, h1_heading: e.target.value}) : null)} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark" />
               </div>
 
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-black text-grey uppercase tracking-wide">Focus Meta Keywords (Comma Separated)</label>
-                <input type="text" placeholder="brake service, mechanic near me, cheap car repair" value={editingRecord.meta_keywords} onChange={(e)=>setEditingRecord(p => p ? ({...p, meta_keywords: e.target.value}) : null)} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark" />
+                <input type="text" placeholder="brake service, mechanic near me, cheap car repair" value={editingRecord.meta_keywords ?? ''} onChange={(e)=>setEditingRecord(p => p ? ({...p, meta_keywords: e.target.value}) : null)} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark" />
               </div>
 
               <div className="flex flex-col gap-1">

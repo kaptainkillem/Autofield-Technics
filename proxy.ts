@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
     request: { headers: request.headers },
   });
@@ -49,10 +49,16 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Extract metadata parameters securely from user payload
-  const meta = user.user_metadata ?? {};
-  const role = meta.role ?? 'client';
-  const onboardingCompleted = meta.onboarding_completed ?? false;
+  // 🔒 SECURE: Query profiles table server-side instead of reading user_metadata
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, onboarding_completed')
+    .eq('id', user.id)
+    .single();
+
+  // Fallback to safe defaults if profile missing — denies admin access by default
+  const role = profile?.role ?? 'client';
+  const onboardingCompleted = profile?.onboarding_completed ?? false;
 
   // 🔒 2. AUTHENTICATED ENTRY PROTECTIONS (Prevents logged-in users from seeing signin/signup)
   if (isAuthRoute) {
@@ -106,6 +112,6 @@ export const config = {
     '/signup', 
     '/forgot-password', 
     '/reset-password',
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

@@ -33,8 +33,8 @@ export async function ScrollingReviews() {
                 id={review.id}
                 customerName={review.customer_name}
                 rating={review.rating}
-                reviewText={review.comment}
-                date={new Date(review.created_at).toLocaleDateString()}
+                reviewText={review.comment ?? ''}
+                date={review.created_at ? new Date(review.created_at).toLocaleDateString() : '—'}
                 vehicleServiced={undefined}
               />
             </div>

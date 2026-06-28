@@ -1,24 +1,22 @@
 -- schema.sql — Autofield-Technics
--- Fully synced with types/database.ts
-
--- ─── Extensions ────────────────────────────────────────────────────────────────
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Single source of truth — synced with live Supabase database
+-- Standardized on gen_random_uuid() (Postgres native, no extension needed)
 
 -- ─── Users (standalone business contacts) ─────────────────────────────────────
 CREATE TABLE public.users (
-    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email         TEXT NOT NULL,
-    phone         TEXT,
-    business_name TEXT,
-    whatsapp_number TEXT,
-    password_hash TEXT,
-    bio           TEXT,
-    profile_image_url TEXT,
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email                 TEXT NOT NULL,
+    phone                 TEXT,
+    business_name         TEXT,
+    whatsapp_number       TEXT,
+    password_hash         TEXT,
+    bio                   TEXT,
+    profile_image_url     TEXT,
     notifications_enabled BOOLEAN NOT NULL DEFAULT true,
-    auto_reply_message TEXT,
-    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    deleted_at    TIMESTAMP WITH TIME ZONE
+    auto_reply_message    TEXT,
+    created_at            TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at            TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    deleted_at            TIMESTAMP WITH TIME ZONE
 );
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -29,11 +27,11 @@ CREATE POLICY "Service role full access on users" ON public.users FOR ALL USING 
 
 -- ─── Categories ────────────────────────────────────────────────────────────────
 CREATE TABLE public.categories (
-    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name          TEXT NOT NULL,
     slug          TEXT NOT NULL UNIQUE,
-    icon_name     TEXT,
-    display_order INT,
+    icon_name     TEXT NOT NULL DEFAULT 'Wrench',
+    display_order INT DEFAULT 0,
     created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -45,7 +43,7 @@ CREATE POLICY "Service role can manage categories" ON public.categories FOR ALL 
 
 -- ─── Services ───────────────────────────────────────────────────────────────────
 CREATE TABLE public.services (
-    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     name          TEXT NOT NULL,
     description   TEXT,
@@ -65,13 +63,34 @@ CREATE POLICY "Service role can manage services" ON public.services FOR ALL USIN
 
 -- ─── Profiles (one-to-one with auth.users) ─────────────────────────────────────
 CREATE TABLE public.profiles (
-    id                  UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    full_name           TEXT,
-    phone               TEXT,
-    role                TEXT NOT NULL DEFAULT 'client' CHECK (role IN ('client', 'admin')),
-    onboarding_completed BOOLEAN NOT NULL DEFAULT false,
-    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id                    UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name             TEXT,
+    phone                 TEXT,
+    role                  TEXT NOT NULL DEFAULT 'client' CHECK (role IN ('client', 'admin')),
+    onboarding_completed  BOOLEAN NOT NULL DEFAULT false,
+    company_name          TEXT,
+    logo_url              TEXT,
+    address               TEXT,
+    whatsapp_number       TEXT,
+    vat_number            TEXT,
+    registration_number   TEXT,
+    bank_name             TEXT,
+    account_holder        TEXT,
+    account_number        TEXT,
+    branch_code           TEXT,
+    hourly_rate           NUMERIC,
+    callout_fee           NUMERIC,
+    diagnostic_fee        NUMERIC,
+    terms_conditions      TEXT,
+    default_deposit_percent NUMERIC,
+    alternate_phone       TEXT,
+    physical_address      TEXT,
+    prefers_whatsapp      BOOLEAN DEFAULT true,
+    service_reminders_opt_in BOOLEAN DEFAULT true,
+    client_status         TEXT DEFAULT 'active',
+    internal_notes        TEXT,
+    created_at            TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at            TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -82,13 +101,15 @@ CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING
 
 -- ─── Vehicles ───────────────────────────────────────────────────────────────────
 CREATE TABLE public.vehicles (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id    UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-    make       TEXT NOT NULL,
-    model      TEXT NOT NULL,
-    year       INT NOT NULL CHECK (year >= 1900 AND year <= 2030),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    make          TEXT NOT NULL,
+    model         TEXT NOT NULL,
+    year          INT NOT NULL CHECK (year >= 1900 AND year <= 2030),
+    license_plate TEXT,
+    mileage       TEXT,
+    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
@@ -100,19 +121,24 @@ CREATE POLICY "Users can delete own vehicles" ON public.vehicles FOR DELETE USIN
 
 -- ─── Quotes ─────────────────────────────────────────────────────────────────────
 CREATE TABLE public.quotes (
-    id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id        UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-    customer_name  TEXT NOT NULL,
-    customer_email TEXT,
-    customer_phone TEXT NOT NULL,
-    vehicle_year   INT,
-    vehicle_make   TEXT,
-    vehicle_model  TEXT,
-    description    TEXT,
-    status         TEXT DEFAULT 'pending',
-    created_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    deleted_at     TIMESTAMP WITH TIME ZONE
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id             UUID NOT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
+    customer_name       TEXT NOT NULL,
+    customer_email      TEXT,
+    customer_phone      TEXT NOT NULL,
+    vehicle_year        INT,
+    vehicle_make        TEXT,
+    vehicle_model       TEXT,
+    service_type        TEXT,
+    description         TEXT NOT NULL,
+    estimated_quote     NUMERIC,
+    status              TEXT DEFAULT 'pending',
+    notes               TEXT,
+    whatsapp_sent_at    TIMESTAMP WITH TIME ZONE,
+    whatsapp_message_id TEXT,
+    created_at          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at          TIMESTAMP WITH TIME ZONE
 );
 
 ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
@@ -123,19 +149,19 @@ CREATE POLICY "Service role can manage quotes" ON public.quotes FOR ALL USING (a
 
 -- ─── Reviews ─────────────────────────────────────────────────────────────────────
 CREATE TABLE public.reviews (
-    id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id          UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          UUID NOT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
     quote_id         UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
+    rating           INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment          TEXT,
     customer_name    TEXT NOT NULL,
     customer_email   TEXT,
-    rating           INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
-    comment          TEXT NOT NULL,
-    status           TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    status           TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
     moderation_notes TEXT,
     approved_at      TIMESTAMP WITH TIME ZONE,
     deleted_at       TIMESTAMP WITH TIME ZONE,
-    created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
@@ -146,13 +172,16 @@ CREATE POLICY "Service role can update reviews" ON public.reviews FOR UPDATE USI
 
 -- ─── Receipts ────────────────────────────────────────────────────────────────────
 CREATE TABLE public.receipts (
-    id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id        UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id        UUID NOT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
     quote_id       UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
+    invoice_number TEXT,
     amount_paid    NUMERIC NOT NULL,
     payment_method TEXT,
-    job_date       DATE,
-    issued_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    job_date       DATE NOT NULL,
+    notes          TEXT,
+    created_at     TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     deleted_at     TIMESTAMP WITH TIME ZONE
 );
 
@@ -163,7 +192,7 @@ CREATE POLICY "Service role can manage receipts" ON public.receipts FOR ALL USIN
 
 -- ─── Leads ───────────────────────────────────────────────────────────────────────
 CREATE TABLE public.leads (
-    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name            TEXT,
     phone           TEXT,
     vehicle_details TEXT,
@@ -177,19 +206,19 @@ CREATE POLICY "Service role can manage leads" ON public.leads FOR ALL USING (aut
 
 -- ─── SEO Registry ───────────────────────────────────────────────────────────────
 CREATE TABLE public.seo_registry (
-    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    path_url        TEXT NOT NULL UNIQUE,
-    page_type       TEXT DEFAULT 'landing',
-    meta_title      TEXT NOT NULL,
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    path_url         TEXT NOT NULL UNIQUE,
+    page_type        TEXT NOT NULL,
+    meta_title       TEXT NOT NULL,
     meta_description TEXT NOT NULL,
-    meta_keywords   TEXT NOT NULL,
-    h1_heading      TEXT NOT NULL,
-    province        TEXT,
-    city            TEXT,
-    suburb          TEXT,
-    is_active       BOOLEAN NOT NULL DEFAULT true,
-    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    meta_keywords    TEXT,
+    h1_heading       TEXT,
+    province         TEXT,
+    city             TEXT,
+    suburb           TEXT,
+    is_active        BOOLEAN DEFAULT true,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 ALTER TABLE public.seo_registry ENABLE ROW LEVEL SECURITY;
@@ -197,9 +226,29 @@ ALTER TABLE public.seo_registry ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can read active SEO entries" ON public.seo_registry FOR SELECT USING (is_active = true);
 CREATE POLICY "Service role can manage SEO entries" ON public.seo_registry FOR ALL USING (auth.role() = 'service_role');
 
+-- ─── SEO Locations ──────────────────────────────────────────────────────────────
+CREATE TABLE public.seo_locations (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    city             TEXT NOT NULL,
+    suburb           TEXT NOT NULL,
+    province         TEXT NOT NULL,
+    meta_title       TEXT NOT NULL,
+    meta_description TEXT NOT NULL,
+    h1_heading       TEXT NOT NULL,
+    content_body     TEXT NOT NULL,
+    is_active        BOOLEAN DEFAULT true,
+    created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.seo_locations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read active SEO locations" ON public.seo_locations FOR SELECT USING (is_active = true);
+CREATE POLICY "Service role can manage SEO locations" ON public.seo_locations FOR ALL USING (auth.role() = 'service_role');
+
 -- ─── Analytics ───────────────────────────────────────────────────────────────────
 CREATE TABLE public.analytics (
-    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     month         INT NOT NULL CHECK (month >= 1 AND month <= 12),
     year          INT NOT NULL,
@@ -217,7 +266,7 @@ CREATE POLICY "Service role can manage analytics" ON public.analytics FOR ALL US
 
 -- ─── Appointments (Jobs) ────────────────────────────────────────────────────────
 CREATE TABLE public.appointments (
-    id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id        UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     quote_id       UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
     service_type   TEXT NOT NULL,
@@ -233,6 +282,44 @@ ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own appointments" ON public.appointments FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Service role can manage appointments" ON public.appointments FOR ALL USING (auth.role() = 'service_role');
+
+-- ─── Working Hours ──────────────────────────────────────────────────────────────
+CREATE TABLE public.working_hours (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    day_of_week INT NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+    start_time  TIME NOT NULL,
+    end_time    TIME NOT NULL,
+    is_active   BOOLEAN NOT NULL DEFAULT true,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(day_of_week)
+);
+
+ALTER TABLE public.working_hours ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read working hours" ON public.working_hours FOR SELECT USING (true);
+CREATE POLICY "Service role can manage working hours" ON public.working_hours FOR ALL USING (auth.role() = 'service_role');
+
+-- ─── Blocked Slots ──────────────────────────────────────────────────────────────
+CREATE TABLE public.blocked_slots (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mechanic_id     UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    start_datetime  TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_datetime    TIMESTAMP WITH TIME ZONE NOT NULL,
+    reason          TEXT,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.blocked_slots ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role can manage blocked slots" ON public.blocked_slots FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Admins can read blocked slots" ON public.blocked_slots FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM public.profiles 
+        WHERE id = auth.uid() AND role = 'admin'
+    )
+);
 
 -- ─── Auto-create profile row on signup ──────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -259,13 +346,21 @@ CREATE TRIGGER on_auth_user_created
 -- ─── Indexes ─────────────────────────────────────────────────────────────────────
 CREATE INDEX idx_quotes_user_id ON public.quotes(user_id);
 CREATE INDEX idx_quotes_status ON public.quotes(status);
+CREATE INDEX idx_quotes_whatsapp_message_id ON public.quotes(whatsapp_message_id);
 CREATE INDEX idx_receipts_user_id ON public.receipts(user_id);
 CREATE INDEX idx_appointments_user_id ON public.appointments(user_id);
 CREATE INDEX idx_appointments_status ON public.appointments(status);
 CREATE INDEX idx_appointments_scheduled_date ON public.appointments(scheduled_date);
 CREATE INDEX idx_seo_registry_path ON public.seo_registry(path_url);
+CREATE INDEX idx_seo_locations_path_url ON public.seo_locations(id);
 CREATE INDEX idx_analytics_user_month_year ON public.analytics(user_id, month, year);
 CREATE INDEX idx_services_category_id ON public.services(category_id);
 CREATE INDEX idx_services_is_active ON public.services(is_active);
 CREATE INDEX idx_leads_created_at ON public.leads(created_at);
 CREATE INDEX idx_reviews_status ON public.reviews(status);
+CREATE INDEX idx_vehicles_user_id ON public.vehicles(user_id);
+CREATE INDEX idx_users_email ON public.users(email);
+CREATE INDEX idx_working_hours_day ON public.working_hours(day_of_week);
+CREATE INDEX idx_blocked_slots_mechanic_id ON public.blocked_slots(mechanic_id);
+CREATE INDEX idx_blocked_slots_start_datetime ON public.blocked_slots(start_datetime);
+CREATE INDEX idx_blocked_slots_end_datetime ON public.blocked_slots(end_datetime);

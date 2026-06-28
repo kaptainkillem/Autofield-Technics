@@ -125,7 +125,7 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
                     <td className="py-4 px-4">
                       <p className="font-medium text-grey-dark">{quote.customer_name}</p>
                       <p className="text-xs text-grey-medium">
-                        {quote.customer_phone} · {timeAgo(quote.created_at)}
+                        {quote.customer_phone} · {quote.created_at ? timeAgo(quote.created_at) : '—'}
                       </p>
                     </td>
                     <td className="py-4 px-4 text-grey-dark hidden md:table-cell">
