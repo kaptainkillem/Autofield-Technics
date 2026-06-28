@@ -4,7 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { TableSearch } from '@/components/ui/TableSearch'
 import { Database } from '@/types/database'
-import { MessageCircle, ChevronRight } from 'lucide-react'
+import { MessageCircle, ChevronRight, Plus, UserPlus } from 'lucide-react'
+import { AddNewCustomerModal } from './AddNewCustomerModal'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 
@@ -30,8 +31,10 @@ function statusColor(status: string | null) {
   }
 }
 
-export function AdminCustomers({ customers }: AdminCustomersProps) {
+export function AdminCustomers({ customers: initialCustomers }: AdminCustomersProps) {
   const [search, setSearch] = useState('')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [customers, setCustomers] = useState(initialCustomers)
 
   const filtered = customers.filter((c) => {
     const term = search.toLowerCase()
@@ -53,11 +56,22 @@ export function AdminCustomers({ customers }: AdminCustomersProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <TableSearch
-        placeholder="Search by name, phone, or notes..."
-        value={search}
-        onChange={setSearch}
-      />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1">
+          <TableSearch
+            placeholder="Search by name, phone, or notes..."
+            value={search}
+            onChange={setSearch}
+          />
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-base bg-primary text-white text-sm font-bold hover:bg-primary-dark transition-colors shadow-sm shrink-0"
+        >
+          <UserPlus size={16} />
+          New Customer
+        </button>
+      </div>
       <div className="border border-grey-medium/10 rounded-base overflow-hidden">
         <div className="p-4 border-b border-grey-medium/20 flex items-center justify-between bg-white">
           <span className="text-sm font-semibold text-grey-dark">All customers</span>
@@ -119,6 +133,16 @@ export function AdminCustomers({ customers }: AdminCustomersProps) {
           })}
         </ul>
       </div>
+
+      {showAddModal && (
+        <AddNewCustomerModal
+          onClose={() => setShowAddModal(false)}
+          onSuccess={() => {
+            // Refresh page data
+            window.location.reload()
+          }}
+        />
+      )}
     </div>
   )
 }

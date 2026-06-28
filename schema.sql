@@ -1,9 +1,10 @@
 -- schema.sql — Autofield-Technics
 -- Single source of truth — synced with live Supabase database
 -- Standardized on gen_random_uuid() (Postgres native, no extension needed)
+-- IDEMPOTENT: safe to run multiple times on an existing database
 
 -- ─── Users (standalone business contacts) ─────────────────────────────────────
-CREATE TABLE public.users (
+CREATE TABLE IF NOT EXISTS public.users (
     id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email                 TEXT NOT NULL,
     phone                 TEXT,
@@ -21,12 +22,17 @@ CREATE TABLE public.users (
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own data" ON public.users;
 CREATE POLICY "Users can view own data" ON public.users FOR SELECT USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can update own data" ON public.users;
 CREATE POLICY "Users can update own data" ON public.users FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Service role full access on users" ON public.users;
 CREATE POLICY "Service role full access on users" ON public.users FOR ALL USING (auth.role() = 'service_role');
 
 -- ─── Categories ────────────────────────────────────────────────────────────────
-CREATE TABLE public.categories (
+CREATE TABLE IF NOT EXISTS public.categories (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name          TEXT NOT NULL,
     slug          TEXT NOT NULL UNIQUE,
@@ -38,11 +44,14 @@ CREATE TABLE public.categories (
 
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can read categories" ON public.categories;
 CREATE POLICY "Anyone can read categories" ON public.categories FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Service role can manage categories" ON public.categories;
 CREATE POLICY "Service role can manage categories" ON public.categories FOR ALL USING (auth.role() = 'service_role');
 
 -- ─── Services ───────────────────────────────────────────────────────────────────
-CREATE TABLE public.services (
+CREATE TABLE IF NOT EXISTS public.services (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     name          TEXT NOT NULL,
@@ -58,11 +67,14 @@ CREATE TABLE public.services (
 
 ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can read active services" ON public.services;
 CREATE POLICY "Anyone can read active services" ON public.services FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Service role can manage services" ON public.services;
 CREATE POLICY "Service role can manage services" ON public.services FOR ALL USING (auth.role() = 'service_role');
 
 -- ─── Profiles (one-to-one with auth.users) ─────────────────────────────────────
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
     id                    UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name             TEXT,
     phone                 TEXT,
@@ -95,12 +107,23 @@ CREATE TABLE public.profiles (
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
+-- Client notification preferences (added for Client Settings portal)
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS notification_quotes_whatsapp BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS notification_appointments_email BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS notification_marketing BOOLEAN DEFAULT false;
+
 -- ─── Vehicles ───────────────────────────────────────────────────────────────────
-CREATE TABLE public.vehicles (
+CREATE TABLE IF NOT EXISTS public.vehicles (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     make          TEXT NOT NULL,
@@ -114,13 +137,20 @@ CREATE TABLE public.vehicles (
 
 ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own vehicles" ON public.vehicles;
 CREATE POLICY "Users can view own vehicles" ON public.vehicles FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own vehicles" ON public.vehicles;
 CREATE POLICY "Users can insert own vehicles" ON public.vehicles FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own vehicles" ON public.vehicles;
 CREATE POLICY "Users can update own vehicles" ON public.vehicles FOR UPDATE USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own vehicles" ON public.vehicles;
 CREATE POLICY "Users can delete own vehicles" ON public.vehicles FOR DELETE USING (auth.uid() = user_id);
 
 -- ─── Quotes ─────────────────────────────────────────────────────────────────────
-CREATE TABLE public.quotes (
+CREATE TABLE IF NOT EXISTS public.quotes (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id             UUID NOT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
     customer_name       TEXT NOT NULL,
@@ -143,12 +173,17 @@ CREATE TABLE public.quotes (
 
 ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own quotes" ON public.quotes;
 CREATE POLICY "Users can view own quotes" ON public.quotes FOR SELECT USING (auth.uid() = user_id AND deleted_at IS NULL);
+
+DROP POLICY IF EXISTS "Anyone can submit a quote" ON public.quotes;
 CREATE POLICY "Anyone can submit a quote" ON public.quotes FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service role can manage quotes" ON public.quotes;
 CREATE POLICY "Service role can manage quotes" ON public.quotes FOR ALL USING (auth.role() = 'service_role');
 
 -- ─── Reviews ─────────────────────────────────────────────────────────────────────
-CREATE TABLE public.reviews (
+CREATE TABLE IF NOT EXISTS public.reviews (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id          UUID NOT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
     quote_id         UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
@@ -166,12 +201,17 @@ CREATE TABLE public.reviews (
 
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can read approved reviews" ON public.reviews;
 CREATE POLICY "Anyone can read approved reviews" ON public.reviews FOR SELECT USING (status = 'approved' AND deleted_at IS NULL);
+
+DROP POLICY IF EXISTS "Anyone can submit a review" ON public.reviews;
 CREATE POLICY "Anyone can submit a review" ON public.reviews FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service role can update reviews" ON public.reviews;
 CREATE POLICY "Service role can update reviews" ON public.reviews FOR UPDATE USING (true);
 
 -- ─── Receipts ────────────────────────────────────────────────────────────────────
-CREATE TABLE public.receipts (
+CREATE TABLE IF NOT EXISTS public.receipts (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id        UUID NOT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
     quote_id       UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
@@ -180,6 +220,8 @@ CREATE TABLE public.receipts (
     payment_method TEXT,
     job_date       DATE NOT NULL,
     notes          TEXT,
+    source         TEXT DEFAULT 'system',
+    customer_name  TEXT,
     created_at     TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     deleted_at     TIMESTAMP WITH TIME ZONE
@@ -187,11 +229,35 @@ CREATE TABLE public.receipts (
 
 ALTER TABLE public.receipts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own receipts" ON public.receipts;
 CREATE POLICY "Users can view own receipts" ON public.receipts FOR SELECT USING (auth.uid() = user_id AND deleted_at IS NULL);
+
+DROP POLICY IF EXISTS "Service role can manage receipts" ON public.receipts;
 CREATE POLICY "Service role can manage receipts" ON public.receipts FOR ALL USING (auth.role() = 'service_role');
 
+-- ─── Expenses ────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.expenses (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    amount       NUMERIC NOT NULL CHECK (amount >= 0),
+    category     TEXT NOT NULL CHECK (category IN ('Parts', 'Fuel', 'Tools', 'Rent', 'Data', 'Misc')),
+    description  TEXT,
+    expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at   TIMESTAMP WITH TIME ZONE
+);
+
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Service role can manage expenses" ON public.expenses;
+CREATE POLICY "Service role can manage expenses" ON public.expenses FOR ALL USING (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Users can view own expenses" ON public.expenses;
+CREATE POLICY "Users can view own expenses" ON public.expenses FOR SELECT USING (auth.uid() = user_id);
+
 -- ─── Leads ───────────────────────────────────────────────────────────────────────
-CREATE TABLE public.leads (
+CREATE TABLE IF NOT EXISTS public.leads (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name            TEXT,
     phone           TEXT,
@@ -202,10 +268,11 @@ CREATE TABLE public.leads (
 
 ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service role can manage leads" ON public.leads;
 CREATE POLICY "Service role can manage leads" ON public.leads FOR ALL USING (auth.role() = 'service_role');
 
 -- ─── SEO Registry ───────────────────────────────────────────────────────────────
-CREATE TABLE public.seo_registry (
+CREATE TABLE IF NOT EXISTS public.seo_registry (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     path_url         TEXT NOT NULL UNIQUE,
     page_type        TEXT NOT NULL,
@@ -223,11 +290,14 @@ CREATE TABLE public.seo_registry (
 
 ALTER TABLE public.seo_registry ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can read active SEO entries" ON public.seo_registry;
 CREATE POLICY "Anyone can read active SEO entries" ON public.seo_registry FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Service role can manage SEO entries" ON public.seo_registry;
 CREATE POLICY "Service role can manage SEO entries" ON public.seo_registry FOR ALL USING (auth.role() = 'service_role');
 
 -- ─── SEO Locations ──────────────────────────────────────────────────────────────
-CREATE TABLE public.seo_locations (
+CREATE TABLE IF NOT EXISTS public.seo_locations (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     city             TEXT NOT NULL,
     suburb           TEXT NOT NULL,
@@ -243,11 +313,14 @@ CREATE TABLE public.seo_locations (
 
 ALTER TABLE public.seo_locations ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can read active SEO locations" ON public.seo_locations;
 CREATE POLICY "Anyone can read active SEO locations" ON public.seo_locations FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Service role can manage SEO locations" ON public.seo_locations;
 CREATE POLICY "Service role can manage SEO locations" ON public.seo_locations FOR ALL USING (auth.role() = 'service_role');
 
 -- ─── Analytics ───────────────────────────────────────────────────────────────────
-CREATE TABLE public.analytics (
+CREATE TABLE IF NOT EXISTS public.analytics (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     month         INT NOT NULL CHECK (month >= 1 AND month <= 12),
@@ -261,11 +334,14 @@ CREATE TABLE public.analytics (
 
 ALTER TABLE public.analytics ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own analytics" ON public.analytics;
 CREATE POLICY "Users can view own analytics" ON public.analytics FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Service role can manage analytics" ON public.analytics;
 CREATE POLICY "Service role can manage analytics" ON public.analytics FOR ALL USING (auth.role() = 'service_role');
 
 -- ─── Appointments (Jobs) ────────────────────────────────────────────────────────
-CREATE TABLE public.appointments (
+CREATE TABLE IF NOT EXISTS public.appointments (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id        UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     quote_id       UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
@@ -280,11 +356,14 @@ CREATE TABLE public.appointments (
 
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own appointments" ON public.appointments;
 CREATE POLICY "Users can view own appointments" ON public.appointments FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Service role can manage appointments" ON public.appointments;
 CREATE POLICY "Service role can manage appointments" ON public.appointments FOR ALL USING (auth.role() = 'service_role');
 
 -- ─── Working Hours ──────────────────────────────────────────────────────────────
-CREATE TABLE public.working_hours (
+CREATE TABLE IF NOT EXISTS public.working_hours (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     day_of_week INT NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
     start_time  TIME NOT NULL,
@@ -297,11 +376,14 @@ CREATE TABLE public.working_hours (
 
 ALTER TABLE public.working_hours ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can read working hours" ON public.working_hours;
 CREATE POLICY "Anyone can read working hours" ON public.working_hours FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Service role can manage working hours" ON public.working_hours;
 CREATE POLICY "Service role can manage working hours" ON public.working_hours FOR ALL USING (auth.role() = 'service_role');
 
 -- ─── Blocked Slots ──────────────────────────────────────────────────────────────
-CREATE TABLE public.blocked_slots (
+CREATE TABLE IF NOT EXISTS public.blocked_slots (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     mechanic_id     UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     start_datetime  TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -313,7 +395,10 @@ CREATE TABLE public.blocked_slots (
 
 ALTER TABLE public.blocked_slots ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service role can manage blocked slots" ON public.blocked_slots;
 CREATE POLICY "Service role can manage blocked slots" ON public.blocked_slots FOR ALL USING (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "Admins can read blocked slots" ON public.blocked_slots;
 CREATE POLICY "Admins can read blocked slots" ON public.blocked_slots FOR SELECT USING (
     EXISTS (
         SELECT 1 FROM public.profiles 
@@ -339,28 +424,66 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ─── Indexes ─────────────────────────────────────────────────────────────────────
-CREATE INDEX idx_quotes_user_id ON public.quotes(user_id);
-CREATE INDEX idx_quotes_status ON public.quotes(status);
-CREATE INDEX idx_quotes_whatsapp_message_id ON public.quotes(whatsapp_message_id);
-CREATE INDEX idx_receipts_user_id ON public.receipts(user_id);
-CREATE INDEX idx_appointments_user_id ON public.appointments(user_id);
-CREATE INDEX idx_appointments_status ON public.appointments(status);
-CREATE INDEX idx_appointments_scheduled_date ON public.appointments(scheduled_date);
-CREATE INDEX idx_seo_registry_path ON public.seo_registry(path_url);
-CREATE INDEX idx_seo_locations_path_url ON public.seo_locations(id);
-CREATE INDEX idx_analytics_user_month_year ON public.analytics(user_id, month, year);
-CREATE INDEX idx_services_category_id ON public.services(category_id);
-CREATE INDEX idx_services_is_active ON public.services(is_active);
-CREATE INDEX idx_leads_created_at ON public.leads(created_at);
-CREATE INDEX idx_reviews_status ON public.reviews(status);
-CREATE INDEX idx_vehicles_user_id ON public.vehicles(user_id);
-CREATE INDEX idx_users_email ON public.users(email);
-CREATE INDEX idx_working_hours_day ON public.working_hours(day_of_week);
-CREATE INDEX idx_blocked_slots_mechanic_id ON public.blocked_slots(mechanic_id);
-CREATE INDEX idx_blocked_slots_start_datetime ON public.blocked_slots(start_datetime);
-CREATE INDEX idx_blocked_slots_end_datetime ON public.blocked_slots(end_datetime);
+CREATE INDEX IF NOT EXISTS idx_quotes_user_id ON public.quotes(user_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_status ON public.quotes(status);
+CREATE INDEX IF NOT EXISTS idx_quotes_whatsapp_message_id ON public.quotes(whatsapp_message_id);
+CREATE INDEX IF NOT EXISTS idx_receipts_user_id ON public.receipts(user_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_user_id ON public.appointments(user_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_status ON public.appointments(status);
+CREATE INDEX IF NOT EXISTS idx_appointments_scheduled_date ON public.appointments(scheduled_date);
+CREATE INDEX IF NOT EXISTS idx_seo_registry_path ON public.seo_registry(path_url);
+CREATE INDEX IF NOT EXISTS idx_seo_locations_path_url ON public.seo_locations(id);
+CREATE INDEX IF NOT EXISTS idx_analytics_user_month_year ON public.analytics(user_id, month, year);
+CREATE INDEX IF NOT EXISTS idx_services_category_id ON public.services(category_id);
+CREATE INDEX IF NOT EXISTS idx_services_is_active ON public.services(is_active);
+CREATE INDEX IF NOT EXISTS idx_leads_created_at ON public.leads(created_at);
+CREATE INDEX IF NOT EXISTS idx_reviews_status ON public.reviews(status);
+CREATE INDEX IF NOT EXISTS idx_vehicles_user_id ON public.vehicles(user_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
+CREATE INDEX IF NOT EXISTS idx_working_hours_day ON public.working_hours(day_of_week);
+CREATE INDEX IF NOT EXISTS idx_blocked_slots_mechanic_id ON public.blocked_slots(mechanic_id);
+CREATE INDEX IF NOT EXISTS idx_blocked_slots_start_datetime ON public.blocked_slots(start_datetime);
+CREATE INDEX IF NOT EXISTS idx_blocked_slots_end_datetime ON public.blocked_slots(end_datetime);
+
+-- ─── Admin Check Function ──────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ─── Business Settings ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.business_settings (
+    id                  TEXT PRIMARY KEY DEFAULT 'config',
+    primary_color       TEXT DEFAULT '#3B82F6',
+    accent_color        TEXT DEFAULT '#10B981',
+    favicon_url         TEXT,
+    notification_email  BOOLEAN DEFAULT true,
+    notification_push   BOOLEAN DEFAULT true,
+    notification_whatsapp BOOLEAN DEFAULT false,
+    whatsapp_auto_reply TEXT,
+    whatsapp_business_only BOOLEAN DEFAULT false,
+    email_display_name  TEXT,
+    email_reply_to      TEXT,
+    smtp_note           TEXT,
+    created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.business_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can read business settings" ON public.business_settings;
+CREATE POLICY "Anyone can read business settings" ON public.business_settings FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Admins can manage business settings" ON public.business_settings;
+CREATE POLICY "Admins can manage business settings" ON public.business_settings FOR ALL USING (public.is_admin());

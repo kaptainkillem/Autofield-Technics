@@ -4,11 +4,18 @@ const nextConfig: NextConfig = {
   output: 'standalone',
 
   images: {
-    domains: [
-      process.env.NEXT_PUBLIC_SUPABASE_URL 
-        ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname 
-        : '',
-    ].filter(Boolean),
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: process.env.NEXT_PUBLIC_SUPABASE_URL
+          ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+          : '*.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.pexels.com',
+      },
+    ],
   },
 
   async headers() {
@@ -38,9 +45,11 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' blob: data:",
+              // UPDATED: Whitelisted Pexels and Supabase for images
+              "img-src 'self' blob: data: https://images.pexels.com https://*.supabase.co",
               "font-src 'self'",
-              "connect-src 'self'",
+              // UPDATED: Whitelisted Supabase REST API (https) and Realtime (wss)
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

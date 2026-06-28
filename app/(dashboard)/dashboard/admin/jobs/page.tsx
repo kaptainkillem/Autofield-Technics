@@ -7,6 +7,8 @@ import { CalendarGrid } from '@/components/admin/CalendarGrid'
 import { JobsTable } from '@/components/admin/JobsTable'
 import { CreateAppointmentModal } from '@/components/admin/CreateAppointmentModal'
 import { EditAppointmentModal } from '@/components/admin/EditAppointmentModal'
+import { PageWrapper } from '@/components/layout/PageWrapper'
+import { SITE_CONFIG } from '@/lib/site-config'
 
 type Appointment = {
   id: string
@@ -76,6 +78,8 @@ export default function AdminJobsPage() {
     setSelectedAppointment(appt)
   }
 
+  const pendingCount = appointments.filter((a) => a.status === 'pending').length
+
   if (loading) {
     return (
       <div className="flex min-h-[400px] w-full items-center justify-center">
@@ -85,11 +89,11 @@ export default function AdminJobsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6 max-w-[1600px] mx-auto w-full mt-4">
+    <PageWrapper className="gap-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-grey-dark">Active Mechanical Jobs</h1>
+          <h1 className="text-2xl font-bold text-grey-dark">{SITE_CONFIG.dashboard.pageTitles.jobs}</h1>
           <p className="text-sm text-grey">
             {view === 'calendar'
               ? 'View and manage appointments on the calendar.'
@@ -97,11 +101,11 @@ export default function AdminJobsPage() {
           </p>
         </div>
 
-        {/* View Toggle */}
+         {/* View Toggle */}
         <div className="flex items-center gap-1 bg-white border border-grey-medium/10 rounded-base p-1 shadow-sm">
           <button
             onClick={() => setView('list')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-base text-sm font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-base text-sm font-semibold transition-all cursor-pointer relative ${
               view === 'list'
                 ? 'bg-primary text-white shadow-sm'
                 : 'text-grey hover:bg-primary/5 hover:text-grey-dark'
@@ -109,6 +113,13 @@ export default function AdminJobsPage() {
           >
             <List size={16} />
             List
+            {pendingCount > 0 && (
+              <span className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                view === 'list' ? 'bg-white text-primary' : 'bg-amber-500 text-white'
+              }`}>
+                {pendingCount}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setView('calendar')}
@@ -127,7 +138,7 @@ export default function AdminJobsPage() {
       {/* Content */}
       <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm">
         {view === 'list' ? (
-          <JobsTable appointments={appointments} />
+          <JobsTable appointments={appointments} onUpdate={fetchData} />
         ) : (
           <CalendarGrid
             appointments={appointments}
@@ -150,6 +161,6 @@ export default function AdminJobsPage() {
         onClose={() => setSelectedAppointment(null)}
         onSuccess={fetchData}
       />
-    </div>
+    </PageWrapper>
   )
 }

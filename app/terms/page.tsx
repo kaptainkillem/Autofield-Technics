@@ -1,7 +1,8 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SITE_CONFIG } from '@/lib/site-config'
 
-export const metadata = {
+export const metadata: Metadata = {
   title: `Terms of Service | ${SITE_CONFIG.name}`,
 }
 

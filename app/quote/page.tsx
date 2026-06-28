@@ -1,10 +1,16 @@
 export const dynamic = 'force-dynamic'
 
+import type { Metadata } from 'next'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { ServicesHero } from '@/components/features/ServicesHero'
 import { QuoteForm } from '@/components/QuoteForm'
 import { HelpCircle, CheckCircle, Smartphone } from 'lucide-react'
 import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
+
+export const metadata: Metadata = {
+  title: `Get a Free Quote | ${SITE_CONFIG.name}`,
+  description: `Request a free repair quote from ${SITE_CONFIG.name}. Mobile mechanic services in ${SITE_CONFIG.city}. Fast response via WhatsApp.`,
+}
 
 export default function QuotePage() {
   return (

@@ -8,6 +8,8 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Database } from '@/types/database'
+import { PageWrapper } from '@/components/layout/PageWrapper'
+import { SITE_CONFIG } from '@/lib/site-config'
 
 type Review = {
   id: string
@@ -109,15 +111,14 @@ export default function AdminReviewsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-8 max-w-[1400px] mx-auto w-full mt-4">
-
+    <PageWrapper className="max-w-[1400px] gap-6">
       {/* Header Block */}
       <div className="flex items-center gap-3">
         <Link href="/dashboard/admin" className="p-2 bg-white rounded-base border border-grey-medium/10 text-grey hover:text-primary transition-all shadow-sm">
           <ArrowLeft size={16} />
         </Link>
         <div>
-          <h1 className="text-2xl font-black text-grey-dark tracking-tight">Reviews & Approvals</h1>
+          <h1 className="text-2xl font-black text-grey-dark tracking-tight">{SITE_CONFIG.dashboard.pageTitles.reviews}</h1>
           <p className="text-xs text-grey">Review and moderate customer testimonials before they go live.</p>
         </div>
       </div>
@@ -265,6 +266,6 @@ export default function AdminReviewsPage() {
           ))
         )}
       </div>
-    </div>
+    </PageWrapper>
   )
 }

@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
 import { z } from 'zod';
 
 const SignInSchema = z.object({
@@ -7,7 +8,20 @@ const SignInSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const { allowed, remaining } = checkRateLimit(`auth:signin:${ip}`, {
+    maxRequests: 5,
+    windowMs: 60_000,
+  })
+
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many login attempts. Please try again in a minute.' },
+      { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+    );
+  }
+
   let body: z.infer<typeof SignInSchema>;
 
   try {

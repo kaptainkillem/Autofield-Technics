@@ -2,9 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Clock, Wrench, CheckCircle, XCircle, Calendar } from 'lucide-react'
+import { ArrowRight, Clock, Wrench, CheckCircle, XCircle, Calendar, Loader2 } from 'lucide-react'
 import { TableSearch } from '@/components/ui/TableSearch'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
+
 interface AppointmentRow {
   id: string
   scheduled_date: string
@@ -18,6 +21,7 @@ interface AppointmentRow {
 
 interface JobsTableProps {
   appointments: AppointmentRow[]
+  onUpdate?: () => void
 }
 
 const STATUS_FILTERS = [
@@ -27,9 +31,10 @@ const STATUS_FILTERS = [
   { label: 'Cancelled', value: 'cancelled' },
 ]
 
-export function JobsTable({ appointments }: JobsTableProps) {
+export function JobsTable({ appointments, onUpdate }: JobsTableProps) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [processingId, setProcessingId] = useState<string | null>(null)
 
   const pendingCount = appointments.filter((j) => j.status === 'pending').length
   const confirmedCount = appointments.filter((j) => j.status === 'confirmed').length
@@ -45,6 +50,46 @@ export function JobsTable({ appointments }: JobsTableProps) {
 
     return matchesSearch && matchesFilter
   })
+
+  async function handleApprove(id: string) {
+    setProcessingId(id)
+    const { error } = await (supabase as any)
+      .from('appointments')
+      .update({ status: 'confirmed', updated_at: new Date().toISOString() })
+      .eq('id', id)
+
+    setProcessingId(null)
+
+    if (error) {
+      console.error('Approve error:', error)
+      toast.error('Failed to approve appointment')
+      return
+    }
+
+    toast.success('Appointment approved!')
+    onUpdate?.()
+  }
+
+  async function handleDecline(id: string) {
+    if (!confirm('Are you sure you want to decline this appointment?')) return
+
+    setProcessingId(id)
+    const { error } = await (supabase as any)
+      .from('appointments')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', id)
+
+    setProcessingId(null)
+
+    if (error) {
+      console.error('Decline error:', error)
+      toast.error('Failed to decline appointment')
+      return
+    }
+
+    toast.success('Appointment declined')
+    onUpdate?.()
+  }
 
   if (appointments.length === 0) {
     return (
@@ -117,13 +162,38 @@ export function JobsTable({ appointments }: JobsTableProps) {
                   </td>
                   <td className="py-4 px-4 text-grey text-xs max-w-xs truncate">{job.notes ?? '—'}</td>
                   <td className="py-4 px-4 text-right whitespace-nowrap">
-                    <Link
-                      href={`/dashboard/admin/quotes?highlight=${job.quote_id ?? ''}`}
-                      className="inline-flex items-center gap-1.5 bg-primary text-white text-xs px-3 py-2 rounded-base font-bold no-underline hover:bg-primary-dark transition shadow-sm"
-                    >
-                      View Quote
-                      <ArrowRight size={12} />
-                    </Link>
+                    {job.status === 'pending' ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleDecline(job.id)}
+                          disabled={processingId === job.id}
+                          aria-disabled={processingId === job.id}
+                          aria-busy={processingId === job.id}
+                          className="inline-flex items-center gap-1 bg-white text-grey border border-grey-medium/20 text-xs px-2.5 py-1.5 rounded-base font-semibold hover:bg-grey-lightest transition disabled:opacity-50"
+                        >
+                          {processingId === job.id ? <Loader2 size={10} className="animate-spin" /> : <XCircle size={10} />}
+                          Decline
+                        </button>
+                        <button
+                          onClick={() => handleApprove(job.id)}
+                          disabled={processingId === job.id}
+                          aria-disabled={processingId === job.id}
+                          aria-busy={processingId === job.id}
+                          className="inline-flex items-center gap-1 bg-green-600 text-white text-xs px-2.5 py-1.5 rounded-base font-bold hover:bg-green-700 transition disabled:opacity-50"
+                        >
+                          {processingId === job.id ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />}
+                          Approve
+                        </button>
+                      </div>
+                    ) : (
+                      <Link
+                        href={`/dashboard/admin/quotes?highlight=${job.quote_id ?? ''}`}
+                        className="inline-flex items-center gap-1.5 bg-primary text-white text-xs px-3 py-2 rounded-base font-bold no-underline hover:bg-primary-dark transition shadow-sm"
+                      >
+                        View Quote
+                        <ArrowRight size={12} />
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}

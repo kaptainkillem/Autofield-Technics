@@ -6,6 +6,7 @@ import { Star, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { Database } from '@/types/database'
+import { sanitizeText } from '@/lib/input-sanitizer'
 
 type ReviewRow = Database['public']['Tables']['reviews']['Row']
 type ReviewInsert = {
@@ -88,10 +89,10 @@ export function ReviewForm() {
 
     const payload: ReviewInsert = {
       user_id: user.id,
-      customer_name: form.customerName.trim(),
+      customer_name: sanitizeText(form.customerName, 200),
       customer_email: null,
       rating,
-      comment: trimmedComment,
+      comment: sanitizeText(trimmedComment, 2000),
       status: 'pending',
     }
 

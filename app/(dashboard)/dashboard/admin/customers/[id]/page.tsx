@@ -21,10 +21,13 @@ import {
 import { Database } from '@/types/database'
 import { EditClientForm } from '@/components/admin/EditClientForm'
 import { AddVehicleModal } from '@/components/admin/AddVehicleModal'
+import { PageWrapper } from '@/components/layout/PageWrapper'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 type Vehicle = Database['public']['Tables']['vehicles']['Row']
 type Quote = Database['public']['Tables']['quotes']['Row']
+type Appointment = Database['public']['Tables']['appointments']['Row']
+type Receipt = Database['public']['Tables']['receipts']['Row']
 
 function statusBadgeColor(status: string | null) {
   switch (status) {
@@ -43,15 +46,19 @@ export default function CustomerDetailPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [quotes, setQuotes] = useState<Quote[]>([])
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [receipts, setReceipts] = useState<Receipt[]>([])
   const [editOpen, setEditOpen] = useState(false)
   const [addVehicleOpen, setAddVehicleOpen] = useState(false)
 
   async function fetchData() {
     setLoading(true)
-    const [profileRes, vehiclesRes, quotesRes] = await Promise.all([
+    const [profileRes, vehiclesRes, quotesRes, apptsRes, receiptsRes] = await Promise.all([
       (supabase as any).from('profiles').select('*').eq('id', id).single(),
       (supabase as any).from('vehicles').select('*').eq('user_id', id).order('created_at', { ascending: false }),
       (supabase as any).from('quotes').select('*').eq('user_id', id).is('deleted_at', null).order('created_at', { ascending: false }),
+      (supabase as any).from('appointments').select('*').eq('user_id', id).order('scheduled_date', { ascending: false }),
+      (supabase as any).from('receipts').select('*').eq('user_id', id).is('deleted_at', null).order('created_at', { ascending: false }),
     ])
 
     if (profileRes.error) {
@@ -63,6 +70,8 @@ export default function CustomerDetailPage() {
     setProfile(profileRes.data)
     setVehicles(vehiclesRes.data ?? [])
     setQuotes(quotesRes.data ?? [])
+    setAppointments(apptsRes.data ?? [])
+    setReceipts(receiptsRes.data ?? [])
     setLoading(false)
   }
 
@@ -83,8 +92,10 @@ export default function CustomerDetailPage() {
   const status = profile.client_status ?? 'active'
   const whatsappNumber = profile.whatsapp_number || profile.phone || profile.alternate_phone
 
+  const lifetimeSpend = receipts.reduce((sum, r) => sum + (r.amount_paid ?? 0), 0)
+
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6 max-w-[1000px] mx-auto w-full mt-4">
+    <PageWrapper className="max-w-[1000px] gap-6">
       {/* Header Bar */}
       <div className="flex items-center gap-3">
         <Link href="/dashboard/admin/customers" className="p-2 bg-white rounded-base border border-grey-medium/10 text-grey hover:text-primary transition-all shadow-sm">
@@ -151,6 +162,18 @@ export default function CustomerDetailPage() {
           </div>
           <p className="text-sm text-grey-dark">{profile.physical_address ?? '—'}</p>
         </div>
+
+        {/* Lifetime Spend */}
+        <div className="bg-primary/5 border border-primary/10 rounded-base p-5 shadow-sm flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-primary">
+            <FileText size={14} />
+            <span className="text-xs font-bold uppercase tracking-wide">Lifetime Spend</span>
+          </div>
+          <p className="text-2xl font-extrabold text-grey-dark">
+            R {lifetimeSpend.toLocaleString('en-ZA')}
+          </p>
+          <p className="text-xs text-grey">{receipts.length} invoice{receipts.length !== 1 ? 's' : ''}</p>
+        </div>
       </div>
 
       {/* Digital Garage */}
@@ -211,6 +234,44 @@ export default function CustomerDetailPage() {
         )}
       </div>
 
+      {/* Appointments History */}
+      <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5">
+        <div className="flex items-center gap-2">
+          <Clock size={18} className="text-primary" />
+          <h2 className="text-lg font-bold text-grey-dark">Appointments</h2>
+        </div>
+
+        {appointments.length === 0 ? (
+          <div className="text-center py-8 bg-white rounded-base border border-grey-medium/10">
+            <Clock className="h-8 w-8 text-grey-medium mx-auto mb-2" />
+            <p className="text-sm text-grey">No appointments on record.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {appointments.map((a) => (
+              <div key={a.id} className="flex items-center justify-between p-4 rounded-base bg-white border border-grey-medium/10 hover:bg-primary/5 transition-colors">
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-semibold text-grey-dark">
+                    {a.service_type ?? 'Service'}
+                  </p>
+                  <p className="text-xs text-grey">
+                    {a.scheduled_date} at {a.scheduled_time?.slice(0, 5) ?? '—'}
+                  </p>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                  a.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                  a.status === 'confirmed' ? 'bg-primary/10 text-primary-dark' :
+                  a.status === 'completed' ? 'bg-green-100 text-green-700' :
+                  'bg-grey-light text-grey-medium'
+                }`}>
+                  {a.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Quote History */}
       <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5">
         <div className="flex items-center gap-2">
@@ -252,6 +313,39 @@ export default function CustomerDetailPage() {
         )}
       </div>
 
+      {/* Receipts History */}
+      <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5">
+        <div className="flex items-center gap-2">
+          <FileText size={18} className="text-green-600" />
+          <h2 className="text-lg font-bold text-grey-dark">Receipts & Payments</h2>
+        </div>
+
+        {receipts.length === 0 ? (
+          <div className="text-center py-8 bg-white rounded-base border border-grey-medium/10">
+            <FileText className="h-8 w-8 text-grey-medium mx-auto mb-2" />
+            <p className="text-sm text-grey">No receipts on record.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {receipts.map((r) => (
+              <div key={r.id} className="flex items-center justify-between p-4 rounded-base bg-white border border-grey-medium/10 hover:bg-primary/5 transition-colors">
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-semibold text-grey-dark">
+                    Invoice #{r.invoice_number ?? r.id.slice(0, 8).toUpperCase()}
+                  </p>
+                  <p className="text-xs text-grey">
+                    {r.job_date ? new Date(r.job_date).toLocaleDateString('en-ZA') : '—'} · {r.payment_method ?? 'Cash'}
+                  </p>
+                </div>
+                <span className="text-sm font-bold text-grey-dark">
+                  R {Number(r.amount_paid).toLocaleString('en-ZA')}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Modals */}
       {editOpen && (
         <EditClientForm
@@ -276,6 +370,6 @@ export default function CustomerDetailPage() {
           }}
         />
       )}
-    </div>
+    </PageWrapper>
   )
 }

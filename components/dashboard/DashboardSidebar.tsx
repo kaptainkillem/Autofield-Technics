@@ -14,11 +14,15 @@ import {
   X,
   Wrench,
   Users,
-  Receipt,
   Settings,
   Globe,
   Settings2,
-  CalendarClock
+  CalendarClock,
+  MessageSquare,
+  Landmark,
+  PlusCircle,
+  BarChart3,
+  HelpCircle,
 } from 'lucide-react'
 import { SiteLogo } from '@/components/common/SiteLogo'
 import { supabase } from '@/lib/supabase'
@@ -32,26 +36,38 @@ function getUserInitial(user: SupabaseUser | null): string {
   return user.email?.charAt(0).toUpperCase() ?? ''
 }
 
-// 🚀 Updated: Synced with dedicated client standalone workspace sub-routes
-const CLIENT_NAV = [
+interface NavItem {
+  label: string
+  href: string
+  icon: React.ElementType
+  badgeKey?: string
+}
+
+const CLIENT_NAV: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'My Quotes ', href: '/dashboard/quotes', icon: FileText },
+  { label: 'My Quotes', href: '/dashboard/quotes', icon: FileText, badgeKey: 'quotes' },
   { label: 'My Garage', href: '/dashboard/vehicles', icon: Wrench },
-  { label: 'Invoices & Spend', href: '/dashboard/receipts', icon: Receipt },
   { label: 'Review Center', href: '/dashboard/reviews', icon: Star },
-  { label: 'Account Settings', href: '/dashboard/settings', icon: Settings },
+  { label: 'Settings', href: '/dashboard/client/settings', icon: Settings },
 ]
 
-const ADMIN_NAV = [
+// External shortcut for client (opens in same tab, but is public route)
+const CLIENT_SHORTCUTS: NavItem[] = [
+  { label: 'Get a Quote', href: '/quote', icon: PlusCircle },
+]
+
+const ADMIN_NAV: NavItem[] = [
   { label: 'Overview', href: '/dashboard/admin', icon: LayoutDashboard },
-  { label: 'Quotes Inbox', href: '/dashboard/admin/quotes', icon: FileText },
-  { label: 'Leads', href: '/dashboard/admin/leads', icon: Wrench },
-  { label: 'Jobs', href: '/dashboard/admin/jobs', icon: CalendarClock },
-  { label: 'Reviews', href: '/dashboard/admin/reviews', icon: Star },
+  { label: 'Quotes Inbox', href: '/dashboard/admin/quotes', icon: FileText, badgeKey: 'pendingQuotes' },
+  { label: 'Leads', href: '/dashboard/admin/leads', icon: MessageSquare },
+  { label: 'Jobs', href: '/dashboard/admin/jobs', icon: CalendarClock, badgeKey: 'pendingJobs' },
+  { label: 'Reviews', href: '/dashboard/admin/reviews', icon: Star, badgeKey: 'pendingReviews' },
   { label: 'Services', href: '/dashboard/admin/services', icon: Settings2 },
-  { label: 'Finances', href: '/dashboard/admin/finance', icon: Star },
+  { label: 'Finances', href: '/dashboard/admin/finance', icon: Landmark },
   { label: 'Customers', href: '/dashboard/admin/customers', icon: Users },
   { label: 'SEO Engine', href: '/dashboard/admin/seo', icon: Globe },
+  { label: 'Analytics', href: '/dashboard/admin/analytics', icon: BarChart3 },
+  { label: 'FAQs', href: '/dashboard/admin/faqs', icon: HelpCircle },
   { label: 'Account Settings', href: '/dashboard/admin/settings', icon: Settings },
 ]
 
@@ -61,6 +77,7 @@ export function DashboardSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [badges, setBadges] = useState<Record<string, number>>({})
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -74,8 +91,49 @@ export function DashboardSidebar() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Fetch badge counts
+  useEffect(() => {
+    if (!user) return
+
+    const currentUserId = user.id
+
+    async function fetchBadgeCounts() {
+      const isAdminPath = pathname.startsWith('/dashboard/admin')
+
+      if (isAdminPath) {
+        const [quotesRes, reviewsRes, jobsRes] = await Promise.all([
+          (supabase as any).from('quotes').select('id', { count: 'exact', head: true }).eq('status', 'pending').is('deleted_at', null),
+          (supabase as any).from('reviews').select('id', { count: 'exact', head: true }).eq('status', 'pending').is('deleted_at', null),
+          (supabase as any).from('appointments').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        ])
+
+        setBadges({
+          pendingQuotes: quotesRes.count ?? 0,
+          pendingReviews: reviewsRes.count ?? 0,
+          pendingJobs: jobsRes.count ?? 0,
+        })
+      } else {
+        // Client counts
+        const { count } = await (supabase as any)
+          .from('quotes')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', currentUserId)
+          .is('deleted_at', null)
+
+        setBadges({ quotes: count ?? 0 })
+      }
+    }
+
+    fetchBadgeCounts()
+
+    // Refresh badges every 60 seconds
+    const interval = setInterval(fetchBadgeCounts, 60_000)
+    return () => clearInterval(interval)
+  }, [user, pathname])
+
   const isAdmin = pathname.startsWith('/dashboard/admin')
   const navItems = isAdmin ? ADMIN_NAV : CLIENT_NAV
+  const shortcuts = isAdmin ? [] : CLIENT_SHORTCUTS
   const initial = getUserInitial(user)
 
   const handleLogout = async () => {
@@ -92,27 +150,52 @@ export function DashboardSidebar() {
     router.refresh()
   }
 
+  function renderNavLink(item: NavItem, isShortcut = false) {
+    const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+    const badgeCount = item.badgeKey ? badges[item.badgeKey] ?? 0 : 0
+    const Icon = item.icon
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`flex items-center justify-between px-3 py-2.5 rounded-base text-sm font-medium transition-colors ${
+          isActive
+            ? 'bg-primary/10 text-primary font-bold'
+            : isShortcut
+            ? 'text-primary hover:bg-primary/5'
+            : 'text-grey hover:text-primary'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <Icon size={18} />
+          {item.label}
+        </div>
+        {badgeCount > 0 && (
+          <span className="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+            {badgeCount > 99 ? '99+' : badgeCount}
+          </span>
+        )}
+      </Link>
+    )
+  }
+
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Nav links */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1" onClick={() => setMobileOpen(false)}>
-        {navItems.map(({ label, href, icon: Icon }) => {
-          const isActive = pathname === href || (href.includes('#') && pathname === href.split('#')[0])
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-base text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary/10 text-primary font-bold'
-                  : 'text-grey hover:text-primary'
-              }`}
-            >
-              <Icon size={18} />
-              {label}
-            </Link>
-          )
-        })}
+        {navItems.map((item) => renderNavLink(item))}
+
+        {/* Shortcuts section for clients */}
+        {shortcuts.length > 0 && (
+          <>
+            <div className="my-2 border-t border-grey-light/60" />
+            <p className="px-3 text-[10px] font-bold text-grey-medium uppercase tracking-wider mb-1">
+              Quick Actions
+            </p>
+            {shortcuts.map((item) => renderNavLink(item, true))}
+          </>
+        )}
       </nav>
 
       {/* Logout */}

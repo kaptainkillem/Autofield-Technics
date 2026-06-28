@@ -20,6 +20,7 @@ export function BlockedSlotsForm() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Form state
   const [startDate, setStartDate] = useState<Date | null>(null)
@@ -84,10 +85,15 @@ export function BlockedSlotsForm() {
   }
 
   async function handleDeleteSlot(id: string) {
+    if (!window.confirm('Are you sure you want to remove this blocked slot?')) return
+
+    setDeletingId(id)
     const { error } = await (supabase as any)
       .from('blocked_slots')
       .delete()
       .eq('id', id)
+
+    setDeletingId(null)
 
     if (error) {
       console.error('Delete blocked slot error:', error)
@@ -179,10 +185,17 @@ export function BlockedSlotsForm() {
                   <td className="py-3 px-4 text-right">
                     <button
                       onClick={() => handleDeleteSlot(slot.id)}
-                      className="text-grey-medium hover:text-error transition-colors p-1"
+                      disabled={deletingId === slot.id}
+                      aria-disabled={deletingId === slot.id}
+                      aria-busy={deletingId === slot.id}
+                      className="text-grey-medium hover:text-error transition-colors p-1 disabled:opacity-50"
                       title="Delete blocked slot"
                     >
-                      <Trash2 size={14} />
+                      {deletingId === slot.id ? (
+                        <Loader2 size={14} className="animate-spin text-error" />
+                      ) : (
+                        <Trash2 size={14} />
+                      )}
                     </button>
                   </td>
                 </tr>
@@ -209,7 +222,7 @@ export function BlockedSlotsForm() {
             <div className="flex flex-col gap-4">
               {/* Start DateTime */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide">Start Date & Time</label>
+                <label className="text-xs font-semibold text-grey uppercase tracking-wide">Start Date & Time</label>
                   <DatePicker
                   selected={startDate}
                   onChange={(date: Date | null) => setStartDate(date)}
@@ -226,7 +239,7 @@ export function BlockedSlotsForm() {
 
               {/* End DateTime */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide">End Date & Time</label>
+                <label className="text-xs font-semibold text-grey uppercase tracking-wide">End Date & Time</label>
                   <DatePicker
                   selected={endDate}
                   onChange={(date: Date | null) => setEndDate(date)}
@@ -243,7 +256,7 @@ export function BlockedSlotsForm() {
 
               {/* Reason */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide">Reason (optional)</label>
+                <label className="text-xs font-semibold text-grey uppercase tracking-wide">Reason (optional)</label>
                 <input
                   type="text"
                   value={reason}
@@ -266,6 +279,8 @@ export function BlockedSlotsForm() {
                 type="button"
                 onClick={handleAddSlot}
                 disabled={saving}
+                aria-disabled={saving}
+                aria-busy={saving}
                 className="bg-primary text-white font-bold py-2 px-4 rounded-base shadow-sm hover:bg-primary-dark transition-all flex items-center gap-2"
               >
                 {saving ? <Loader2 size={16} className="animate-spin" /> : null}
