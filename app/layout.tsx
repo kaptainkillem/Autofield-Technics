@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ConditionalLayout } from "@/components/common/ConditionalLayout";
+import { SiteConfigProvider } from "@/components/providers/SiteConfigProvider";
+import { getMergedSiteConfig } from "@/lib/get-site-config";
 import { createSupabaseAdminClient } from '@/lib/supabaseServer';
 import "./globals.css";
 import { SITE_CONFIG, replaceVars } from '@/lib/site-config';
@@ -16,11 +18,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: replaceVars(SITE_CONFIG.seo.defaultTitle, { name: SITE_CONFIG.name, tagline: SITE_CONFIG.tagline }),
-  description: replaceVars(SITE_CONFIG.seo.defaultDescription, { name: SITE_CONFIG.name, tagline: SITE_CONFIG.tagline }),
-  icons: { icon: SITE_CONFIG.images.favicon },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  // Fetch merged config for SEO metadata
+  const config = await getMergedSiteConfig()
+
+  return {
+    title: config.seo.defaultTitle,
+    description: config.seo.defaultDescription,
+    icons: { icon: SITE_CONFIG.images.favicon },
+  }
+}
 
 async function getBrandingCss() {
   try {
@@ -56,6 +63,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const brandingCss = await getBrandingCss()
+  const siteConfig = await getMergedSiteConfig()
 
   return (
     <html
@@ -67,7 +75,9 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col m-0 p-0">
         <Toaster position="top-right" richColors closeButton />
-        <ConditionalLayout>{children}</ConditionalLayout>
+        <SiteConfigProvider config={siteConfig}>
+          <ConditionalLayout>{children}</ConditionalLayout>
+        </SiteConfigProvider>
       </body>
     </html>
   );

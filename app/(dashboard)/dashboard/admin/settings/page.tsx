@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import {
   Settings, ArrowLeft, Loader2, Building2, Banknote, FileText, Clock, CalendarX,
-  Bell, MessageCircle, Mail, Palette
+  Bell, MessageCircle, Mail, Palette, Type,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -20,6 +20,7 @@ import { NotificationsForm } from '@/components/settings/NotificationsForm'
 import { WhatsAppForm } from '@/components/settings/WhatsAppForm'
 import { EmailForm } from '@/components/settings/EmailForm'
 import { BrandingForm } from '@/components/settings/BrandingForm'
+import { WebsiteCopyForm } from '@/components/settings/WebsiteCopyForm'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 
 type Tab =
@@ -32,6 +33,7 @@ type Tab =
   | 'whatsapp'
   | 'email'
   | 'branding'
+  | 'website_copy'
 
 interface FormData {
   full_name: string
@@ -92,6 +94,7 @@ const tabs = [
   { id: 'business' as Tab, label: 'Business', icon: Building2 },
   { id: 'financials' as Tab, label: 'Financials', icon: Banknote },
   { id: 'quotes' as Tab, label: 'Quotes', icon: FileText },
+  { id: 'website_copy' as Tab, label: 'Content', icon: Type },
   { id: 'notifications' as Tab, label: 'Alerts', icon: Bell },
   { id: 'whatsapp' as Tab, label: 'WhatsApp', icon: MessageCircle },
   { id: 'email' as Tab, label: 'Email', icon: Mail },
@@ -101,6 +104,7 @@ const tabs = [
 ]
 
 const profileTabs: Tab[] = ['business', 'financials', 'quotes']
+const contentTabs: Tab[] = ['website_copy']
 const settingsTabs: Tab[] = ['notifications', 'whatsapp', 'email', 'branding']
 const calendarTabs: Tab[] = ['working_hours', 'blocked_slots']
 
@@ -112,6 +116,14 @@ export default function AdminSettingsPage() {
   const [userId, setUserId] = useState<string>('')
   const [formData, setFormData] = useState<FormData>(defaultFormData)
   const [bizSettings, setBizSettings] = useState<BusinessSettings>(defaultBusinessSettings)
+  const [websiteCopy, setWebsiteCopy] = useState({
+    site_name: '',
+    phone: '',
+    city: '',
+    hero_title: '',
+    hero_description: '',
+    contact_email: '',
+  })
 
   useEffect(() => {
     async function fetchAllData() {
@@ -162,6 +174,14 @@ export default function AdminSettingsPage() {
           primary_color: s.primary_color ?? '#3B82F6',
           accent_color: s.accent_color ?? '#10B981',
           favicon_url: s.favicon_url ?? null,
+        })
+        setWebsiteCopy({
+          site_name: s.site_name ?? 'Autofields Technics',
+          phone: s.phone ?? '+27784802796',
+          city: s.city ?? 'Johannesburg',
+          hero_title: s.hero_title ?? 'Professional Mechanical Care, Wherever You Are',
+          hero_description: s.hero_description ?? 'From emergency roadside assistance to expert workshop repairs in {city}.',
+          contact_email: s.contact_email ?? 'info@autofieldstechnics.co.za',
         })
       }
 
@@ -289,6 +309,18 @@ export default function AdminSettingsPage() {
             </Button>
           </div>
         </form>
+      ) : contentTabs.includes(activeTab) ? (
+        <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5 min-h-[400px]">
+          {activeTab === 'website_copy' && (
+            <WebsiteCopyForm
+              initialData={websiteCopy}
+              onSaved={() => {
+                // Refresh data after save
+                window.location.reload()
+              }}
+            />
+          )}
+        </div>
       ) : settingsTabs.includes(activeTab) ? (
         <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5 min-h-[400px]">
           {activeTab === 'notifications' && (

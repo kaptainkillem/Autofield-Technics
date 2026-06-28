@@ -476,6 +476,13 @@ CREATE TABLE IF NOT EXISTS public.business_settings (
     email_display_name  TEXT,
     email_reply_to      TEXT,
     smtp_note           TEXT,
+    -- Website Copy (editable via admin dashboard)
+    site_name           TEXT DEFAULT 'Autofields Technics',
+    phone               TEXT DEFAULT '+27784802796',
+    city                TEXT DEFAULT 'Johannesburg',
+    hero_title          TEXT DEFAULT 'Professional Mechanical Care, Wherever You Are',
+    hero_description    TEXT DEFAULT 'From emergency roadside assistance to expert workshop repairs in {city}.',
+    contact_email       TEXT DEFAULT 'info@autofieldstechnics.co.za',
     created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

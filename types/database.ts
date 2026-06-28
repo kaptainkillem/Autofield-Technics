@@ -162,6 +162,12 @@ export type Database = {
           notification_whatsapp: boolean
           primary_color: string
           smtp_note: string | null
+          site_name: string | null
+          phone: string | null
+          city: string | null
+          hero_title: string | null
+          hero_description: string | null
+          contact_email: string | null
           updated_at: string | null
           whatsapp_auto_reply: string | null
           whatsapp_business_only: boolean
@@ -177,6 +183,12 @@ export type Database = {
           notification_whatsapp?: boolean
           primary_color?: string
           smtp_note?: string | null
+          site_name?: string | null
+          phone?: string | null
+          city?: string | null
+          hero_title?: string | null
+          hero_description?: string | null
+          contact_email?: string | null
           updated_at?: string | null
           whatsapp_auto_reply?: string | null
           whatsapp_business_only?: boolean
@@ -192,6 +204,12 @@ export type Database = {
           notification_whatsapp?: boolean
           primary_color?: string
           smtp_note?: string | null
+          site_name?: string | null
+          phone?: string | null
+          city?: string | null
+          hero_title?: string | null
+          hero_description?: string | null
+          contact_email?: string | null
           updated_at?: string | null
           whatsapp_auto_reply?: string | null
           whatsapp_business_only?: boolean
@@ -224,6 +242,50 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string | null
+          deleted_at: string | null
+          description: string | null
+          expense_date: string
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          expense_date?: string
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          expense_date?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       faqs: {
         Row: {
@@ -503,6 +565,7 @@ export type Database = {
         Row: {
           amount_paid: number
           created_at: string | null
+          customer_name: string | null
           deleted_at: string | null
           id: string
           invoice_number: string | null
@@ -511,13 +574,13 @@ export type Database = {
           payment_method: string | null
           quote_id: string | null
           source: string | null
-          customer_name: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           amount_paid: number
           created_at?: string | null
+          customer_name?: string | null
           deleted_at?: string | null
           id?: string
           invoice_number?: string | null
@@ -526,13 +589,13 @@ export type Database = {
           payment_method?: string | null
           quote_id?: string | null
           source?: string | null
-          customer_name?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           amount_paid?: number
           created_at?: string | null
+          customer_name?: string | null
           deleted_at?: string | null
           id?: string
           invoice_number?: string | null
@@ -541,7 +604,6 @@ export type Database = {
           payment_method?: string | null
           quote_id?: string | null
           source?: string | null
-          customer_name?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -560,50 +622,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      expenses: {
-        Row: {
-          amount: number
-          category: string
-          created_at: string | null
-          deleted_at: string | null
-          description: string | null
-          expense_date: string
-          id: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          category: string
-          created_at?: string | null
-          deleted_at?: string | null
-          description?: string | null
-          expense_date: string
-          id?: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          category?: string
-          created_at?: string | null
-          deleted_at?: string | null
-          description?: string | null
-          expense_date?: string
-          id?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "expenses_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
         ]
       }
       reviews: {
