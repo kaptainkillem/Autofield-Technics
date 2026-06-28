@@ -6,7 +6,7 @@ import { Database } from '@/types/database'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { QuoteDetailModal } from '@/components/ui/QuoteDetailModal'
 import { TableSearch } from '@/components/ui/TableSearch'
-import { MessageCircle, ArrowUpRight } from 'lucide-react'
+import { MessageCircle, ArrowUpRight, CheckSquare, Square, Loader2 } from 'lucide-react'
 
 type Quote = Database['public']['Tables']['quotes']['Row']
 type Status = NonNullable<Quote['status']>
@@ -39,6 +39,8 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
   const [search, setSearch] = useState('')
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null)
   const [allQuotes, setAllQuotes] = useState(quotes)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkLoading, setBulkLoading] = useState(false)
   const router = useRouter()
 
   const visible = allQuotes.filter((q) => {
@@ -51,6 +53,59 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
       (q.description ?? '').toLowerCase().includes(term)
     return matchStatus && matchSearch
   })
+
+  const allSelected = visible.length > 0 && visible.every((q) => selectedIds.has(q.id))
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        visible.forEach((q) => next.delete(q.id))
+        return next
+      })
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        visible.forEach((q) => next.add(q.id))
+        return next
+      })
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function handleBulkStatusChange(status: Status) {
+    if (selectedIds.size === 0) return
+    setBulkLoading(true)
+
+    try {
+      const res = await fetch('/api/quotes/bulk-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds), status }),
+      })
+
+      if (!res.ok) throw new Error('Bulk update failed')
+
+      setAllQuotes((prev) =>
+        prev.map((q) => (selectedIds.has(q.id) ? { ...q, status } : q))
+      )
+      setSelectedIds(new Set())
+      router.refresh()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to update quotes. Please try again.')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
 
   function handleStatusChange(updatedQuote: Quote) {
     setAllQuotes((prev) =>
@@ -90,6 +145,34 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
         filterLabel="Status"
       />
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-base px-4 py-2">
+          <span className="text-sm font-semibold text-primary">
+            {selectedIds.size} selected
+          </span>
+          <div className="flex items-center gap-2">
+            {(['pending', 'sent', 'accepted', 'completed', 'cancelled'] as Status[]).map((status) => (
+              <button
+                key={status}
+                type="button"
+                disabled={bulkLoading}
+                aria-disabled={bulkLoading}
+                aria-busy={bulkLoading}
+                onClick={() => handleBulkStatusChange(status)}
+                className="px-3 py-1 text-xs font-bold rounded-base bg-white border border-grey-medium/20 hover:border-primary/40 hover:bg-primary/10 transition-all disabled:opacity-50 capitalize"
+              >
+                {bulkLoading ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  status
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="border border-grey-medium/10 rounded-base overflow-hidden">
         <div className="p-4 border-b border-grey-medium/20 bg-white flex items-center justify-between">
           <span className="text-sm font-semibold text-grey-dark">All quotes</span>
@@ -101,6 +184,21 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-white border-b border-grey-medium/20 text-grey uppercase tracking-wider text-xs">
+                <th className="py-3 px-2 w-10">
+                  <button
+                    type="button"
+                    onClick={toggleSelectAll}
+                    disabled={bulkLoading}
+                    aria-disabled={bulkLoading}
+                    className="p-1 hover:bg-grey-lightest rounded transition-colors disabled:opacity-50"
+                  >
+                    {allSelected ? (
+                      <CheckSquare size={16} className="text-primary" />
+                    ) : (
+                      <Square size={16} className="text-grey-medium" />
+                    )}
+                  </button>
+                </th>
                 <th className="py-3 px-4 font-bold">Customer</th>
                 <th className="py-3 px-4 font-bold hidden md:table-cell">Vehicle</th>
                 <th className="py-3 px-4 font-bold hidden lg:table-cell">Service</th>
@@ -111,7 +209,7 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
             <tbody className="divide-y divide-grey-light">
               {visible.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-10 text-grey text-sm">
+                  <td colSpan={6} className="text-center py-10 text-grey text-sm">
                     No quotes found.
                   </td>
                 </tr>
@@ -120,8 +218,25 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
                   <tr
                     key={quote.id}
                     onClick={() => setSelectedQuote(quote)}
-                    className="hover:bg-primary/5 transition-colors cursor-pointer"
+                    className={`hover:bg-primary/5 transition-colors cursor-pointer ${
+                      selectedIds.has(quote.id) ? 'bg-primary/5' : ''
+                    }`}
                   >
+                    <td className="py-4 px-2" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => toggleSelect(quote.id)}
+                        disabled={bulkLoading}
+                        aria-disabled={bulkLoading}
+                        className="p-1 hover:bg-grey-lightest rounded transition-colors disabled:opacity-50"
+                      >
+                        {selectedIds.has(quote.id) ? (
+                          <CheckSquare size={16} className="text-primary" />
+                        ) : (
+                          <Square size={16} className="text-grey-medium" />
+                        )}
+                      </button>
+                    </td>
                     <td className="py-4 px-4">
                       <p className="font-medium text-grey-dark">{quote.customer_name}</p>
                       <p className="text-xs text-grey-medium">

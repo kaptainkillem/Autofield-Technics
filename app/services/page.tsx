@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
@@ -10,6 +11,11 @@ import { MobileStickyCTA } from '@/components/ui/MobileStickyCTA'
 import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
 import { Wrench } from 'lucide-react'
 import type { Database } from '@/types/database'
+
+export const metadata: Metadata = {
+  title: `Our Services | ${SITE_CONFIG.name}`,
+  description: `Explore professional mechanical services in ${SITE_CONFIG.city}. Mobile mechanic, workshop repairs, diagnostics, and more.`,
+}
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 

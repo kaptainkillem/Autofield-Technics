@@ -150,7 +150,7 @@ export function CreateAppointmentModal({ date, onClose, onSuccess }: CreateAppoi
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Time Slot */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
+            <label className="text-xs font-semibold text-grey uppercase tracking-wide flex items-center gap-1">
               <Clock size={12} />
               Time Slot
             </label>
@@ -174,7 +174,7 @@ export function CreateAppointmentModal({ date, onClose, onSuccess }: CreateAppoi
 
           {/* Service Type */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
+            <label className="text-xs font-semibold text-grey uppercase tracking-wide flex items-center gap-1">
               <Wrench size={12} />
               Service Type
             </label>
@@ -190,7 +190,7 @@ export function CreateAppointmentModal({ date, onClose, onSuccess }: CreateAppoi
 
           {/* Customer Name */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
+            <label className="text-xs font-semibold text-grey uppercase tracking-wide flex items-center gap-1">
               <User size={12} />
               Customer Name
             </label>
@@ -205,7 +205,7 @@ export function CreateAppointmentModal({ date, onClose, onSuccess }: CreateAppoi
 
           {/* Duration */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
+            <label className="text-xs font-semibold text-grey uppercase tracking-wide flex items-center gap-1">
               <Timer size={12} />
               Duration (minutes)
             </label>
@@ -222,7 +222,7 @@ export function CreateAppointmentModal({ date, onClose, onSuccess }: CreateAppoi
 
           {/* Notes */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
+            <label className="text-xs font-semibold text-grey uppercase tracking-wide flex items-center gap-1">
               <FileText size={12} />
               Notes
             </label>
@@ -247,6 +247,8 @@ export function CreateAppointmentModal({ date, onClose, onSuccess }: CreateAppoi
             <Button
               type="submit"
               disabled={!canSave}
+              aria-disabled={!canSave}
+              aria-busy={loading}
               className="bg-primary text-white font-bold py-2 px-4 rounded-base shadow-sm hover:bg-primary-dark transition-all flex items-center gap-2 disabled:opacity-50"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : null}

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
 import { Database } from '@/types/database'
+import { sanitizePhone, sanitizeText } from '@/lib/input-sanitizer'
 import Link from 'next/link'
 
 const SERVICE_OPTIONS = [
@@ -90,13 +91,13 @@ export function QuoteForm() {
 
     const { data, error: supabaseError } = await (supabase as any).from('quotes').insert({
       user_id: currentUserId || null,
-      customer_name: form.customerName,
-      customer_phone: form.customerPhone,
+      customer_name: sanitizeText(form.customerName, 200),
+      customer_phone: sanitizePhone(form.customerPhone),
       customer_email: null,
-      vehicle_make: form.brand,
-      vehicle_model: form.model,
+      vehicle_make: sanitizeText(form.brand, 100),
+      vehicle_model: sanitizeText(form.model, 100),
       vehicle_year: form.year ? parseInt(form.year) : null,
-      description: integratedDescriptionText, 
+      description: sanitizeText(integratedDescriptionText, 2000),
       status: 'pending',
     }).select('id').single()
 

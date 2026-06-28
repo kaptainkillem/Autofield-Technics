@@ -149,13 +149,13 @@ export default async function DynamicLocationPage({ params }: LocationPageProps)
                 <span className="text-[10px] uppercase font-black text-grey tracking-wider">Active Coverage Area Map</span>
               </div>
               <iframe
-  width="100%"
-  height="100%"
-  style={{ border: 0 }}
-  loading="lazy"
-  referrerPolicy="no-referrer-when-downgrade"
-  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3581.428457002012!2d28.0566!3d-26.1072!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1e95730a840e698d%3A0x6b8d4f40f3b4c10c!2sSandton%2C%20Johannesburg!5e0!3m2!1sen!2sza!4v1620000000000!5m2!1sen!2sza"
-/><div className="mt-3 text-[11px] text-grey font-medium p-3 bg-white rounded border border-grey-medium/5">
+                width="100%"
+                height="300"
+                style={{ border: 0 }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                src={SITE_CONFIG.address.mapUrl}
+              /><div className="mt-3 text-[11px] text-grey font-medium p-3 bg-white rounded border border-grey-medium/5">
                 📍 Currently servicing {displaySuburb}, {displayCity} and {displayProvince}.
               </div>
             </div>

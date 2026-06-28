@@ -1,11 +1,16 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { redirect } from 'next/navigation'
+import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabaseServer'
 import { Database } from '@/types/database'
-import { AdminStats } from '@/components/AdminStats' // Ensure tiles inside this are wrapped in <Link> matching the sub-routes below!
+import { AdminStats } from '@/components/AdminStats'
 import { QuotesInbox } from '@/components/admin/QuotesInbox'
 import { UpcomingJobsWidget } from '@/components/admin/UpcomingJobsWidget'
+import { RevenueChart } from '@/components/admin/RevenueChart'
+import { DashboardSkeleton } from '@/components/admin/DashboardSkeleton'
 import { ArrowRight, Users, FileText, Landmark, Wrench, Settings2 } from 'lucide-react'
 import { SITE_CONFIG } from '@/lib/site-config'
+import { PageWrapper } from '@/components/layout/PageWrapper'
 
 type Quote   = Database['public']['Tables']['quotes']['Row']
 type Receipt = Database['public']['Tables']['receipts']['Row']
@@ -13,6 +18,19 @@ type Receipt = Database['public']['Tables']['receipts']['Row']
 export const dynamic = 'force-dynamic'
 
 async function getSummaryData() {
+  // Server-side auth guard: verify user is authenticated and has admin role
+  const serverClient = await createSupabaseServerClient()
+  const { data: { user } } = await serverClient.auth.getUser()
+
+  if (!user) {
+    redirect('/signin')
+  }
+
+  const role = user.user_metadata?.role ?? 'client'
+  if (role !== 'admin') {
+    redirect('/dashboard')
+  }
+
   const supabase = createSupabaseAdminClient()
 
   // Fetch only high-level snapshot data boundaries for the overview index execution
@@ -31,7 +49,7 @@ async function getSummaryData() {
   }
 }
 
-export default async function AdminDashboardArchivePage() {
+async function DashboardContent() {
   const { quotes, receiptsCount, pendingReviewsCount, customersCount } = await getSummaryData()
 
   const totalQuotes     = quotes.length
@@ -46,11 +64,26 @@ export default async function AdminDashboardArchivePage() {
     })
     .reduce((sum, r) => sum + (r.amount_paid ?? 0), 0)
 
+  // Build monthly revenue chart data (last 6 months)
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const now = new Date()
+  const chartData = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
+    const monthLabel = monthNames[d.getMonth()]
+    const revenue = receiptsCount
+      .filter((r) => {
+        const jobDate = r.job_date ? new Date(r.job_date) : null
+        return jobDate && jobDate.getMonth() === d.getMonth() && jobDate.getFullYear() === d.getFullYear()
+      })
+      .reduce((sum, r) => sum + (r.amount_paid ?? 0), 0)
+    return { month: monthLabel, revenue, jobs: 0 }
+  })
+
   // Glimpse slices for premium summary overview display
   const recentQuotesGlimpse = quotes.slice(0, 5)
 
   return (
-    <div className="flex flex-col gap-8 p-4 md:p-6 max-w-[1600px] mx-auto w-full mt-4">
+    <PageWrapper>
       {/* Executive Archive Header Block */}
       <div className="flex flex-col gap-1 border-b border-grey-medium/10 pb-4">
         <h1 className="text-3xl font-extrabold tracking-tight text-grey-dark">{SITE_CONFIG.dashboard.adminTitle}</h1>
@@ -84,6 +117,11 @@ export default async function AdminDashboardArchivePage() {
             </Link>
           </div>
           <QuotesInbox quotes={recentQuotesGlimpse} />
+
+          {/* Revenue Chart */}
+          <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm">
+            <RevenueChart data={chartData} />
+          </div>
         </div>
 
         {/* Right 1-Col Module Block: Operations Directory Hub Navigation Quick links */}
@@ -148,6 +186,14 @@ export default async function AdminDashboardArchivePage() {
         </div>
 
       </div>
-    </div>
+    </PageWrapper>
+  )
+}
+
+export default function AdminDashboardArchivePage() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardContent />
+    </Suspense>
   )
 }

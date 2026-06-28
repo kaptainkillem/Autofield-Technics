@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { SITE_CONFIG } from '@/lib/site-config'
+import { buildQuoteNotificationEmail } from '@/lib/email-templates'
 import { z } from 'zod'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -68,41 +69,24 @@ export async function POST(request: NextRequest) {
       ? rawDescription.split(' — ')[1] 
       : rawDescription
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yourdomain.com'
+    // 🚀 3. Execute the automated mail delivery transaction using reusable template
+    const { subject, text, html } = buildQuoteNotificationEmail({
+      id: 'webhook',
+      customer_name: name,
+      customer_phone: phone,
+      vehicle_make: make,
+      vehicle_model: model,
+      vehicle_year: String(year),
+      service_type: service,
+      description: cleanDescription,
+    })
 
-    // 🚀 3. Execute the automated mail delivery transaction
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
       to: ADMIN_EMAIL,
-      subject: `🔧 New Quote Request: ${name} — ${make} ${model}`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; rounded-radius: 8px;">
-          <h2 style="color: #1a1a1a; margin-bottom: 5px;">New Repair Quote Requested</h2>
-          <p style="color: #666; font-size: 14px; margin-top: 0;">A customer has just submitted an estimate request form on your platform.</p>
-          
-          <hr style="border: 0; border-top: 1px solid #eaeaea; margin: 20px 0;" />
-          
-          <h3 style="color: #333; font-size: 16px; margin-bottom: 10px;">👤 Customer Details</h3>
-          <p style="font-size: 14px; margin: 4px 0;"><strong>Name:</strong> ${name}</p>
-          <p style="font-size: 14px; margin: 4px 0;"><strong>WhatsApp/Phone:</strong> ${phone}</p>
-          
-          <h3 style="color: #333; font-size: 16px; margin-bottom: 10px; margin-top: 20px;">🚗 Vehicle & Service</h3>
-          <p style="font-size: 14px; margin: 4px 0;"><strong>Vehicle:</strong> ${year} ${make} ${model}</p>
-          <p style="font-size: 14px; margin: 4px 0;"><strong>VIN Key:</strong> <span style="font-family: monospace; background: #f5f5f5; padding: 2px 4px; border-radius: 4px;">${vin}</span></p>
-          <p style="font-size: 14px; margin: 4px 0;"><strong>Requested Service:</strong> <span style="color: #E11D48; font-weight: bold;">${service}</span></p>
-          
-          <h3 style="color: #333; font-size: 16px; margin-bottom: 10px; margin-top: 20px;">📝 Issue Description</h3>
-          <div style="background: #f9f9f9; padding: 12px; border-radius: 6px; border-left: 4px solid #cbd5e1; font-size: 14px; color: #475569; line-height: 1.6; font-style: italic;">
-            "${cleanDescription}"
-          </div>
-          
-          <div style="margin-top: 30px; text-align: center;">
-            <a href="${appUrl}/dashboard/admin/quotes" style="background: #E11D48; color: white; font-weight: bold; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-size: 14px; display: inline-block;">
-              Open Admin Quotes Inbox →
-            </a>
-          </div>
-        </div>
-      `,
+      subject,
+      text,
+      html,
     })
 
     if (error) {

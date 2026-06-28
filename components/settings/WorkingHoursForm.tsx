@@ -127,6 +127,8 @@ export function WorkingHoursForm() {
         <Button
           onClick={handleSave}
           disabled={saving}
+          aria-disabled={saving}
+          aria-busy={saving}
           className="bg-primary text-white font-bold py-2 px-4 rounded-base shadow-sm hover:bg-primary-dark transition-all flex items-center gap-2"
         >
           {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}

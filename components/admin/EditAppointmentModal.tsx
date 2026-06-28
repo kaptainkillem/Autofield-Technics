@@ -127,7 +127,7 @@ export function EditAppointmentModal({ appointment, onClose, onSuccess }: EditAp
         <form onSubmit={handleUpdate} className="flex flex-col gap-4">
           {/* Status */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
+            <label className="text-xs font-semibold text-grey uppercase tracking-wide flex items-center gap-1">
               <CheckCircle size={12} />
               Status
             </label>
@@ -151,7 +151,7 @@ export function EditAppointmentModal({ appointment, onClose, onSuccess }: EditAp
 
           {/* Notes */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
+            <label className="text-xs font-semibold text-grey uppercase tracking-wide flex items-center gap-1">
               <FileText size={12} />
               Notes
             </label>
@@ -170,7 +170,9 @@ export function EditAppointmentModal({ appointment, onClose, onSuccess }: EditAp
               type="button"
               onClick={handleDelete}
               disabled={loading}
-              className="text-sm text-error font-semibold hover:text-error/80 transition-colors px-2 py-1"
+              aria-disabled={loading}
+              aria-busy={loading}
+              className="text-sm text-error font-semibold hover:text-error/80 transition-colors px-2 py-1 disabled:opacity-50"
             >
               Delete
             </button>
@@ -186,6 +188,8 @@ export function EditAppointmentModal({ appointment, onClose, onSuccess }: EditAp
               <Button
                 type="submit"
                 disabled={loading}
+                aria-disabled={loading}
+                aria-busy={loading}
                 className="bg-primary text-white font-bold py-2 px-4 rounded-base shadow-sm hover:bg-primary-dark transition-all flex items-center gap-2"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : null}

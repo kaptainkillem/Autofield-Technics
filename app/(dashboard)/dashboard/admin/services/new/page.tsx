@@ -2,6 +2,7 @@ import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { Database } from '@/types/database'
 import { SITE_CONFIG } from '@/lib/site-config'
 import AdminServiceForm from './AdminServiceForm'
+import { PageWrapper } from '@/components/layout/PageWrapper'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 
@@ -13,12 +14,12 @@ export default async function NewServicePage() {
   const cats = (categories ?? []) as CategoryRow[]
 
   return (
-    <div className="max-w-2xl mx-auto w-full p-1 md:p-4">
+    <PageWrapper className="max-w-2xl">
       <div className="mb-6 border-b border-grey-medium/10 pb-4">
         <h1 className="text-2xl font-bold text-grey-dark">Add New Service</h1>
         <p className="text-sm text-grey">Create a new service for your {SITE_CONFIG.name} catalog.</p>
       </div>
       <AdminServiceForm categories={cats} />
-    </div>
+    </PageWrapper>
   )
 }

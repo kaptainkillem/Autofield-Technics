@@ -1,11 +1,17 @@
 export const dynamic = 'force-dynamic'
 
+import type { Metadata } from 'next'
 import { supabase } from '@/lib/supabase'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { ServicesHero } from '@/components/features/ServicesHero'
 import { ReviewForm } from '@/components/features/ReviewForm'
 import { ReviewCard } from '@/components/ReviewCard'
 import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
+
+export const metadata: Metadata = {
+  title: `Customer Reviews | ${SITE_CONFIG.name}`,
+  description: `Read verified customer reviews for ${SITE_CONFIG.name}. ${SITE_CONFIG.business.yearsOfExperience} years of experience in ${SITE_CONFIG.city}.`,
+}
 
 export default async function ReviewsPage() {
   const { data: reviews } = await (supabase as any)

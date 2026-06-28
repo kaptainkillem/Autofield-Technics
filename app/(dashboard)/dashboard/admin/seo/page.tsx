@@ -6,6 +6,8 @@ import { Globe, ArrowLeft, Plus, Loader2, Edit3, MapPin, Layers, Layout, X, Save
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { TableSearch } from '@/components/ui/TableSearch'
+import { PageWrapper } from '@/components/layout/PageWrapper'
+import { SITE_CONFIG } from '@/lib/site-config'
 
 type SEORecord = {
   id: string
@@ -152,15 +154,16 @@ export default function AdminSEOCommandPage() {
   }
 
   return (
-    <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm max-w-[1600px] mx-auto w-full mt-4">
-      {/* Header */}
+    <PageWrapper>
+      <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm">
+        {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-grey-light pb-3">
         <div className="flex items-center gap-3">
           <Link href="/dashboard/admin" className="p-2 rounded-base border border-grey-medium/10 bg-white text-grey hover:text-primary hover:bg-primary/5 transition-all">
             <ArrowLeft size={16} />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-grey-dark">Global SEO Control Deck</h1>
+            <h1 className="text-2xl font-bold text-grey-dark">{SITE_CONFIG.dashboard.pageTitles.seo}</h1>
             <p className="text-sm text-grey">Discover core page routes or generate geographic landing channels from one portal view.</p>
           </div>
         </div>
@@ -357,6 +360,7 @@ export default function AdminSEOCommandPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </PageWrapper>
   )
 }

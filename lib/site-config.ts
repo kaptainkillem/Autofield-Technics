@@ -127,12 +127,16 @@ export const SITE_CONFIG = {
     header: [
       { label: 'Services', href: '/services', external: false },
       { label: 'Locations', href: '/locations', external: false },
+      { label: 'FAQ', href: '/faq', external: false },
+      { label: 'Contact', href: '/contact', external: false },
       { label: 'Reviews', href: '/reviews', external: false },
       { label: 'Get a Quote', href: '/quote', external: false },
     ],
     footerQuick: [
       { label: 'Request a Quote', href: '/quote' },
       { label: 'Services', href: '/services' },
+      { label: 'FAQ', href: '/faq' },
+      { label: 'Contact', href: '/contact' },
       { label: 'Reviews', href: '/reviews' },
     ],
     footerLegal: [
@@ -180,6 +184,17 @@ export const SITE_CONFIG = {
     adminSubtitle: 'High-level snapshot workspace summary parameters.',
     clientTitle: 'Welcome Back',
     clientSubtitle: 'High-level overview tracking your active estimates, mechanical requests, and shared feedback logs.',
+    pageTitles: {
+      quotes: 'Quotes Processing Pipeline Inbox',
+      leads: 'Incoming Service Requests',
+      jobs: 'Active Mechanical Jobs',
+      customers: 'Customer Base Profiles Directory',
+      finance: 'Money Keeper Financial Ledger',
+      services: 'Services Management',
+      reviews: 'Reviews & Approvals',
+      seo: 'Global SEO Control Deck',
+      settings: 'Workspace Settings',
+    },
   },
 
   // ── Theme Bridge ────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { SiteLogo } from '@/components/common/SiteLogo'
+import { NotificationBell } from '@/components/admin/NotificationBell'
 import { supabase } from '@/lib/supabase'
 
 function getUserInitial(user: { user_metadata?: Record<string, unknown>; email?: string } | null): string {
@@ -45,13 +46,16 @@ export function DashboardTopBar() {
         )}
       </div>
       <div className="flex-1 h-14 flex items-center justify-end px-6">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">
-            {user && initial ? initial : '?'}
+        <div className="flex items-center gap-4">
+          <NotificationBell />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">
+              {user && initial ? initial : '?'}
+            </div>
+            <span className="text-sm text-grey hidden md:block">
+              {user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'User'}
+            </span>
           </div>
-          <span className="text-sm text-grey hidden md:block">
-            {user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'User'}
-          </span>
         </div>
       </div>
     </header>
