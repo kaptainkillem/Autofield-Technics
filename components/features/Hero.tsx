@@ -32,7 +32,7 @@ export const Hero: React.FC<HeroProps> = ({
 }) => {
   return (
     <section
-      className={`bg-grey-light px-4 py-20 md:px-20 md:py-20 ${className ?? ''}`}
+      className={`bg-grey-light px-4 pt-28 pb-20 md:px-20 md:pt-32 md:pb-20 ${className ?? ''}`}
       {...props}
     >
       <div

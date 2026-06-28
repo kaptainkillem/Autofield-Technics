@@ -171,13 +171,13 @@ export const Header: React.FC<HeaderProps> = ({
             </Link>
           </div>
 
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-3">
             {NAV_LINKS.map((link) => (
               link.external ? (
                 <a
                   key={link.label}
                   href={link.href}
-                  className="text-white no-underline text-base font-bold tracking-wide hover:text-white/80 transition-colors duration-200"
+                  className="text-white no-underline text-sm font-bold tracking-wide border border-white/40 rounded-base px-3 py-1.5 hover:bg-white/10 hover:border-white/60 transition-all duration-200"
                 >
                   {link.label}
                 </a>
@@ -185,7 +185,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <Link
                   key={link.label}
                   href={link.href}
-                  className="text-white no-underline text-base font-bold tracking-wide hover:text-white/80 transition-colors duration-200"
+                  className="text-white no-underline text-sm font-bold tracking-wide border border-white/40 rounded-base px-3 py-1.5 hover:bg-white/10 hover:border-white/60 transition-all duration-200"
                 >
                   {link.label}
                 </Link>
