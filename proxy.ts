@@ -35,6 +35,10 @@ export async function proxy(request: NextRequest) {
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
   
   const isAdminRoute = pathname.startsWith('/dashboard/admin');
+  const isStaffDocumentRoute =
+    pathname.startsWith('/dashboard/admin/quotes/create') ||
+    pathname.startsWith('/dashboard/admin/quotes/drafts') ||
+    pathname.startsWith('/dashboard/admin/invoices');
   
   // 🚀 Fixed: Captures both root /dashboard AND all standalone sub-routes cleanly
   const isDashboardRoute = pathname.startsWith('/dashboard') && !isAdminRoute;
@@ -58,6 +62,7 @@ export async function proxy(request: NextRequest) {
 
   // Fallback to safe defaults if profile missing — denies admin access by default
   const role = profile?.role ?? 'client';
+  const isStaff = role === 'admin' || role === 'mechanic';
   const onboardingCompleted = profile?.onboarding_completed ?? false;
 
   // 🔒 2. AUTHENTICATED ENTRY PROTECTIONS (Prevents logged-in users from seeing signin/signup)
@@ -73,7 +78,7 @@ export async function proxy(request: NextRequest) {
 
   // 🛡️ 3. ADMIN ZONE SHIELDING (Blocks regular clients from entry instantly)
   if (isAdminRoute) {
-    if (role === 'admin') {
+    if (role === 'admin' || (isStaffDocumentRoute && isStaff)) {
       return response;
     }
     // Cross-tenant protection: boot malicious or accidental traffic back to customer space

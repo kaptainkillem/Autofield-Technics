@@ -17,6 +17,7 @@ interface QuotesInboxProps {
 
 const STATUS_FILTERS = [
   { label: 'All', value: '' },
+  { label: 'Draft', value: 'draft' },
   { label: 'Pending', value: 'pending' },
   { label: 'Sent', value: 'sent' },
   { label: 'Accepted', value: 'accepted' },

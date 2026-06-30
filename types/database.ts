@@ -320,6 +320,96 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          created_at: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          deleted_at: string | null
+          description: string | null
+          discount_percent: number
+          id: string
+          invoice_number: string | null
+          line_items: Json
+          notes: string | null
+          payment_method: string | null
+          quote_id: string | null
+          service_type: string | null
+          status: string | null
+          subtotal: number
+          total: number
+          updated_at: string | null
+          user_id: string
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_year: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          discount_percent?: number
+          id?: string
+          invoice_number?: string | null
+          line_items?: Json
+          notes?: string | null
+          payment_method?: string | null
+          quote_id?: string | null
+          service_type?: string | null
+          status?: string | null
+          subtotal?: number
+          total?: number
+          updated_at?: string | null
+          user_id: string
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          discount_percent?: number
+          id?: string
+          invoice_number?: string | null
+          line_items?: Json
+          notes?: string | null
+          payment_method?: string | null
+          quote_id?: string | null
+          service_type?: string | null
+          status?: string | null
+          subtotal?: number
+          total?: number
+          updated_at?: string | null
+          user_id?: string
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           created_at: string | null
@@ -498,11 +588,17 @@ export type Database = {
           customer_phone: string
           deleted_at: string | null
           description: string
+          discount_percent: number | null
           estimated_quote: number | null
           id: string
+          line_items: Json | null
           notes: string | null
+          quote_number: string | null
           service_type: string | null
+          source: string | null
           status: string | null
+          subtotal: number | null
+          total: number | null
           updated_at: string | null
           user_id: string
           vehicle_make: string | null
@@ -518,11 +614,17 @@ export type Database = {
           customer_phone: string
           deleted_at?: string | null
           description: string
+          discount_percent?: number | null
           estimated_quote?: number | null
           id?: string
+          line_items?: Json | null
           notes?: string | null
+          quote_number?: string | null
           service_type?: string | null
+          source?: string | null
           status?: string | null
+          subtotal?: number | null
+          total?: number | null
           updated_at?: string | null
           user_id: string
           vehicle_make?: string | null
@@ -538,11 +640,17 @@ export type Database = {
           customer_phone?: string
           deleted_at?: string | null
           description?: string
+          discount_percent?: number | null
           estimated_quote?: number | null
           id?: string
+          line_items?: Json | null
           notes?: string | null
+          quote_number?: string | null
           service_type?: string | null
+          source?: string | null
           status?: string | null
+          subtotal?: number | null
+          total?: number | null
           updated_at?: string | null
           user_id?: string
           vehicle_make?: string | null

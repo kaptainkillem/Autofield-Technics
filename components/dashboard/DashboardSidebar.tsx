@@ -21,6 +21,7 @@ import {
   MessageSquare,
   Landmark,
   PlusCircle,
+  ReceiptText,
   BarChart3,
   HelpCircle,
 } from 'lucide-react'
@@ -59,6 +60,8 @@ const CLIENT_SHORTCUTS: NavItem[] = [
 const ADMIN_NAV: NavItem[] = [
   { label: 'Overview', href: '/dashboard/admin', icon: LayoutDashboard },
   { label: 'Quotes Inbox', href: '/dashboard/admin/quotes', icon: FileText, badgeKey: 'pendingQuotes' },
+  { label: 'Create Quote', href: '/dashboard/admin/quotes/create', icon: PlusCircle },
+  { label: 'Invoices', href: '/dashboard/admin/invoices', icon: ReceiptText },
   { label: 'Leads', href: '/dashboard/admin/leads', icon: MessageSquare },
   { label: 'Jobs', href: '/dashboard/admin/jobs', icon: CalendarClock, badgeKey: 'pendingJobs' },
   { label: 'Reviews', href: '/dashboard/admin/reviews', icon: Star, badgeKey: 'pendingReviews' },

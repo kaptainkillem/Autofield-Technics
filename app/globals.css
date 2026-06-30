@@ -86,6 +86,47 @@ body {
   font-family: var(--font-sans);
 }
 
+.invoice-body,
+.invoice-torn-edge {
+  background-color: color-mix(in srgb, var(--color-primary-light) 18%, #fdfbf3);
+}
+
+.invoice-torn-edge {
+  background-image:
+    linear-gradient(135deg, color-mix(in srgb, var(--color-primary-light) 18%, #fdfbf3) 50%, transparent 50%),
+    linear-gradient(45deg, transparent 50%, color-mix(in srgb, var(--color-primary-light) 18%, #fdfbf3) 50%);
+  background-repeat: repeat-x;
+  background-size: 16px 16px;
+}
+
+@media print {
+  body {
+    background: white;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .invoice-paper,
+  .invoice-paper * {
+    visibility: visible;
+  }
+
+  .invoice-paper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  input,
+  textarea,
+  select {
+    box-shadow: none !important;
+  }
+}
+
 @layer base {
   h1, h2, h3 {
     color: var(--color-black);
