@@ -10,6 +10,7 @@ import { BottomCTA } from '@/components/features/BottomCTA';
 import { supabase } from '@/lib/supabase';
 import { SITE_CONFIG } from '@/lib/site-config';
 import { getMergedSiteConfig } from '@/lib/get-site-config';
+import { TrustStrip } from '@/components/features/TrustStrip';
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await getMergedSiteConfig()
@@ -45,15 +46,11 @@ export default async function Home() {
         showImage
         imageSrc="/images/hero-image.webp"
       />
-
-      <TestimonialsCarousel reviews={reviews ?? []} />
-
+      <TrustStrip />
+        <ServicesGrid />
       <FeatureShowcase />
-
       <HowItWorks city={config.city} />
-
-      <ServicesGrid />
-
+      <TestimonialsCarousel reviews={reviews ?? []} />
       <BottomCTA />
     </>
   );
