@@ -1,11 +1,12 @@
 import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabaseServer'
 import { NextResponse } from 'next/server'
+import { checkRateLimit } from '@/lib/rate-limiter'
 import { z } from 'zod'
 
-const VALID_STATUSES = ['pending', 'sent', 'accepted', 'completed', 'cancelled']
+const VALID_STATUSES = ['draft', 'pending', 'sent', 'accepted', 'declined', 'completed', 'cancelled']
 
 const PatchBodySchema = z.object({
-  status: z.enum(['pending', 'sent', 'accepted', 'completed', 'cancelled']),
+  status: z.enum(VALID_STATUSES as [string, ...string[]]),
 })
 
 async function verifyAdmin() {
@@ -33,9 +34,19 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params
+  try {
+    const { id } = await params
 
-  // 🔒 1. Verify caller is authenticated admin
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    const { allowed, remaining } = checkRateLimit(`quotes:patch:${ip}`, { maxRequests: 20, windowMs: 60_000 })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
+    }
+
+    // 🔒 1. Verify caller is authenticated admin
   const auth = await verifyAdmin()
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: auth.status })
@@ -72,4 +83,8 @@ export async function PATCH(
   }
 
   return NextResponse.json({ quote: data })
+  } catch (error) {
+    console.error('[quotes:status:update]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

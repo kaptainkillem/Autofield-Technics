@@ -1,3 +1,5 @@
+-- DEPRECATED: All DDL is now consolidated in schema.sql (single source of truth).
+-- Preserved for historical reference only.
 -- Seed working hours for testing the calendar
 -- Run this in your Supabase SQL Editor
 

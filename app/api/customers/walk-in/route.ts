@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
 import { z } from 'zod'
 
@@ -30,6 +31,11 @@ export async function POST(request: NextRequest) {
         { error: 'Too many requests. Please try again in a minute.' },
         { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
       )
+    }
+
+    const auth = await verifyStaffUser()
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
     // 1. Validate body

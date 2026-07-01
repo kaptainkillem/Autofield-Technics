@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
 import { sanitizeText, sanitizeName, sanitizeEmail, sanitizePhone } from '@/lib/input-sanitizer'
 import { z } from 'zod'
+import { Resend } from 'resend'
+import { SITE_CONFIG } from '@/lib/site-config'
+
+const resend = new Resend(process.env.RESEND_API_KEY)
+const EMAIL_FROM = process.env.EMAIL_FROM ?? 'Autofield Technics <onboarding@resend.dev>'
+const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL ?? SITE_CONFIG.contact.email
 
 const CONTACT_SCHEMA = z.object({
   name: z.string().min(1, 'Name is required').max(100),
@@ -29,21 +34,31 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const parsed = CONTACT_SCHEMA.parse(body)
 
-    const supabase = createSupabaseAdminClient()
+    const name = sanitizeName(parsed.name)
+    const email = parsed.email ? sanitizeEmail(parsed.email) : null
+    const phone = sanitizePhone(parsed.phone)
+    const message = sanitizeText(parsed.message, 2000)
 
-    const { error } = await supabase.from('leads').insert({
-      name: sanitizeName(parsed.name),
-      phone: sanitizePhone(parsed.phone),
-      notes: sanitizeText(parsed.message, 2000),
+    const emailHtml = `
+<div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1f2937;">
+  <h2 style="color: #3B82F6; margin-bottom: 16px;">New Contact Message</h2>
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+    <tr><td style="padding: 8px 0; font-weight: 600;">Name</td><td>${escapeHtml(name)}</td></tr>
+    <tr><td style="padding: 8px 0; font-weight: 600;">Email</td><td>${escapeHtml(email ?? 'N/A')}</td></tr>
+    <tr><td style="padding: 8px 0; font-weight: 600;">Phone</td><td>${escapeHtml(phone)}</td></tr>
+    <tr><td style="padding: 8px 0; font-weight: 600; vertical-align: top;">Message</td><td>${escapeHtml(message)}</td></tr>
+  </table>
+  <hr style="border: none; border-top: 1px solid #e5e7eb;" />
+  <p style="font-size: 12px; color: #9ca3af;">Sent from ${SITE_CONFIG.name} contact form</p>
+</div>`.trim()
+
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: ADMIN_EMAIL,
+      subject: `Contact Form: ${name} from ${SITE_CONFIG.name}`,
+      html: emailHtml,
+      replyTo: email || undefined,
     })
-
-    if (error) {
-      console.error('Contact insert error:', error)
-      return NextResponse.json(
-        { success: false, error: 'Failed to send message. Please try again.' },
-        { status: 500 }
-      )
-    }
 
     return NextResponse.json(
       { success: true, message: 'Message sent successfully!' },
@@ -64,4 +79,13 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
 }

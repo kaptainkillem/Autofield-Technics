@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { sanitizeText } from '@/lib/input-sanitizer'
 import { toast } from 'sonner'
 import { Palette, Upload, Save, Loader2, ImageIcon, RefreshCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -37,8 +38,8 @@ export function BrandingForm({ settings, onUpdate }: BrandingFormProps) {
     const { error } = await (supabase as any)
       .from('business_settings')
       .update({
-        primary_color: form.primary_color,
-        accent_color: form.accent_color,
+        primary_color: sanitizeText(form.primary_color),
+        accent_color: sanitizeText(form.accent_color),
         favicon_url: form.favicon_url,
         updated_at: new Date().toISOString(),
       })

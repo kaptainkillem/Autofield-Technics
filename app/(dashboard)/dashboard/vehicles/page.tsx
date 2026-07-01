@@ -33,6 +33,7 @@ export default function ClientGaragePage() {
       const { data } = await supabase
         .from('vehicles')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
       setVehicles(data ?? [])

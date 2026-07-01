@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
+import { checkRateLimit } from '@/lib/rate-limiter'
 
 const LineItemSchema = z.object({
   id: z.string(),
@@ -20,7 +21,7 @@ const CreateQuoteSchema = z.object({
   serviceType: z.string().trim().optional(),
   description: z.string().trim().optional(),
   notes: z.string().trim().optional(),
-  status: z.enum(['draft', 'sent', 'accepted', 'completed', 'cancelled']).default('draft'),
+  status: z.enum(['draft', 'pending', 'sent', 'accepted', 'declined', 'completed', 'cancelled']).default('draft'),
   discountPercent: z.number().min(0).max(100).default(0),
   lineItems: z.array(LineItemSchema).min(1),
 })
@@ -31,9 +32,19 @@ function makeDocumentNumber(prefix: string) {
 }
 
 export async function POST(request: Request) {
-  const auth = await verifyStaffUser()
+  try {
+    const auth = await verifyStaffUser()
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: auth.status })
+  }
+
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const { allowed, remaining } = checkRateLimit(`admin:quotes:${ip}`, { maxRequests: 20, windowMs: 60_000 })
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again shortly.' },
+      { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+    )
   }
 
   let body: z.infer<typeof CreateQuoteSchema>
@@ -81,4 +92,8 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ quote: data }, { status: 201 })
+  } catch (error) {
+    console.error('[admin:quotes:create]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

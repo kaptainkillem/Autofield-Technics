@@ -9,6 +9,7 @@ const STATUS_STYLES: Record<string, string> = {
   sent: 'bg-blue-100 text-blue-800',
   accepted: 'bg-green-100 text-green-800',
   completed: 'bg-green-100 text-green-800',
+  declined: 'bg-red-100 text-red-800',
   rejected: 'bg-red-100 text-red-800',
   cancelled: 'bg-red-100 text-red-800',
   approved: 'bg-green-100 text-green-800',

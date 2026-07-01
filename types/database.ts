@@ -168,6 +168,8 @@ export type Database = {
           hero_title: string | null
           hero_description: string | null
           contact_email: string | null
+          created_at: string | null
+          document_footer: string | null
           updated_at: string | null
           whatsapp_auto_reply: string | null
           whatsapp_business_only: boolean
@@ -189,6 +191,8 @@ export type Database = {
           hero_title?: string | null
           hero_description?: string | null
           contact_email?: string | null
+          created_at?: string | null
+          document_footer?: string | null
           updated_at?: string | null
           whatsapp_auto_reply?: string | null
           whatsapp_business_only?: boolean
@@ -210,6 +214,8 @@ export type Database = {
           hero_title?: string | null
           hero_description?: string | null
           contact_email?: string | null
+          created_at?: string | null
+          document_footer?: string | null
           updated_at?: string | null
           whatsapp_auto_reply?: string | null
           whatsapp_business_only?: boolean
@@ -224,6 +230,7 @@ export type Database = {
           id: string
           name: string
           slug: string
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
@@ -232,6 +239,7 @@ export type Database = {
           id?: string
           name: string
           slug: string
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
@@ -240,6 +248,7 @@ export type Database = {
           id?: string
           name?: string
           slug?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -410,29 +419,36 @@ export type Database = {
           },
         ]
       }
+      // DEPRECATED — leads table removed from UI, unified into quotes table. Retained for backward DB compat.
       leads: {
         Row: {
           created_at: string | null
+          email: string | null
           id: string
           name: string | null
           notes: string | null
           phone: string | null
+          status: string | null
           vehicle_details: string | null
         }
         Insert: {
           created_at?: string | null
+          email?: string | null
           id?: string
           name?: string | null
           notes?: string | null
           phone?: string | null
+          status?: string | null
           vehicle_details?: string | null
         }
         Update: {
           created_at?: string | null
+          email?: string | null
           id?: string
           name?: string | null
           notes?: string | null
           phone?: string | null
+          status?: string | null
           vehicle_details?: string | null
         }
         Relationships: []
@@ -593,6 +609,7 @@ export type Database = {
           id: string
           line_items: Json | null
           notes: string | null
+          pdf_url: string | null
           quote_number: string | null
           service_type: string | null
           source: string | null
@@ -600,7 +617,7 @@ export type Database = {
           subtotal: number | null
           total: number | null
           updated_at: string | null
-          user_id: string
+          user_id: string | null
           vehicle_make: string | null
           vehicle_model: string | null
           vehicle_year: number | null
@@ -619,6 +636,7 @@ export type Database = {
           id?: string
           line_items?: Json | null
           notes?: string | null
+          pdf_url?: string | null
           quote_number?: string | null
           service_type?: string | null
           source?: string | null
@@ -626,7 +644,7 @@ export type Database = {
           subtotal?: number | null
           total?: number | null
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
           vehicle_make?: string | null
           vehicle_model?: string | null
           vehicle_year?: number | null
@@ -645,6 +663,7 @@ export type Database = {
           id?: string
           line_items?: Json | null
           notes?: string | null
+          pdf_url?: string | null
           quote_number?: string | null
           service_type?: string | null
           source?: string | null
@@ -935,6 +954,7 @@ export type Database = {
           },
         ]
       }
+      // DEPRECATED — unused in application code
       users: {
         Row: {
           auto_reply_message: string | null

@@ -1,3 +1,5 @@
+-- DEPRECATED: All DDL is now consolidated in schema.sql (single source of truth).
+-- Preserved for historical reference only.
 -- Migration: Add CRM Lite columns to profiles and vehicles tables
 -- Run this in your Supabase SQL Editor before deploying the UI
 

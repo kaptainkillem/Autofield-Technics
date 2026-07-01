@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { X, Loader2, Save } from 'lucide-react'
 import { Database } from '@/types/database'
 import { toast } from 'sonner'
+import { sanitizeName, sanitizePhone, sanitizeText } from '@/lib/input-sanitizer'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 
@@ -35,28 +35,32 @@ export function EditClientForm({ profile, onClose, onSaved }: EditClientFormProp
     e.preventDefault()
     setSaving(true)
 
-    const { error } = await (supabase as any)
-      .from('profiles')
-      .update({
-        full_name: form.full_name.trim() || null,
-        phone: form.phone.trim() || null,
-        alternate_phone: form.alternate_phone.trim() || null,
-        physical_address: form.physical_address.trim() || null,
-        prefers_whatsapp: form.prefers_whatsapp,
-        service_reminders_opt_in: form.service_reminders_opt_in,
-        client_status: form.client_status,
-        internal_notes: form.internal_notes.trim() || null,
+    try {
+      const res = await fetch(`/api/admin/customers/${profile.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: sanitizeName(form.full_name) || null,
+          phone: sanitizePhone(form.phone) || null,
+          alternate_phone: sanitizePhone(form.alternate_phone) || null,
+          physical_address: sanitizeText(form.physical_address) || null,
+          prefers_whatsapp: form.prefers_whatsapp,
+          service_reminders_opt_in: form.service_reminders_opt_in,
+          client_status: form.client_status,
+          internal_notes: sanitizeText(form.internal_notes) || null,
+        }),
       })
-      .eq('id', profile.id)
 
-    setSaving(false)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to update client')
 
-    if (error) {
-      toast.error('Failed to update client')
-      return
+      toast.success('Client updated')
+      onSaved()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update client')
+    } finally {
+      setSaving(false)
     }
-
-    onSaved()
   }
 
   return (

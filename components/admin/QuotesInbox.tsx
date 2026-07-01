@@ -6,7 +6,8 @@ import { Database } from '@/types/database'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { QuoteDetailModal } from '@/components/ui/QuoteDetailModal'
 import { TableSearch } from '@/components/ui/TableSearch'
-import { MessageCircle, ArrowUpRight, CheckSquare, Square, Loader2 } from 'lucide-react'
+import { MessageCircle, ArrowUpRight, CheckSquare, Square, Loader2, Edit, FileDown } from 'lucide-react'
+import { toast } from 'sonner'
 
 type Quote = Database['public']['Tables']['quotes']['Row']
 type Status = NonNullable<Quote['status']>
@@ -21,6 +22,7 @@ const STATUS_FILTERS = [
   { label: 'Pending', value: 'pending' },
   { label: 'Sent', value: 'sent' },
   { label: 'Accepted', value: 'accepted' },
+  { label: 'Declined', value: 'declined' },
   { label: 'Completed', value: 'completed' },
   { label: 'Cancelled', value: 'cancelled' },
 ]
@@ -132,6 +134,7 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
       `I've looked over your vehicle details and put together an estimate breakdown for you. Let me know if you're ready for me to send it over! 🔧`,
     ].join('\n')
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageBody)}`, '_blank', 'noopener,noreferrer')
+    toast.success('WhatsApp follow-up opened')
   }
 
   return (
@@ -153,7 +156,7 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
             {selectedIds.size} selected
           </span>
           <div className="flex items-center gap-2">
-            {(['pending', 'sent', 'accepted', 'completed', 'cancelled'] as Status[]).map((status) => (
+            {(['pending', 'sent', 'accepted', 'declined', 'completed', 'cancelled'] as Status[]).map((status) => (
               <button
                 key={status}
                 type="button"
@@ -255,15 +258,56 @@ export function QuotesInbox({ quotes }: QuotesInboxProps) {
                       <StatusBadge status={quote.status ?? 'pending'} />
                     </td>
                     <td className="py-4 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => triggerWhatsAppQuickReply(e, quote)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-base shadow-sm transition-all"
-                      >
-                        <MessageCircle size={13} className="fill-white" />
-                        <span className="hidden sm:inline">Follow-up</span>
-                        <ArrowUpRight size={10} className="opacity-70" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {quote.status === 'draft' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(`/dashboard/admin/quotes/builder?quoteId=${quote.id}`)
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-primary text-white text-xs font-bold rounded-base hover:bg-primary-dark transition-colors"
+                          >
+                            <Edit size={13} />
+                            <span className="hidden sm:inline">Edit</span>
+                          </button>
+                        )}
+                        {(quote.status === 'sent' || quote.status === 'accepted') && (
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              try {
+                                const res = await fetch(`/api/quotes/${quote.id}/pdf`, { method: 'POST' })
+                                const data = await res.json()
+                                if (res.ok && data.url) {
+                                  window.open(data.url, '_blank')
+                                  toast.success('PDF ready!')
+                                } else {
+                                  toast.error(data.error || 'Failed to generate PDF')
+                                }
+                              } catch {
+                                toast.error('Failed to generate PDF')
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-1.5 bg-grey-lightest hover:bg-grey-light text-grey-dark text-xs font-semibold rounded-base transition-colors"
+                            title="Download PDF"
+                          >
+                            <FileDown size={13} />
+                          </button>
+                        )}
+                        {quote.status === 'sent' && (
+                          <button
+                            type="button"
+                            onClick={(e) => triggerWhatsAppQuickReply(e, quote)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-base shadow-sm transition-all"
+                          >
+                            <MessageCircle size={13} className="fill-white" />
+                            <span className="hidden sm:inline">Follow-up</span>
+                            <ArrowUpRight size={10} className="opacity-70" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

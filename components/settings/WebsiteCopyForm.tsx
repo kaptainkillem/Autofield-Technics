@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { sanitizeText, sanitizePhone, sanitizeEmail } from '@/lib/input-sanitizer'
 import { Loader2, Save, Type, Phone, MapPin, Mail, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -56,12 +57,12 @@ export function WebsiteCopyForm({ initialData, onSaved }: WebsiteCopyFormProps) 
       .from('business_settings')
       .upsert({
         id: 'config',
-        site_name: form.site_name.trim(),
-        phone: form.phone.trim(),
-        city: form.city.trim(),
-        hero_title: form.hero_title.trim(),
-        hero_description: form.hero_description.trim(),
-        contact_email: form.contact_email.trim(),
+        site_name: sanitizeText(form.site_name),
+        phone: sanitizePhone(form.phone),
+        city: sanitizeText(form.city),
+        hero_title: sanitizeText(form.hero_title),
+        hero_description: sanitizeText(form.hero_description),
+        contact_email: sanitizeEmail(form.contact_email),
       })
 
     setSaving(false)

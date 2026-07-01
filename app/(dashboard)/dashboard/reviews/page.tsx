@@ -36,6 +36,12 @@ export default function AdminReviewsPage() {
       return
     }
 
+    const role = user.user_metadata?.role ?? 'client'
+    if (role !== 'admin') {
+      router.replace('/dashboard')
+      return
+    }
+
     const { data } = await supabase
       .from('reviews')
       .select(`

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 export async function POST(request: Request) {
-  const response = NextResponse.json({ success: true })
+  try {
+    const response = NextResponse.json({ success: true })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,4 +32,8 @@ export async function POST(request: Request) {
   await supabase.auth.signOut()
 
   return response
+  } catch (error) {
+    console.error('[signout]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

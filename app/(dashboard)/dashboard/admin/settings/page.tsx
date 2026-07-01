@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import {
   Settings, ArrowLeft, Loader2, Building2, Banknote, FileText, Clock, CalendarX,
-  Bell, MessageCircle, Mail, Palette, Type,
+  Bell, MessageCircle, Mail, Palette, Type, Scale,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -21,12 +21,14 @@ import { WhatsAppForm } from '@/components/settings/WhatsAppForm'
 import { EmailForm } from '@/components/settings/EmailForm'
 import { BrandingForm } from '@/components/settings/BrandingForm'
 import { WebsiteCopyForm } from '@/components/settings/WebsiteCopyForm'
+import { LegalSettingsForm } from '@/components/settings/LegalSettingsForm'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 
 type Tab =
   | 'business'
   | 'financials'
   | 'quotes'
+  | 'legal'
   | 'working_hours'
   | 'blocked_slots'
   | 'notifications'
@@ -74,6 +76,7 @@ interface BusinessSettings {
   primary_color: string
   accent_color: string
   favicon_url: string | null
+  document_footer: string | null
 }
 
 const defaultBusinessSettings: BusinessSettings = {
@@ -88,12 +91,14 @@ const defaultBusinessSettings: BusinessSettings = {
   primary_color: '#3B82F6',
   accent_color: '#10B981',
   favicon_url: null,
+  document_footer: null,
 }
 
 const tabs = [
   { id: 'business' as Tab, label: 'Business', icon: Building2 },
   { id: 'financials' as Tab, label: 'Financials', icon: Banknote },
   { id: 'quotes' as Tab, label: 'Quotes', icon: FileText },
+  { id: 'legal' as Tab, label: 'Legal & PDFs', icon: Scale },
   { id: 'website_copy' as Tab, label: 'Content', icon: Type },
   { id: 'notifications' as Tab, label: 'Alerts', icon: Bell },
   { id: 'whatsapp' as Tab, label: 'WhatsApp', icon: MessageCircle },
@@ -103,7 +108,7 @@ const tabs = [
   { id: 'blocked_slots' as Tab, label: 'Blocked', icon: CalendarX },
 ]
 
-const profileTabs: Tab[] = ['business', 'financials', 'quotes']
+const profileTabs: Tab[] = ['business', 'financials', 'quotes', 'legal']
 const contentTabs: Tab[] = ['website_copy']
 const settingsTabs: Tab[] = ['notifications', 'whatsapp', 'email', 'branding']
 const calendarTabs: Tab[] = ['working_hours', 'blocked_slots']
@@ -124,6 +129,7 @@ export default function AdminSettingsPage() {
     hero_description: '',
     contact_email: '',
   })
+  const [documentFooter, setDocumentFooter] = useState('')
 
   useEffect(() => {
     async function fetchAllData() {
@@ -174,6 +180,7 @@ export default function AdminSettingsPage() {
           primary_color: s.primary_color ?? '#3B82F6',
           accent_color: s.accent_color ?? '#10B981',
           favicon_url: s.favicon_url ?? null,
+          document_footer: s.document_footer ?? null,
         })
         setWebsiteCopy({
           site_name: s.site_name ?? 'Autofields Technics',
@@ -183,6 +190,7 @@ export default function AdminSettingsPage() {
           hero_description: s.hero_description ?? 'From emergency roadside assistance to expert workshop repairs in {city}.',
           contact_email: s.contact_email ?? 'info@autofieldstechnics.co.za',
         })
+        setDocumentFooter(s.document_footer ?? '')
       }
 
       setLoading(false)
@@ -289,6 +297,14 @@ export default function AdminSettingsPage() {
             )}
             {activeTab === 'quotes' && (
               <QuoteSettingsForm values={formData} onChange={handleChange} />
+            )}
+            {activeTab === 'legal' && (
+              <LegalSettingsForm
+                termsConditions={formData.terms_conditions}
+                documentFooter={documentFooter}
+                onTermsChange={(v) => handleChange('terms_conditions', v)}
+                onDocumentFooterChange={setDocumentFooter}
+              />
             )}
           </div>
 

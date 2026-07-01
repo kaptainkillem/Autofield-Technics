@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
 import { Database } from '@/types/database'
-import { sanitizePhone, sanitizeText } from '@/lib/input-sanitizer'
+import { sanitizePhone, sanitizeText, sanitizeEmail } from '@/lib/input-sanitizer'
 import Link from 'next/link'
 
 const SERVICE_OPTIONS = [
@@ -43,11 +43,12 @@ export function QuoteForm() {
 
   const [form, setForm] = useState({
     customerName: '',
+    customerEmail: '',
     customerPhone: '',
     brand: '',
     model: '',
     year: '',
-    vin: '', // 🌟 Added VIN field state
+    vin: '',
     service: SERVICE_OPTIONS[0],
     description: '',
   })
@@ -92,8 +93,8 @@ export function QuoteForm() {
     const { data, error: supabaseError } = await (supabase as any).from('quotes').insert({
       user_id: currentUserId || null,
       customer_name: sanitizeText(form.customerName, 200),
+      customer_email: sanitizeEmail(form.customerEmail) || null,
       customer_phone: sanitizePhone(form.customerPhone),
-      customer_email: null,
       vehicle_make: sanitizeText(form.brand, 100),
       vehicle_model: sanitizeText(form.model, 100),
       vehicle_year: form.year ? parseInt(form.year) : null,
@@ -183,6 +184,19 @@ export function QuoteForm() {
           />
         </div>
       </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-bold text-grey uppercase tracking-wide">Email</label>
+          <input
+            name="customerEmail"
+            type="email"
+            placeholder="you@example.com"
+            required
+            value={form.customerEmail}
+            onChange={handleChange}
+            className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark"
+          />
+        </div>
 
       <h3 className="text-lg font-bold text-grey-dark border-b border-grey-light pb-2 pt-2">Vehicle details</h3>
 

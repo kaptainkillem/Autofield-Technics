@@ -1,3 +1,5 @@
+-- DEPRECATED: All DDL is now consolidated in schema.sql (single source of truth).
+-- Preserved for historical reference only.
 -- Migration: Create notifications table + triggers for Persistent Inbox
 -- Date: 2025-06-28
 -- Targets all admin users for notifications

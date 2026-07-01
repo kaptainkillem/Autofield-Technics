@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { checkRateLimit } from '@/lib/rate-limiter'
 import { z } from 'zod'
 import { parseISO, getDay, format } from 'date-fns'
 import { toZonedTime, fromZonedTime } from 'date-fns-tz'
@@ -69,6 +70,15 @@ function slotOverlapsBlockedSlot(
 
 export async function GET(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    const { allowed, remaining } = checkRateLimit(`availability:${ip}`, { maxRequests: 30, windowMs: 60_000 })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
+    }
+
     // 1. Validate query params
     const { searchParams } = new URL(request.url)
     const rawDate = searchParams.get('date')
