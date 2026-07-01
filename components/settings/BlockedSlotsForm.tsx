@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { sanitizeText } from '@/lib/input-sanitizer'
 import { Plus, Trash2, X, Loader2, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -60,49 +61,55 @@ export function BlockedSlotsForm() {
 
     setSaving(true)
 
-    const { error } = await (supabase as any)
-      .from('blocked_slots')
-      .insert({
-        start_datetime: startDate.toISOString(),
-        end_datetime: endDate.toISOString(),
-        reason: reason.trim() || null,
+    try {
+      const res = await fetch('/api/admin/settings/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'blocked_slot_add',
+          start_datetime: startDate.toISOString(),
+          end_datetime: endDate.toISOString(),
+          reason: sanitizeText(reason) || null,
+        }),
       })
 
-    setSaving(false)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to add')
 
-    if (error) {
-      console.error('Add blocked slot error:', error)
-      toast.error('Failed to add blocked slot')
-      return
+      toast.success('Blocked slot added')
+      setShowModal(false)
+      setStartDate(null)
+      setEndDate(null)
+      setReason('')
+      fetchBlockedSlots()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add blocked slot')
+    } finally {
+      setSaving(false)
     }
-
-    toast.success('Blocked slot added')
-    setShowModal(false)
-    setStartDate(null)
-    setEndDate(null)
-    setReason('')
-    fetchBlockedSlots()
   }
 
   async function handleDeleteSlot(id: string) {
     if (!window.confirm('Are you sure you want to remove this blocked slot?')) return
 
     setDeletingId(id)
-    const { error } = await (supabase as any)
-      .from('blocked_slots')
-      .delete()
-      .eq('id', id)
+    try {
+      const res = await fetch('/api/admin/settings/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'blocked_slot_delete', id }),
+      })
 
-    setDeletingId(null)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to delete')
 
-    if (error) {
-      console.error('Delete blocked slot error:', error)
-      toast.error('Failed to delete blocked slot')
-      return
+      toast.success('Blocked slot removed')
+      setSlots((prev) => prev.filter((s) => s.id !== id))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete blocked slot')
+    } finally {
+      setDeletingId(null)
     }
-
-    toast.success('Blocked slot removed')
-    setSlots((prev) => prev.filter((s) => s.id !== id))
   }
 
   function formatDateTime(isoString: string): string {

@@ -1,3 +1,5 @@
+-- DEPRECATED: All DDL is now consolidated in schema.sql (single source of truth).
+-- Preserved for historical reference only.
 -- Migration: Create missing tables to match application requirements
 -- Date: 2025-06-27
 -- Author: Jey (Developer B)

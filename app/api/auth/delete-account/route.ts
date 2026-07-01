@@ -1,10 +1,21 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database'
+import { checkRateLimit } from '@/lib/rate-limiter'
 import { cookies } from 'next/headers'
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  try {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const { allowed, remaining } = checkRateLimit(`delete-account:${ip}`, { maxRequests: 3, windowMs: 3_600_000 })
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+    )
+  }
+
   const cookieStore = await cookies()
 
   // 1. Verify the requesting user via session cookie
@@ -101,4 +112,8 @@ export async function POST() {
   await sessionClient.auth.signOut()
 
   return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('[delete-account]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { sanitizeText } from '@/lib/input-sanitizer'
 import { toast } from 'sonner'
 import { MessageCircle, Clock, Save, Loader2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -31,7 +32,7 @@ export function WhatsAppForm({ settings, onUpdate }: WhatsAppFormProps) {
     const { error } = await (supabase as any)
       .from('business_settings')
       .update({
-        whatsapp_auto_reply: form.whatsapp_auto_reply?.trim() || null,
+        whatsapp_auto_reply: form.whatsapp_auto_reply ? sanitizeText(form.whatsapp_auto_reply) : null,
         whatsapp_business_only: form.whatsapp_business_only,
         updated_at: new Date().toISOString(),
       })

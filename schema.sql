@@ -31,6 +31,12 @@ CREATE POLICY "Users can update own data" ON public.users FOR UPDATE USING (auth
 DROP POLICY IF EXISTS "Service role full access on users" ON public.users;
 CREATE POLICY "Service role full access on users" ON public.users FOR ALL USING (auth.role() = 'service_role');
 
+ALTER TABLE public.users
+  ADD COLUMN IF NOT EXISTS bio TEXT,
+  ADD COLUMN IF NOT EXISTS profile_image_url TEXT,
+  ADD COLUMN IF NOT EXISTS notifications_enabled BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS auto_reply_message TEXT;
+
 -- ─── Categories ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.categories (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -107,6 +113,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+DO $$ BEGIN
+  ALTER TABLE public.profiles ADD CONSTRAINT profiles_client_status_check CHECK (client_status IS NULL OR client_status IN ('active', 'vip', 'blacklisted'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
 
@@ -116,11 +127,35 @@ CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH 
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
--- Client notification preferences (added for Client Settings portal)
+-- CRM & business columns (safe re-add on existing DBs)
 ALTER TABLE public.profiles
-ADD COLUMN IF NOT EXISTS notification_quotes_whatsapp BOOLEAN DEFAULT true,
-ADD COLUMN IF NOT EXISTS notification_appointments_email BOOLEAN DEFAULT true,
-ADD COLUMN IF NOT EXISTS notification_marketing BOOLEAN DEFAULT false;
+  ADD COLUMN IF NOT EXISTS company_name TEXT,
+  ADD COLUMN IF NOT EXISTS logo_url TEXT,
+  ADD COLUMN IF NOT EXISTS address TEXT,
+  ADD COLUMN IF NOT EXISTS whatsapp_number TEXT,
+  ADD COLUMN IF NOT EXISTS vat_number TEXT,
+  ADD COLUMN IF NOT EXISTS registration_number TEXT,
+  ADD COLUMN IF NOT EXISTS bank_name TEXT,
+  ADD COLUMN IF NOT EXISTS account_holder TEXT,
+  ADD COLUMN IF NOT EXISTS account_number TEXT,
+  ADD COLUMN IF NOT EXISTS branch_code TEXT,
+  ADD COLUMN IF NOT EXISTS hourly_rate NUMERIC,
+  ADD COLUMN IF NOT EXISTS callout_fee NUMERIC,
+  ADD COLUMN IF NOT EXISTS diagnostic_fee NUMERIC,
+  ADD COLUMN IF NOT EXISTS terms_conditions TEXT,
+  ADD COLUMN IF NOT EXISTS default_deposit_percent NUMERIC,
+  ADD COLUMN IF NOT EXISTS alternate_phone TEXT,
+  ADD COLUMN IF NOT EXISTS physical_address TEXT,
+  ADD COLUMN IF NOT EXISTS prefers_whatsapp BOOLEAN DEFAULT true,
+  ADD COLUMN IF NOT EXISTS service_reminders_opt_in BOOLEAN DEFAULT true,
+  ADD COLUMN IF NOT EXISTS client_status TEXT DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS internal_notes TEXT;
+
+-- Client notification preferences
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS notification_quotes_whatsapp BOOLEAN DEFAULT true,
+  ADD COLUMN IF NOT EXISTS notification_appointments_email BOOLEAN DEFAULT true,
+  ADD COLUMN IF NOT EXISTS notification_marketing BOOLEAN DEFAULT false;
 
 -- ─── Vehicles ───────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.vehicles (
@@ -152,7 +187,7 @@ CREATE POLICY "Users can delete own vehicles" ON public.vehicles FOR DELETE USIN
 -- ─── Quotes ─────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.quotes (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id             UUID NOT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
+    user_id             UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     customer_name       TEXT NOT NULL,
     customer_email      TEXT,
     customer_phone      TEXT NOT NULL,
@@ -164,11 +199,19 @@ CREATE TABLE IF NOT EXISTS public.quotes (
     estimated_quote     NUMERIC,
     status              TEXT DEFAULT 'pending',
     notes               TEXT,
+    pdf_url             TEXT,
     whatsapp_sent_at    TIMESTAMP WITH TIME ZONE,
     whatsapp_message_id TEXT,
     created_at          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    deleted_at          TIMESTAMP WITH TIME ZONE
+    deleted_at          TIMESTAMP WITH TIME ZONE,
+    quote_number        VARCHAR,
+    line_items          JSONB NOT NULL DEFAULT '[]'::jsonb,
+    discount_percent    NUMERIC NOT NULL DEFAULT 0,
+    subtotal            NUMERIC NOT NULL DEFAULT 0,
+    total               NUMERIC NOT NULL DEFAULT 0,
+    source              VARCHAR DEFAULT 'request',
+    CONSTRAINT quotes_status_check CHECK (status IN ('draft', 'pending', 'sent', 'accepted', 'declined', 'completed', 'cancelled'))
 );
 
 ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
@@ -182,10 +225,31 @@ CREATE POLICY "Anyone can submit a quote" ON public.quotes FOR INSERT WITH CHECK
 DROP POLICY IF EXISTS "Service role can manage quotes" ON public.quotes;
 CREATE POLICY "Service role can manage quotes" ON public.quotes FOR ALL USING (auth.role() = 'service_role');
 
+ALTER TABLE public.quotes
+  ADD COLUMN IF NOT EXISTS quote_number VARCHAR,
+  ADD COLUMN IF NOT EXISTS line_items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS discount_percent NUMERIC NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS subtotal NUMERIC NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS total NUMERIC NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS source VARCHAR DEFAULT 'request',
+  ADD COLUMN IF NOT EXISTS pdf_url TEXT,
+  ADD COLUMN IF NOT EXISTS whatsapp_sent_at TIMESTAMP WITH TIME ZONE,
+  ADD COLUMN IF NOT EXISTS whatsapp_message_id TEXT;
+
+DO $$ BEGIN
+  ALTER TABLE public.quotes DROP CONSTRAINT IF EXISTS quotes_status_check;
+  ALTER TABLE public.quotes ADD CONSTRAINT quotes_status_check
+    CHECK (status IN ('draft', 'pending', 'sent', 'accepted', 'declined', 'completed', 'cancelled'));
+EXCEPTION WHEN duplicate_object THEN
+  ALTER TABLE public.quotes DROP CONSTRAINT quotes_status_check;
+  ALTER TABLE public.quotes ADD CONSTRAINT quotes_status_check
+    CHECK (status IN ('draft', 'pending', 'sent', 'accepted', 'declined', 'completed', 'cancelled'));
+END $$;
+
 -- ─── Reviews ─────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.reviews (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id          UUID NOT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
+    user_id          UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     quote_id         UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
     rating           INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
     comment          TEXT,
@@ -207,13 +271,246 @@ CREATE POLICY "Anyone can read approved reviews" ON public.reviews FOR SELECT US
 DROP POLICY IF EXISTS "Anyone can submit a review" ON public.reviews;
 CREATE POLICY "Anyone can submit a review" ON public.reviews FOR INSERT WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Service role can update reviews" ON public.reviews;
-CREATE POLICY "Service role can update reviews" ON public.reviews FOR UPDATE USING (true);
+DO $$ BEGIN
+  DROP POLICY IF EXISTS "Service role can update reviews" ON public.reviews;
+  DROP POLICY IF EXISTS "Admins can update reviews" ON public.reviews;
+  DROP POLICY IF EXISTS "Admins can delete reviews" ON public.reviews;
+END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Admins can update reviews" ON public.reviews FOR UPDATE USING (auth.role() = 'service_role');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Admins can delete reviews" ON public.reviews FOR DELETE USING (auth.role() = 'service_role');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ─── Invoices ───────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.invoices (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    quote_id         UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
+    invoice_number   VARCHAR UNIQUE,
+    customer_name    VARCHAR NOT NULL,
+    customer_email   VARCHAR,
+    customer_phone   VARCHAR,
+    vehicle_year     INTEGER,
+    vehicle_make     VARCHAR,
+    vehicle_model    VARCHAR,
+    service_type     VARCHAR,
+    description      TEXT,
+    line_items       JSONB NOT NULL DEFAULT '[]'::jsonb,
+    discount_percent NUMERIC NOT NULL DEFAULT 0,
+    subtotal         NUMERIC NOT NULL DEFAULT 0,
+    total            NUMERIC NOT NULL DEFAULT 0,
+    payment_method   VARCHAR,
+    status           VARCHAR DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'cancelled')),
+    notes            TEXT,
+    created_at       TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    deleted_at       TIMESTAMPTZ
+);
+
+ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own invoices" ON public.invoices;
+CREATE POLICY "Users can view own invoices" ON public.invoices FOR SELECT USING (auth.uid() = user_id AND deleted_at IS NULL);
+
+DROP POLICY IF EXISTS "Service role can manage invoices" ON public.invoices;
+CREATE POLICY "Service role can manage invoices" ON public.invoices FOR ALL USING (auth.role() = 'service_role');
+
+-- ─── FAQs ───────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.faqs (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    question      TEXT NOT NULL,
+    answer        TEXT NOT NULL,
+    category      TEXT DEFAULT 'general',
+    display_order INT DEFAULT 0,
+    is_active     BOOLEAN NOT NULL DEFAULT true,
+    created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.faqs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can read active FAQs" ON public.faqs;
+CREATE POLICY "Anyone can read active FAQs" ON public.faqs FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS "Admins can manage FAQs" ON public.faqs;
+CREATE POLICY "Admins can manage FAQs" ON public.faqs FOR ALL USING (public.is_admin());
+
+-- ─── Notifications ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.notifications (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    type         TEXT NOT NULL CHECK (type IN ('quote', 'appointment', 'lead', 'review')),
+    reference_id UUID,
+    title        TEXT NOT NULL,
+    message      TEXT,
+    is_read      BOOLEAN NOT NULL DEFAULT false,
+    created_at   TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own notifications" ON public.notifications;
+CREATE POLICY "Users can view own notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
+CREATE POLICY "Users can update own notifications" ON public.notifications FOR UPDATE USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Service role can manage notifications" ON public.notifications;
+CREATE POLICY "Service role can manage notifications" ON public.notifications FOR ALL USING (auth.role() = 'service_role');
+
+-- ─── Notification Helpers ───────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.get_admin_ids()
+RETURNS TABLE(id UUID) AS $$
+BEGIN
+    RETURN QUERY SELECT p.id FROM public.profiles p WHERE p.role = 'admin';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.notify_admins(
+    p_type TEXT,
+    p_reference_id UUID,
+    p_title TEXT,
+    p_message TEXT DEFAULT NULL
+)
+RETURNS void AS $$
+DECLARE
+    admin_id UUID;
+BEGIN
+    FOR admin_id IN SELECT id FROM public.get_admin_ids()
+    LOOP
+        INSERT INTO public.notifications (user_id, type, reference_id, title, message)
+        VALUES (admin_id, p_type, p_reference_id, p_title, p_message);
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.cleanup_old_notifications()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM public.notifications WHERE created_at < NOW() - INTERVAL '60 days';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ─── Notification Triggers ───────────────────────────────────────────────────────
+-- Trigger: New Quote Submitted
+CREATE OR REPLACE FUNCTION public.on_quote_insert_notify()
+RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM public.notify_admins(
+        'quote',
+        NEW.id,
+        'New quote request',
+        COALESCE(NEW.customer_name, 'Someone') || ' requested a quote for ' || COALESCE(NEW.service_type, 'a service')
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_quote_insert_notification ON public.quotes;
+CREATE TRIGGER on_quote_insert_notification
+    AFTER INSERT ON public.quotes
+    FOR EACH ROW EXECUTE FUNCTION public.on_quote_insert_notify();
+
+-- Trigger: Quote Accepted
+CREATE OR REPLACE FUNCTION public.on_quote_accepted_notify()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'accepted' AND OLD.status != 'accepted' THEN
+        PERFORM public.notify_admins(
+            'quote',
+            NEW.id,
+            'Quote accepted',
+            COALESCE(NEW.customer_name, 'A customer') || ' accepted a quote'
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_quote_update_notification ON public.quotes;
+CREATE TRIGGER on_quote_update_notification
+    AFTER UPDATE ON public.quotes
+    FOR EACH ROW EXECUTE FUNCTION public.on_quote_accepted_notify();
+
+-- Trigger: New Appointment Booked
+CREATE OR REPLACE FUNCTION public.on_appointment_insert_notify()
+RETURNS TRIGGER AS $$
+DECLARE
+    customer_name TEXT;
+BEGIN
+    SELECT COALESCE(p.full_name, 'A customer') INTO customer_name
+    FROM public.profiles p WHERE p.id = NEW.user_id;
+
+    PERFORM public.notify_admins(
+        'appointment',
+        NEW.id,
+        'New appointment booked',
+        customer_name || ' booked ' || COALESCE(NEW.service_type, 'a service') || ' on ' || NEW.scheduled_date
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_appointment_insert_notification ON public.appointments;
+CREATE TRIGGER on_appointment_insert_notification
+    AFTER INSERT ON public.appointments
+    FOR EACH ROW EXECUTE FUNCTION public.on_appointment_insert_notify();
+
+-- Trigger: Appointment Cancelled
+CREATE OR REPLACE FUNCTION public.on_appointment_cancelled_notify()
+RETURNS TRIGGER AS $$
+DECLARE
+    customer_name TEXT;
+BEGIN
+    IF NEW.status = 'cancelled' AND OLD.status != 'cancelled' THEN
+        SELECT COALESCE(p.full_name, 'A customer') INTO customer_name
+        FROM public.profiles p WHERE p.id = NEW.user_id;
+
+        PERFORM public.notify_admins(
+            'appointment',
+            NEW.id,
+            'Appointment cancelled',
+            customer_name || ' cancelled their appointment on ' || NEW.scheduled_date
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_appointment_update_notification ON public.appointments;
+CREATE TRIGGER on_appointment_update_notification
+    AFTER UPDATE ON public.appointments
+    FOR EACH ROW EXECUTE FUNCTION public.on_appointment_cancelled_notify();
+
+-- Trigger: New Review Submitted
+CREATE OR REPLACE FUNCTION public.on_review_insert_notify()
+RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM public.notify_admins(
+        'review',
+        NEW.id,
+        'New review submitted',
+        COALESCE(NEW.customer_name, 'A customer') || ' left a ' || NEW.rating || '-star review'
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_review_insert_notification ON public.reviews;
+CREATE TRIGGER on_review_insert_notification
+    AFTER INSERT ON public.reviews
+    FOR EACH ROW EXECUTE FUNCTION public.on_review_insert_notify();
 
 -- ─── Receipts ────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.receipts (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id        UUID NOT NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
+    user_id        UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     quote_id       UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
     invoice_number TEXT,
     amount_paid    NUMERIC NOT NULL,
@@ -229,11 +526,24 @@ CREATE TABLE IF NOT EXISTS public.receipts (
 
 ALTER TABLE public.receipts ENABLE ROW LEVEL SECURITY;
 
+DO $$ BEGIN
+  ALTER TABLE public.receipts ADD CONSTRAINT receipts_payment_method_check CHECK (payment_method IS NULL OR payment_method IN ('Cash', 'Card', 'EFT'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 DROP POLICY IF EXISTS "Users can view own receipts" ON public.receipts;
 CREATE POLICY "Users can view own receipts" ON public.receipts FOR SELECT USING (auth.uid() = user_id AND deleted_at IS NULL);
 
 DROP POLICY IF EXISTS "Service role can manage receipts" ON public.receipts;
 CREATE POLICY "Service role can manage receipts" ON public.receipts FOR ALL USING (auth.role() = 'service_role');
+
+ALTER TABLE public.receipts
+  ADD COLUMN IF NOT EXISTS amount_paid NUMERIC NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS payment_method TEXT,
+  ADD COLUMN IF NOT EXISTS job_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  ADD COLUMN IF NOT EXISTS notes TEXT,
+  ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'system',
+  ADD COLUMN IF NOT EXISTS customer_name TEXT;
 
 -- ─── Expenses ────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.expenses (
@@ -261,8 +571,11 @@ CREATE TABLE IF NOT EXISTS public.leads (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name            TEXT,
     phone           TEXT,
+    email           TEXT,
     vehicle_details TEXT,
     notes           TEXT,
+    status          VARCHAR DEFAULT 'pending'
+      CHECK (status IN ('pending', 'accepted', 'declined')),
     created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -270,6 +583,11 @@ ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role can manage leads" ON public.leads;
 CREATE POLICY "Service role can manage leads" ON public.leads FOR ALL USING (auth.role() = 'service_role');
+
+ALTER TABLE public.leads
+  ADD COLUMN IF NOT EXISTS email TEXT,
+  ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'pending'
+    CHECK (status IN ('pending', 'accepted', 'declined'));
 
 -- ─── SEO Registry ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.seo_registry (
@@ -348,6 +666,7 @@ CREATE TABLE IF NOT EXISTS public.appointments (
     service_type   TEXT NOT NULL,
     scheduled_date DATE NOT NULL,
     scheduled_time TEXT,
+    duration_minutes INTEGER DEFAULT 60,
     status         TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled')),
     notes          TEXT,
     created_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -361,6 +680,8 @@ CREATE POLICY "Users can view own appointments" ON public.appointments FOR SELEC
 
 DROP POLICY IF EXISTS "Service role can manage appointments" ON public.appointments;
 CREATE POLICY "Service role can manage appointments" ON public.appointments FOR ALL USING (auth.role() = 'service_role');
+
+ALTER TABLE public.appointments ADD COLUMN IF NOT EXISTS duration_minutes INTEGER DEFAULT 60;
 
 -- ─── Working Hours ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.working_hours (
@@ -438,11 +759,12 @@ CREATE INDEX IF NOT EXISTS idx_appointments_user_id ON public.appointments(user_
 CREATE INDEX IF NOT EXISTS idx_appointments_status ON public.appointments(status);
 CREATE INDEX IF NOT EXISTS idx_appointments_scheduled_date ON public.appointments(scheduled_date);
 CREATE INDEX IF NOT EXISTS idx_seo_registry_path ON public.seo_registry(path_url);
-CREATE INDEX IF NOT EXISTS idx_seo_locations_path_url ON public.seo_locations(id);
+-- Replaced by idx_seo_locations_province_city_suburb below
 CREATE INDEX IF NOT EXISTS idx_analytics_user_month_year ON public.analytics(user_id, month, year);
 CREATE INDEX IF NOT EXISTS idx_services_category_id ON public.services(category_id);
 CREATE INDEX IF NOT EXISTS idx_services_is_active ON public.services(is_active);
 CREATE INDEX IF NOT EXISTS idx_leads_created_at ON public.leads(created_at);
+CREATE INDEX IF NOT EXISTS idx_leads_status ON public.leads(status);
 CREATE INDEX IF NOT EXISTS idx_reviews_status ON public.reviews(status);
 CREATE INDEX IF NOT EXISTS idx_vehicles_user_id ON public.vehicles(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
@@ -450,6 +772,19 @@ CREATE INDEX IF NOT EXISTS idx_working_hours_day ON public.working_hours(day_of_
 CREATE INDEX IF NOT EXISTS idx_blocked_slots_mechanic_id ON public.blocked_slots(mechanic_id);
 CREATE INDEX IF NOT EXISTS idx_blocked_slots_start_datetime ON public.blocked_slots(start_datetime);
 CREATE INDEX IF NOT EXISTS idx_blocked_slots_end_datetime ON public.blocked_slots(end_datetime);
+CREATE INDEX IF NOT EXISTS idx_quotes_quote_number ON public.quotes(quote_number);
+CREATE INDEX IF NOT EXISTS idx_quotes_source ON public.quotes(source);
+CREATE INDEX IF NOT EXISTS idx_invoices_user_id ON public.invoices(user_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_quote_id ON public.invoices(quote_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON public.invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_invoice_number ON public.invoices(invoice_number);
+CREATE INDEX IF NOT EXISTS idx_faqs_category ON public.faqs(category);
+CREATE INDEX IF NOT EXISTS idx_faqs_display_order ON public.faqs(display_order);
+CREATE INDEX IF NOT EXISTS idx_faqs_is_active ON public.faqs(is_active);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON public.notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_seo_locations_province_city_suburb ON public.seo_locations(province, city, suburb);
 
 -- ─── Admin Check Function ──────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.is_admin()
@@ -465,14 +800,14 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ─── Business Settings ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.business_settings (
     id                  TEXT PRIMARY KEY DEFAULT 'config',
-    primary_color       TEXT DEFAULT '#3B82F6',
-    accent_color        TEXT DEFAULT '#10B981',
+    primary_color       TEXT NOT NULL DEFAULT '#3B82F6',
+    accent_color        TEXT NOT NULL DEFAULT '#10B981',
     favicon_url         TEXT,
-    notification_email  BOOLEAN DEFAULT true,
-    notification_push   BOOLEAN DEFAULT true,
-    notification_whatsapp BOOLEAN DEFAULT false,
+    notification_email  BOOLEAN NOT NULL DEFAULT true,
+    notification_push   BOOLEAN NOT NULL DEFAULT true,
+    notification_whatsapp BOOLEAN NOT NULL DEFAULT false,
     whatsapp_auto_reply TEXT,
-    whatsapp_business_only BOOLEAN DEFAULT false,
+    whatsapp_business_only BOOLEAN NOT NULL DEFAULT false,
     email_display_name  TEXT,
     email_reply_to      TEXT,
     smtp_note           TEXT,
@@ -483,6 +818,7 @@ CREATE TABLE IF NOT EXISTS public.business_settings (
     hero_title          TEXT DEFAULT 'Professional Mechanical Care, Wherever You Are',
     hero_description    TEXT DEFAULT 'From emergency roadside assistance to expert workshop repairs in {city}.',
     contact_email       TEXT DEFAULT 'info@autofieldstechnics.co.za',
+    document_footer     TEXT,
     created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -494,3 +830,13 @@ CREATE POLICY "Anyone can read business settings" ON public.business_settings FO
 
 DROP POLICY IF EXISTS "Admins can manage business settings" ON public.business_settings;
 CREATE POLICY "Admins can manage business settings" ON public.business_settings FOR ALL USING (public.is_admin());
+
+ALTER TABLE public.business_settings
+  ADD COLUMN IF NOT EXISTS site_name TEXT DEFAULT 'Autofields Technics',
+  ADD COLUMN IF NOT EXISTS phone TEXT DEFAULT '+27784802796',
+  ADD COLUMN IF NOT EXISTS city TEXT DEFAULT 'Johannesburg',
+  ADD COLUMN IF NOT EXISTS hero_title TEXT DEFAULT 'Professional Mechanical Care, Wherever You Are',
+  ADD COLUMN IF NOT EXISTS hero_description TEXT DEFAULT 'From emergency roadside assistance to expert workshop repairs in {city}.',
+  ADD COLUMN IF NOT EXISTS contact_email TEXT DEFAULT 'info@autofieldstechnics.co.za',
+  ADD COLUMN IF NOT EXISTS document_footer TEXT,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();

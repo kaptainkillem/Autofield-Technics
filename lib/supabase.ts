@@ -11,6 +11,7 @@ export const supabase = createBrowserClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
 
+// SERVER-ONLY: This export must only be imported in server components or API routes. Do not import in client components.
 // Server-side Supabase client (for API routes - use service role key)
 // Guarded: only created when SUPABASE_SERVICE_ROLE_KEY is available (server-side)
 export const supabaseServer = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -230,23 +231,9 @@ export const supabaseHelpers = {
         ...reviewData,
       });
     },
+    // approve() and reject() removed — admin-only operations. Use server-side API routes
+    // with verifyStaffUser(). RLS now restricts reviews UPDATE to service_role only.
 
-    approve: async (reviewId: string) => {
-      return _supabase
-        .from('reviews')
-        .update({
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-        })
-        .eq('id', reviewId);
-    },
-
-    reject: async (reviewId: string) => {
-      return _supabase
-        .from('reviews')
-        .update({ status: 'rejected' })
-        .eq('id', reviewId);
-    },
   },
 
   // Receipt helpers

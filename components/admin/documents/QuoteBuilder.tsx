@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { FileDown, Loader2, Plus, Save, Send, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
 export interface DocumentLineItem {
   id: string
@@ -12,9 +13,26 @@ export interface DocumentLineItem {
   unitPrice: number
 }
 
+export interface QuoteData {
+  customerName: string
+  customerEmail: string | null
+  customerPhone: string
+  vehicleYear: number | null
+  vehicleMake: string | null
+  vehicleModel: string | null
+  serviceType: string | null
+  description: string | null
+  notes: string | null
+  lineItems: DocumentLineItem[]
+  discountPercent: number
+  status: string
+}
+
 interface QuoteBuilderProps {
   mode: 'quote' | 'invoice'
   acceptedQuotes?: AcceptedQuote[]
+  quoteId?: string
+  initialData?: QuoteData
 }
 
 export interface AcceptedQuote {
@@ -51,9 +69,10 @@ function clampPercent(value: string) {
   return Math.min(100, Math.max(0, next))
 }
 
-export function QuoteBuilder({ mode, acceptedQuotes = [] }: QuoteBuilderProps) {
+export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }: QuoteBuilderProps) {
   const router = useRouter()
   const isInvoice = mode === 'invoice'
+  const isEdit = Boolean(quoteId && initialData)
   const [selectedQuoteId, setSelectedQuoteId] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
@@ -70,6 +89,23 @@ export function QuoteBuilder({ mode, acceptedQuotes = [] }: QuoteBuilderProps) {
   const [status, setStatus] = useState(isInvoice ? 'draft' : 'draft')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [savedDocId, setSavedDocId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!initialData) return
+    setCustomerName(initialData.customerName)
+    setCustomerEmail(initialData.customerEmail ?? '')
+    setCustomerPhone(initialData.customerPhone)
+    setVehicleYear(initialData.vehicleYear ? String(initialData.vehicleYear) : '')
+    setVehicleMake(initialData.vehicleMake ?? '')
+    setVehicleModel(initialData.vehicleModel ?? '')
+    setServiceType(initialData.serviceType ?? '')
+    setDescription(initialData.description ?? '')
+    setNotes(initialData.notes ?? '')
+    setRows(initialData.lineItems.length ? initialData.lineItems : [emptyLine()])
+    setDiscountPercent(initialData.discountPercent)
+    setStatus(initialData.status)
+  }, [initialData])
 
   const subtotal = useMemo(
     () => rows.reduce((sum, row) => sum + row.qty * row.unitPrice, 0),
@@ -121,7 +157,12 @@ export function QuoteBuilder({ mode, acceptedQuotes = [] }: QuoteBuilderProps) {
     setSaving(true)
     setMessage('')
 
-    const endpoint = isInvoice ? '/api/admin/invoices' : '/api/admin/quotes'
+    const endpoint = isInvoice
+      ? '/api/admin/invoices'
+      : isEdit
+        ? `/api/admin/quotes/${quoteId}`
+        : '/api/admin/quotes'
+    const method = isEdit ? 'PATCH' : 'POST'
     const payload = {
       quoteId: isInvoice ? selectedQuoteId || null : undefined,
       customerName,
@@ -141,7 +182,7 @@ export function QuoteBuilder({ mode, acceptedQuotes = [] }: QuoteBuilderProps) {
 
     try {
       const response = await fetch(endpoint, {
-        method: 'POST',
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
@@ -150,23 +191,56 @@ export function QuoteBuilder({ mode, acceptedQuotes = [] }: QuoteBuilderProps) {
 
       setStatus(nextStatus)
       const label = isInvoice ? result.invoice?.invoice_number : result.quote?.quote_number
+      const docId = isInvoice ? result.invoice?.id : result.quote?.id
+      if (docId) setSavedDocId(docId)
       setMessage(`${isInvoice ? 'Invoice' : 'Quote'} saved${label ? ` (${label})` : ''}.`)
+      toast.success(isInvoice ? 'Invoice saved!' : 'Quote saved!')
+      if (nextStatus === 'sent' && docId) {
+        try {
+          const pdfRes = await fetch(`/api/quotes/${docId}/pdf`, { method: 'POST' })
+          const pdfData = await pdfRes.json()
+          if (pdfRes.ok && pdfData.url) {
+            toast.success('PDF generated & email sent')
+          }
+        } catch { /* PDF generation is best-effort */ }
+      }
       if (nextStatus === 'sent' && customerPhone.trim()) {
-        openWhatsApp(label ?? (isInvoice ? 'Invoice' : 'Quote'), cleanRows)
+        openWhatsApp(label ?? (isInvoice ? 'Invoice' : 'Quote'), cleanRows, docId)
+        toast.success('WhatsApp opened')
       }
       router.refresh()
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Save failed')
+      const msg = err instanceof Error ? err.message : 'Save failed'
+      setMessage(msg)
+      toast.error(msg)
     } finally {
       setSaving(false)
     }
   }
 
-  function printInvoice() {
-    window.print()
+  async function downloadPDF() {
+    if (!savedDocId) return
+    setSaving(true)
+    try {
+      const pdfEndpoint = isInvoice
+        ? `/api/invoices/${savedDocId}/pdf`
+        : `/api/quotes/${savedDocId}/pdf`
+      const res = await fetch(pdfEndpoint, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'PDF generation failed')
+      window.open(data.url, '_blank')
+      setMessage('PDF generated successfully.')
+      toast.success('PDF generated!')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'PDF generation failed'
+      setMessage(msg)
+      toast.error(msg)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  function openWhatsApp(documentNumber: string, cleanRows: DocumentLineItem[]) {
+  function openWhatsApp(documentNumber: string, cleanRows: DocumentLineItem[], docId?: string) {
     const phone = customerPhone.replace(/[^\d]/g, '').replace(/^0(\d{9})$/, '27$1')
     const cleanSubtotal = cleanRows.reduce((sum, row) => sum + row.qty * row.unitPrice, 0)
     const cleanDiscountAmount = cleanSubtotal * (discountPercent / 100)
@@ -190,6 +264,12 @@ export function QuoteBuilder({ mode, acceptedQuotes = [] }: QuoteBuilderProps) {
       lines.push(`Paid via: ${paymentMethod}`)
     }
 
+    if (docId) {
+      const siteUrl = typeof window !== 'undefined' ? window.location.origin : ''
+      lines.push('')
+      lines.push(`View full details & accept online: ${siteUrl}/quote/${docId}`)
+    }
+
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener,noreferrer')
   }
 
@@ -199,7 +279,7 @@ export function QuoteBuilder({ mode, acceptedQuotes = [] }: QuoteBuilderProps) {
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h1 className="text-2xl font-black text-grey-dark tracking-tight">
-              Create {isInvoice ? 'Invoice' : 'Quote'}
+              {isEdit ? 'Edit' : 'Create'} {isInvoice ? 'Invoice' : 'Quote'}
             </h1>
             <p className="text-xs text-grey">
               Type prices manually for each job. Nothing here uses preset service pricing.
@@ -331,10 +411,10 @@ export function QuoteBuilder({ mode, acceptedQuotes = [] }: QuoteBuilderProps) {
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
             Send {isInvoice ? 'Invoice' : 'Quote'}
           </Button>
-          {isInvoice && (
-            <Button type="button" variant="secondary" onClick={printInvoice} className="flex items-center gap-2">
-              <FileDown size={16} />
-              Save PDF
+          {savedDocId && (
+            <Button type="button" variant="secondary" disabled={saving} onClick={downloadPDF} className="flex items-center gap-2">
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
+              Download PDF
             </Button>
           )}
         </div>

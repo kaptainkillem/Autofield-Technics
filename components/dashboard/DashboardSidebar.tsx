@@ -18,9 +18,9 @@ import {
   Globe,
   Settings2,
   CalendarClock,
-  MessageSquare,
   Landmark,
   PlusCircle,
+  MessageSquare,
   ReceiptText,
   BarChart3,
   HelpCircle,
@@ -48,7 +48,7 @@ const CLIENT_NAV: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'My Quotes', href: '/dashboard/quotes', icon: FileText, badgeKey: 'quotes' },
   { label: 'My Garage', href: '/dashboard/vehicles', icon: Wrench },
-  { label: 'Review Center', href: '/dashboard/reviews', icon: Star },
+  { label: 'Settings', href: '/dashboard/client/settings', icon: Settings },
   { label: 'Settings', href: '/dashboard/client/settings', icon: Settings },
 ]
 
@@ -59,10 +59,10 @@ const CLIENT_SHORTCUTS: NavItem[] = [
 
 const ADMIN_NAV: NavItem[] = [
   { label: 'Overview', href: '/dashboard/admin', icon: LayoutDashboard },
-  { label: 'Quotes Inbox', href: '/dashboard/admin/quotes', icon: FileText, badgeKey: 'pendingQuotes' },
+  { label: 'Incoming', href: '/dashboard/admin/incoming', icon: MessageSquare, badgeKey: 'pendingQuotes' },
+  { label: 'Quotes', href: '/dashboard/admin/quotes', icon: FileText },
   { label: 'Create Quote', href: '/dashboard/admin/quotes/create', icon: PlusCircle },
   { label: 'Invoices', href: '/dashboard/admin/invoices', icon: ReceiptText },
-  { label: 'Leads', href: '/dashboard/admin/leads', icon: MessageSquare },
   { label: 'Jobs', href: '/dashboard/admin/jobs', icon: CalendarClock, badgeKey: 'pendingJobs' },
   { label: 'Reviews', href: '/dashboard/admin/reviews', icon: Star, badgeKey: 'pendingReviews' },
   { label: 'Services', href: '/dashboard/admin/services', icon: Settings2 },
@@ -94,15 +94,14 @@ export function DashboardSidebar() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Fetch badge counts
+  // Fetch badge counts + Supabase Realtime subscription
   useEffect(() => {
     if (!user) return
 
     const currentUserId = user.id
+    const isAdminPath = pathname.startsWith('/dashboard/admin')
 
     async function fetchBadgeCounts() {
-      const isAdminPath = pathname.startsWith('/dashboard/admin')
-
       if (isAdminPath) {
         const [quotesRes, reviewsRes, jobsRes] = await Promise.all([
           (supabase as any).from('quotes').select('id', { count: 'exact', head: true }).eq('status', 'pending').is('deleted_at', null),
@@ -116,7 +115,6 @@ export function DashboardSidebar() {
           pendingJobs: jobsRes.count ?? 0,
         })
       } else {
-        // Client counts
         const { count } = await (supabase as any)
           .from('quotes')
           .select('id', { count: 'exact', head: true })
@@ -129,9 +127,41 @@ export function DashboardSidebar() {
 
     fetchBadgeCounts()
 
-    // Refresh badges every 60 seconds
-    const interval = setInterval(fetchBadgeCounts, 60_000)
-    return () => clearInterval(interval)
+    const channels: ReturnType<typeof supabase.channel>[] = []
+
+    if (isAdminPath) {
+      const quotesChannel = supabase
+        .channel('badges-quotes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'quotes' }, () => fetchBadgeCounts())
+        .subscribe()
+      channels.push(quotesChannel)
+
+      const reviewsChannel = supabase
+        .channel('badges-reviews')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, () => fetchBadgeCounts())
+        .subscribe()
+      channels.push(reviewsChannel)
+
+      const apptsChannel = supabase
+        .channel('badges-appointments')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => fetchBadgeCounts())
+        .subscribe()
+      channels.push(apptsChannel)
+    } else {
+      const quotesChannel = supabase
+        .channel('badges-client-quotes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'quotes', filter: `user_id=eq.${currentUserId}` },
+          () => fetchBadgeCounts()
+        )
+        .subscribe()
+      channels.push(quotesChannel)
+    }
+
+    return () => {
+      channels.forEach((ch) => supabase.removeChannel(ch))
+    }
   }, [user, pathname])
 
   const isAdmin = pathname.startsWith('/dashboard/admin')

@@ -1,3 +1,5 @@
+-- DEPRECATED: All DDL is now consolidated in schema.sql (single source of truth).
+-- Preserved for historical reference only.
 -- Migration: Create missing appointments and leads tables only
 -- Date: 2025-06-27
 -- Note: working_hours and blocked_slots already exist from previous migration

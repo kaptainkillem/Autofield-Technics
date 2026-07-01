@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
+import { checkRateLimit } from '@/lib/rate-limiter'
 
 const LineItemSchema = z.object({
   id: z.string(),
@@ -33,9 +34,19 @@ function makeDocumentNumber(prefix: string) {
 }
 
 export async function POST(request: Request) {
-  const auth = await verifyStaffUser()
+  try {
+    const auth = await verifyStaffUser()
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: auth.status })
+  }
+
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const { allowed, remaining } = checkRateLimit(`admin:invoices:${ip}`, { maxRequests: 20, windowMs: 60_000 })
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again shortly.' },
+      { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+    )
   }
 
   let body: z.infer<typeof CreateInvoiceSchema>
@@ -82,5 +93,9 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ invoice: data }, { status: 201 })
+  } catch (error) {
+    console.error('[admin:invoices:create]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 

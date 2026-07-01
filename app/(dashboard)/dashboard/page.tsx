@@ -68,7 +68,7 @@ export default function ClientDashboardPage() {
           supabase
             .from('quotes')
             .select('*')
-            .eq('user_id', user.id)
+            .or(`user_id.eq.${user.id},customer_email.eq.${user.email}`)
             .is('deleted_at', null)
             .order('created_at', { ascending: false }),
           supabase

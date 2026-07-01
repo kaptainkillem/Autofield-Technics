@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { sanitizeName, sanitizePhone, sanitizeText } from '@/lib/input-sanitizer'
 import { Loader2, User, Phone, MapPin, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -63,9 +64,9 @@ export function ClientProfileForm({ userId, email, initialData, onSaved }: Clien
       .from('profiles')
       .upsert({
         id: userId,
-        full_name: form.full_name.trim() || null,
-        phone: form.phone.trim() || null,
-        physical_address: form.physical_address?.trim() || null,
+        full_name: sanitizeName(form.full_name) || null,
+        phone: sanitizePhone(form.phone) || null,
+        physical_address: sanitizeText(form.physical_address ?? '') || null,
       })
 
     setSaving(false)

@@ -131,14 +131,6 @@ async function DashboardContent() {
             <p className="text-xs text-grey">Fast workspace routing modules control map shortcuts.</p>
           </div>
 
-          <Link href="/dashboard/admin/leads" className="flex items-center justify-between p-3 rounded-base bg-white border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
-  <div className="flex items-center gap-3">
-    <Users size={18} className="text-primary" />
-    <span className="text-sm font-semibold">Leads Pipeline Portal</span>
-  </div>
-  <ArrowRight size={14} className="text-grey" />
-</Link>
-
           <div className="flex flex-col gap-2.5">
             <Link href="/dashboard/admin/quotes" className="flex items-center justify-between p-3 rounded-base bg-white border border-grey-medium/10 text-grey-dark no-underline hover:border-primary/30 hover:bg-primary/5 transition-all">
               <div className="flex items-center gap-3">

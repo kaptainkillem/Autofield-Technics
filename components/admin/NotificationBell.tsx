@@ -39,7 +39,7 @@ export function NotificationBell() {
 
   async function fetchNotifications() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) return null
 
     const { data } = await (supabase as any)
       .from('notifications')
@@ -53,6 +53,7 @@ export function NotificationBell() {
       setUnreadCount(data.filter((n: Notification) => !n.is_read).length)
     }
     setLoading(false)
+    return user
   }
 
   async function markAsRead(id: string) {
@@ -94,14 +95,53 @@ export function NotificationBell() {
   }
 
   useEffect(() => {
-    fetchNotifications()
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
-    // Poll every 30 seconds for new notifications
-    const interval = setInterval(fetchNotifications, 30000)
-    return () => clearInterval(interval)
+    async function init() {
+      const user = await fetchNotifications()
+      if (!user) return
+
+      channel = supabase
+        .channel('notifications-realtime')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            const newNotif = payload.new as Notification
+            setNotifications((prev) => {
+              const exists = prev.some((n) => n.id === newNotif.id)
+              if (exists) return prev
+              return [newNotif, ...prev.slice(0, 9)]
+            })
+            if (!newNotif.is_read) {
+              setUnreadCount((prev) => prev + 1)
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            const updated = payload.new as Notification
+            setNotifications((prev) =>
+              prev.map((n) => (n.id === updated.id ? updated : n))
+            )
+            const readCount = notifications.filter((n) => !n.is_read).length
+            setUnreadCount(readCount)
+          }
+        )
+        .subscribe()
+    }
+
+    init()
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
+    }
   }, [])
 
-  // Close flyout on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
@@ -114,7 +154,6 @@ export function NotificationBell() {
 
   return (
     <div ref={bellRef} className="relative">
-      {/* Bell Button */}
       <button
         onClick={() => setOpen(!open)}
         className="relative p-2 rounded-base hover:bg-grey-lightest transition-colors"
@@ -127,10 +166,8 @@ export function NotificationBell() {
         )}
       </button>
 
-      {/* Flyout Dropdown */}
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-grey-medium/10 rounded-base shadow-xl z-50 overflow-hidden">
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-grey-light">
             <h3 className="text-sm font-bold text-grey-dark">Notifications</h3>
             {unreadCount > 0 && (
@@ -143,7 +180,6 @@ export function NotificationBell() {
             )}
           </div>
 
-          {/* List */}
           <div className="max-h-[360px] overflow-y-auto">
             {loading ? (
               <div className="px-4 py-6 text-center text-sm text-grey">Loading...</div>

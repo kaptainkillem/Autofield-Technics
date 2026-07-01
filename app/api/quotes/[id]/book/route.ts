@@ -106,6 +106,13 @@ export async function POST(
       )
     }
 
+    if (!quote.user_id) {
+      return NextResponse.json(
+        { error: 'Quote must be linked to a user account before booking' },
+        { status: 400 }
+      )
+    }
+
     // 3. Verify slot is still available (double-booking protection)
     const sastDate = parseISO(scheduled_date)
     const dayOfWeek = getDay(sastDate)

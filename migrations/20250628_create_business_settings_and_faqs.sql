@@ -1,3 +1,5 @@
+-- DEPRECATED: All DDL is now consolidated in schema.sql (single source of truth).
+-- Preserved for historical reference only.
 -- Migration: Create business_settings and faqs tables for Week 5
 -- Date: 2025-06-28
 

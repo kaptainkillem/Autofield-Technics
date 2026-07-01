@@ -73,7 +73,6 @@ export function WorkingHoursForm() {
   async function handleSave() {
     setSaving(true)
 
-    // Validate: if active, start must be before end
     const invalid = hours.find(
       (h) => h.is_active && h.start_time >= h.end_time
     )
@@ -84,27 +83,30 @@ export function WorkingHoursForm() {
       return
     }
 
-    const { error } = await (supabase as any)
-      .from('working_hours')
-      .upsert(
-        hours.map((h) => ({
-          day_of_week: h.day_of_week,
-          start_time: h.start_time,
-          end_time: h.end_time,
-          is_active: h.is_active,
-        })),
-        { onConflict: 'day_of_week' }
-      )
+    try {
+      const res = await fetch('/api/admin/settings/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'working_hours',
+          hours: hours.map((h) => ({
+            day_of_week: h.day_of_week,
+            start_time: h.start_time,
+            end_time: h.end_time,
+            is_active: h.is_active,
+          })),
+        }),
+      })
 
-    setSaving(false)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save')
 
-    if (error) {
-      console.error('Save working hours error:', error)
-      toast.error('Failed to save working hours')
-      return
+      toast.success('Working hours updated!')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save working hours')
+    } finally {
+      setSaving(false)
     }
-
-    toast.success('Working hours updated!')
   }
 
   if (loading) {

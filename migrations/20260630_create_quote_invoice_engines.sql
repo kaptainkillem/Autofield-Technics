@@ -1,3 +1,5 @@
+-- DEPRECATED: All DDL is now consolidated in schema.sql (single source of truth).
+-- Preserved for historical reference only.
 ALTER TABLE public.quotes
   ADD COLUMN IF NOT EXISTS quote_number VARCHAR,
   ADD COLUMN IF NOT EXISTS line_items JSONB NOT NULL DEFAULT '[]'::jsonb,

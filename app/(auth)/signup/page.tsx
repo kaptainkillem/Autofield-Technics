@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Mail, Lock, Loader2, AlertCircle, CheckCircle, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
@@ -34,6 +34,12 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const emailParam = params.get('email')
+    if (emailParam) setEmail(emailParam)
+  }, [])
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const emailTouched = email.length > 0;

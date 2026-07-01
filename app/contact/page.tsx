@@ -2,7 +2,9 @@ import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { ContactForm } from '@/components/ContactForm'
-import { MapPin, Phone, Mail, Clock } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+import { MapPin, Phone, Mail, Clock, ArrowRight } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -104,6 +106,19 @@ export default async function ContactPage() {
 
           {/* Contact Form + Map */}
           <div className="lg:col-span-2 flex flex-col gap-6">
+            <div className="bg-primary/5 border border-primary/20 rounded-base p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-grey-dark">Need a repair estimate?</p>
+                <p className="text-xs text-grey">Fill in your vehicle details and get a quote.</p>
+              </div>
+              <Link href="/quote">
+                <Button className="flex items-center gap-2">
+                  Submit a Quote
+                  <ArrowRight size={16} />
+                </Button>
+              </Link>
+            </div>
+
             <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm">
               <h2 className="text-lg font-bold text-grey-dark mb-1">Send a Message</h2>
               <p className="text-xs text-grey mb-5">Fill in the form below and we will respond as soon as possible.</p>
