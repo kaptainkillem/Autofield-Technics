@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle, XCircle, Loader2, FileDown } from 'lucide-react'
+import { CheckCircle, XCircle, Loader2, FileDown, CalendarClock } from 'lucide-react'
 import { CustomerBookingForm } from '@/components/customer/CustomerBookingForm'
 import { toast } from 'sonner'
 
@@ -14,6 +14,9 @@ interface QuoteActionButtonsProps {
     scheduled_date: string | null
     scheduled_time: string | null
     status: string | null
+    proposed_date: string | null
+    proposed_time: string | null
+    proposed_notes: string | null
   } | null
 }
 
@@ -22,6 +25,7 @@ export function QuoteActionButtons({ quoteId, status, pdfUrl, existingAppointmen
   const [actionError, setActionError] = useState('')
   const [localStatus, setLocalStatus] = useState(status)
   const [showBooking, setShowBooking] = useState(false)
+  const [proposalResponse, setProposalResponse] = useState<'accepted' | 'declined' | null>(null)
 
   async function handleAction(action: 'accept' | 'decline') {
     setActionLoading(true)
@@ -50,6 +54,134 @@ export function QuoteActionButtons({ quoteId, status, pdfUrl, existingAppointmen
     }
   }
 
+  async function handleProposalResponse(action: 'accept' | 'decline') {
+    if (!existingAppointment) return
+    setActionLoading(true)
+    setActionError('')
+    try {
+      const res = await fetch(`/api/appointments/${existingAppointment.id}/respond`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Action failed')
+      const response = action === 'accept' ? 'accepted' : 'declined'
+      setProposalResponse(response)
+      if (action === 'accept') {
+        toast.success('New date accepted! Your appointment is confirmed.')
+      } else {
+        toast.success('Proposal declined. The mechanic will suggest another time.')
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      setActionError(msg)
+      toast.error(msg)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // Handle proposed appointment
+  if (existingAppointment?.status === 'proposed' && localStatus === 'accepted') {
+    if (proposalResponse === 'accepted') {
+      return (
+        <div className="border-t border-grey-light pt-8">
+          <div className="bg-green-50 border border-green-200 rounded-base p-6 flex flex-col items-center gap-3 text-center">
+            <CheckCircle size={32} className="text-green-600" />
+            <h3 className="text-lg font-bold text-grey-dark">Appointment Confirmed</h3>
+            <p className="text-sm text-grey max-w-md">
+              Your appointment has been confirmed for{' '}
+              <strong>
+                {existingAppointment.proposed_date} at {existingAppointment.proposed_time?.slice(0, 5)}
+              </strong>
+              . We look forward to seeing you!
+            </p>
+          </div>
+        </div>
+      )
+    }
+
+    if (proposalResponse === 'declined') {
+      return (
+        <div className="border-t border-grey-light pt-8">
+          <div className="bg-amber-50 border border-amber-200 rounded-base p-6 flex flex-col items-center gap-3 text-center">
+            <CalendarClock size={32} className="text-amber-600" />
+            <h3 className="text-lg font-bold text-grey-dark">Proposal Declined</h3>
+            <p className="text-sm text-grey max-w-md">
+              The mechanic will suggest another time. You will be notified when a new date is proposed.
+            </p>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="border-t border-grey-light pt-8">
+        <div className="bg-blue-50 border border-blue-200 rounded-base p-6">
+          <div className="flex flex-col items-center gap-3 text-center mb-4">
+            <CalendarClock size={32} className="text-blue-600" />
+            <h3 className="text-lg font-bold text-grey-dark">New Date Proposed</h3>
+            <p className="text-sm text-grey max-w-md">
+              The mechanic proposed a new date for your appointment:
+            </p>
+          </div>
+
+          <div className="bg-white rounded-base border border-blue-100 p-4 mb-4">
+            <div className="flex items-center gap-3 justify-center">
+              <div className="text-center">
+                <p className="text-xs text-grey uppercase tracking-wider mb-1">Date</p>
+                <p className="text-lg font-bold text-grey-dark">{existingAppointment.proposed_date}</p>
+              </div>
+              <div className="w-px h-10 bg-grey-medium/20" />
+              <div className="text-center">
+                <p className="text-xs text-grey uppercase tracking-wider mb-1">Time</p>
+                <p className="text-lg font-bold text-grey-dark">{existingAppointment.proposed_time?.slice(0, 5)}</p>
+              </div>
+            </div>
+            {existingAppointment.proposed_notes && (
+              <p className="text-sm text-grey mt-3 pt-3 border-t border-grey-light text-center">
+                &ldquo;{existingAppointment.proposed_notes}&rdquo;
+              </p>
+            )}
+          </div>
+
+          {actionError && (
+            <div className="bg-red-50 border border-red-200 rounded-base p-3 text-sm text-red-700 mb-4">
+              {actionError}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3 justify-center">
+            <button
+              type="button"
+              onClick={() => handleProposalResponse('accept')}
+              disabled={actionLoading}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-base shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {actionLoading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <CheckCircle size={16} />
+              )}
+              Accept New Date
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleProposalResponse('decline')}
+              disabled={actionLoading}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-red-200 text-red-600 hover:bg-red-50 text-sm font-bold rounded-base shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <XCircle size={16} />
+              Decline & Request Another
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (localStatus === 'accepted') {
     if (showBooking && !existingAppointment) {
       return (
@@ -66,17 +198,28 @@ export function QuoteActionButtons({ quoteId, status, pdfUrl, existingAppointmen
     }
 
     if (existingAppointment) {
+      const isPending = existingAppointment.status === 'pending'
+      const isConfirmed = existingAppointment.status === 'confirmed'
+
       return (
         <div className="border-t border-grey-light pt-8">
-          <div className="bg-green-50 border border-green-200 rounded-base p-6 flex flex-col items-center gap-3 text-center">
-            <CheckCircle size={32} className="text-green-600" />
-            <h3 className="text-lg font-bold text-grey-dark">Appointment Requested</h3>
+          <div className={`border rounded-base p-6 flex flex-col items-center gap-3 text-center ${
+            isConfirmed ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'
+          }`}>
+            {isConfirmed ? (
+              <CheckCircle size={32} className="text-green-600" />
+            ) : (
+              <CalendarClock size={32} className="text-amber-600" />
+            )}
+            <h3 className="text-lg font-bold text-grey-dark">
+              {isConfirmed ? 'Appointment Confirmed' : 'Appointment Requested'}
+            </h3>
             <p className="text-sm text-grey max-w-md">
-              Your appointment has been submitted for{' '}
+              {isConfirmed ? 'Your appointment is confirmed for' : 'Your appointment has been submitted for'}{' '}
               <strong>
                 {existingAppointment.scheduled_date} at {existingAppointment.scheduled_time?.slice(0, 5)}
               </strong>
-              . The mechanic will confirm your slot shortly.
+              . {isPending && 'The mechanic will confirm your slot shortly.'}
             </p>
           </div>
         </div>

@@ -1,13 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 import { Star, ArrowLeft, CheckCircle, XCircle, Trash2, Loader2, MessageSquare } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Database } from '@/types/database'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { SITE_CONFIG } from '@/lib/site-config'
 
@@ -24,77 +21,82 @@ type Review = {
 }
 
 export default function AdminReviewsPage() {
-  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [reviews, setReviews] = useState<Review[]>([])
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
   const [actioningId, setActioningId] = useState<string | null>(null)
 
   async function fetchAllReviews() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/signin')
-      return
+    try {
+      const res = await fetch('/api/admin/reviews')
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to load reviews')
+        setReviews([])
+      } else {
+        setReviews(data.reviews || [])
+      }
+    } catch {
+      toast.error('Network error loading reviews')
+      setReviews([])
+    } finally {
+      setLoading(false)
     }
-
-    const { data } = await supabase
-      .from('reviews')
-      .select(`
-        id,
-        rating,
-        comment,
-        status,
-        created_at,
-        profiles (
-          full_name,
-          phone
-        )
-      `)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-
-    setReviews((data as any) || [])
-    setLoading(false)
   }
 
   useEffect(() => {
     fetchAllReviews()
-  }, [router])
+  }, [])
 
   async function updateReviewStatus(id: string, nextStatus: 'approved' | 'rejected') {
     setActioningId(id)
-    const { error } = await (supabase as any)
-      .from('reviews')
-      .update({ status: nextStatus })
-      .eq('id', id)
+    try {
+      const res = await fetch(`/api/admin/reviews/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      })
 
-    if (!error) {
-      setReviews(prev =>
-        prev.map(r => (r.id === id ? { ...r, status: nextStatus } : r))
-      )
-      toast.success(`Review ${nextStatus === 'approved' ? 'approved' : 'rejected'}`)
-    } else {
-      toast.error('Failed to update review status')
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to update review status')
+      } else {
+        setReviews(prev =>
+          prev.map(r => (r.id === id ? { ...r, status: nextStatus } : r))
+        )
+        toast.success(`Review ${nextStatus === 'approved' ? 'approved' : 'rejected'}`)
+      }
+    } catch {
+      toast.error('Network error. Please try again.')
+    } finally {
+      setActioningId(null)
     }
-    setActioningId(null)
   }
 
   async function handleDeleteReview(id: string) {
     if (!confirm('Are you sure you want to remove this review from the workspace?')) return
 
     setActioningId(id)
-    const { error } = await (supabase as any)
-      .from('reviews')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id)
+    try {
+      const res = await fetch(`/api/admin/reviews/${id}`, {
+        method: 'DELETE',
+      })
 
-    if (!error) {
-      setReviews(prev => prev.filter(r => r.id !== id))
-      toast.success('Review deleted')
-    } else {
-      toast.error('Failed to delete review')
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to delete review')
+      } else {
+        setReviews(prev => prev.filter(r => r.id !== id))
+        toast.success('Review deleted')
+      }
+    } catch {
+      toast.error('Network error. Please try again.')
+    } finally {
+      setActioningId(null)
     }
-    setActioningId(null)
   }
 
   const filteredReviews = reviews.filter(r => {

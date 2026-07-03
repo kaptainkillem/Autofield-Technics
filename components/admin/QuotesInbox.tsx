@@ -14,6 +14,7 @@ type Status = NonNullable<Quote['status']>
 
 interface QuotesInboxProps {
   quotes: Quote[]
+  initialFilter?: string
 }
 
 const STATUS_FILTERS = [
@@ -37,8 +38,8 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(days / 7)} weeks ago`
 }
 
-export function QuotesInbox({ quotes }: QuotesInboxProps) {
-  const [filter, setFilter] = useState('')
+export function QuotesInbox({ quotes, initialFilter = '' }: QuotesInboxProps) {
+  const [filter, setFilter] = useState(initialFilter)
   const [search, setSearch] = useState('')
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null)
   const [allQuotes, setAllQuotes] = useState(quotes)

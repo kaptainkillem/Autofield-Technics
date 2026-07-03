@@ -7,7 +7,12 @@ import { Button } from '@/components/ui/button'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AdminQuotesPage() {
+interface PageProps {
+  searchParams: Promise<{ filter?: string }>
+}
+
+export default async function AdminQuotesPage({ searchParams }: PageProps) {
+  const { filter: initialFilter } = await searchParams
   const supabase = createSupabaseAdminClient()
   const { data } = await supabase
     .from('quotes')
@@ -17,13 +22,20 @@ export default async function AdminQuotesPage() {
     .order('created_at', { ascending: false })
   const quotes = (data ?? []) as Database['public']['Tables']['quotes']['Row'][]
 
+  const declinedCount = quotes.filter((q) => q.status === 'declined').length
+
   return (
     <PageWrapper>
       <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-grey-light pb-3">
           <div>
             <h1 className="text-2xl font-bold text-grey-dark">Quotes</h1>
-            <p className="text-sm text-grey">Active quotes in progress — drafts, sent estimates and accepted jobs.</p>
+            <p className="text-sm text-grey">
+              All quotes — drafts, sent estimates, accepted jobs, and declined requests.
+              {declinedCount > 0 && (
+                <span className="ml-1 text-red-600 font-semibold">{declinedCount} declined.</span>
+              )}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/dashboard/admin/quotes/create">
@@ -34,7 +46,7 @@ export default async function AdminQuotesPage() {
             </Link>
           </div>
         </div>
-        <QuotesInbox quotes={quotes} />
+        <QuotesInbox quotes={quotes} initialFilter={initialFilter} />
       </div>
     </PageWrapper>
   )

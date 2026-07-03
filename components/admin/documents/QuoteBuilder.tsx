@@ -197,7 +197,8 @@ export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }
       toast.success(isInvoice ? 'Invoice saved!' : 'Quote saved!')
       if (nextStatus === 'sent' && docId) {
         try {
-          const pdfRes = await fetch(`/api/quotes/${docId}/pdf`, { method: 'POST' })
+          const pdfEndpoint = isInvoice ? `/api/invoices/${docId}/pdf` : `/api/quotes/${docId}/pdf`
+          const pdfRes = await fetch(pdfEndpoint, { method: 'POST' })
           const pdfData = await pdfRes.json()
           if (pdfRes.ok && pdfData.url) {
             toast.success('PDF generated & email sent')

@@ -45,6 +45,7 @@ interface CalendarGridProps {
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-800 border-amber-200',
+  proposed: 'bg-blue-100 text-blue-800 border-blue-200',
   confirmed: 'bg-primary-light text-primary-dark border-primary/20',
   completed: 'bg-green-100 text-green-800 border-green-200',
   cancelled: 'bg-grey-light text-grey-medium border-grey-light',

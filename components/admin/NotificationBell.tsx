@@ -2,13 +2,13 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Bell, Check, FileText, Calendar, MessageSquare, Star, X } from 'lucide-react'
+import { Bell, Check, FileText, Calendar, MessageSquare, Star, X, Wrench } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 
 interface Notification {
   id: string
-  type: 'quote' | 'appointment' | 'lead' | 'review'
+  type: 'quote' | 'appointment' | 'lead' | 'review' | 'work_order'
   reference_id: string | null
   title: string
   message: string | null
@@ -21,6 +21,7 @@ const TYPE_ICONS = {
   appointment: Calendar,
   lead: MessageSquare,
   review: Star,
+  work_order: Wrench,
 }
 
 const TYPE_COLORS = {
@@ -28,6 +29,7 @@ const TYPE_COLORS = {
   appointment: 'text-green-600 bg-green-50',
   lead: 'text-amber-600 bg-amber-50',
   review: 'text-yellow-600 bg-yellow-50',
+  work_order: 'text-blue-600 bg-blue-50',
 }
 
 export function NotificationBell() {
@@ -86,6 +88,7 @@ export function NotificationBell() {
       case 'quote':
         return `/dashboard/admin/quotes`
       case 'appointment':
+      case 'work_order':
         return `/dashboard/admin/jobs`
       case 'review':
         return `/dashboard/admin/reviews`

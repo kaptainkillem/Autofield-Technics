@@ -2,11 +2,11 @@ import { themeTokens } from '../designTokens';
 
 export const SITE_CONFIG = {
   // ── Brand Identity ──────────────────────────────────────────────
-  name: 'Autofields Technics',
-  nameBold: 'Autofields',
-  nameLight: 'Technics',
+  name: 'Top Life Mechanics',
+  nameBold: 'Top Life',
+  nameLight: 'Mechanics',
   tagline: 'Professional Mechanical Care, Wherever You Are',
-  phone: '+27784802796',
+  phone: '+27687780918',
   city: 'Johannesburg',
   region: 'Gauteng',
   country: 'ZA',
@@ -14,8 +14,8 @@ export const SITE_CONFIG = {
 
   // ── Contact ─────────────────────────────────────────────────────
   contact: {
-    email: 'info@autofieldstechnics.co.za',
-    whatsappDisplay: '+27 78 480 2796',
+    email: 'info@toplifemechanics.co.za',
+    whatsappDisplay: '+27 68 778 0918',
     businessHours: 'Mon–Fri: 08:00–17:00, Sat: 08:00–12:00',
   },
 
@@ -39,7 +39,7 @@ export const SITE_CONFIG = {
   // ── Business Profile ────────────────────────────────────────────
   business: {
     yearsOfExperience: '15+',
-    specializations: ['Korean Brands', 'Suzuki', 'Hyundai', 'General Repairs'],
+    specializations: ['Engine Repair', 'Gear box Repair', 'Diagnostic Services', 'suspension', 'brake & Clutch ', 'Auto electrical'],
     businessType: 'mobile and workshop-based',
     serviceRadius: '50km',
     mechanicCount: 1,

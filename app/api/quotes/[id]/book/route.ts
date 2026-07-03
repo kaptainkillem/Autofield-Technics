@@ -113,7 +113,22 @@ export async function POST(
       )
     }
 
-    // 3. Verify slot is still available (double-booking protection)
+    // 3. Check for existing non-cancelled appointment on this quote
+    const { data: existingAppointment } = await supabase
+      .from('appointments')
+      .select('id, status')
+      .eq('quote_id', quote.id)
+      .neq('status', 'cancelled')
+      .maybeSingle()
+
+    if (existingAppointment) {
+      return NextResponse.json(
+        { error: 'An appointment already exists for this quote. Please manage your existing appointment instead.' },
+        { status: 409 }
+      )
+    }
+
+    // 4. Verify slot is still available (double-booking protection)
     const sastDate = parseISO(scheduled_date)
     const dayOfWeek = getDay(sastDate)
 

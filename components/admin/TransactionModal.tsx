@@ -8,15 +8,14 @@ import { Button } from '@/components/ui/button'
 type TransactionType = 'revenue' | 'expense'
 
 interface TransactionModalProps {
-  userId: string
   onClose: () => void
   onSaved: () => void
 }
 
 const EXPENSE_CATEGORIES = ['Parts', 'Fuel', 'Tools', 'Rent', 'Data', 'Misc']
-const PAYMENT_METHODS = ['Cash', 'Card', 'EFT', 'Instant Pay', 'Other']
+const PAYMENT_METHODS = ['Cash', 'Card', 'EFT']
 
-export function TransactionModal({ userId, onClose, onSaved }: TransactionModalProps) {
+export function TransactionModal({ onClose, onSaved }: TransactionModalProps) {
   const [type, setType] = useState<TransactionType>('revenue')
   const [saving, setSaving] = useState(false)
 
@@ -45,7 +44,6 @@ export function TransactionModal({ userId, onClose, onSaved }: TransactionModalP
       type === 'revenue'
         ? {
             type: 'revenue' as const,
-            user_id: userId,
             customer_name: revenueForm.customer_name.trim(),
             amount_paid: parseFloat(revenueForm.amount_paid),
             payment_method: revenueForm.payment_method,
@@ -54,7 +52,6 @@ export function TransactionModal({ userId, onClose, onSaved }: TransactionModalP
           }
         : {
             type: 'expense' as const,
-            user_id: userId,
             amount: parseFloat(expenseForm.amount),
             category: expenseForm.category,
             description: expenseForm.description.trim(),

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Loader2, Save, ArrowLeft, ToggleLeft, ToggleRight } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
 import { Database } from '@/types/database'
 
 type ServiceRow = Database['public']['Tables']['services']['Row']
@@ -55,39 +54,33 @@ export default function AdminServiceForm({ service, categories }: AdminServiceFo
       image_url: form.image_url.trim() || null,
     }
 
-    if (isEditing && service) {
-      const { error: updateError } = await (supabase as any)
-        .from('services')
-        .update(payload)
-        .eq('id', service.id)
+    try {
+      const url = isEditing && service ? `/api/admin/services/${service.id}` : '/api/admin/services'
+      const method = isEditing && service ? 'PATCH' : 'POST'
 
-      if (updateError) {
-        setError(updateError.message)
-        toast.error(updateError.message)
-        setLoading(false)
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await res.json()
+      setLoading(false)
+
+      if (!res.ok) {
+        const msg = data.error || 'Failed to save service'
+        setError(msg)
+        toast.error(msg)
         return
       }
-      toast.success('Service updated successfully!')
-    } else {
-      const { error: insertError } = await (supabase as any)
-        .from('services')
-        .insert({
-          ...payload,
-          user_id: (await supabase.auth.getUser()).data.user?.id ?? '',
-        })
 
-      if (insertError) {
-        setError(insertError.message)
-        toast.error(insertError.message)
-        setLoading(false)
-        return
-      }
-      toast.success('Service created successfully!')
+      toast.success(isEditing ? 'Service updated successfully!' : 'Service created successfully!')
+      router.push('/dashboard/admin/services')
+      router.refresh()
+    } catch {
+      setLoading(false)
+      toast.error('Network error. Please try again.')
     }
-
-    setLoading(false)
-    router.push('/dashboard/admin/services')
-    router.refresh()
   }
 
   return (

@@ -9,6 +9,7 @@ import { CreateAppointmentModal } from '@/components/admin/CreateAppointmentModa
 import { EditAppointmentModal } from '@/components/admin/EditAppointmentModal'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { SITE_CONFIG } from '@/lib/site-config'
+import type { WorkOrder } from '@/components/admin/WorkOrderPanel'
 
 type Appointment = {
   id: string
@@ -18,6 +19,11 @@ type Appointment = {
   service_type?: string
   notes?: string | null
   customer_name?: string
+  proposed_date?: string | null
+  proposed_time?: string | null
+  proposed_notes?: string | null
+  quote_id?: string | null
+  work_orders?: WorkOrder[]
 }
 
 type BlockedSlot = {
@@ -43,7 +49,7 @@ export default function AdminJobsPage() {
     const [apptsRes, blockedRes] = await Promise.all([
       (supabase as any)
         .from('appointments')
-        .select('id, scheduled_date, scheduled_time, status, service_type, notes, duration_minutes')
+        .select('id, scheduled_date, scheduled_time, status, service_type, notes, duration_minutes, proposed_date, proposed_time, proposed_notes, quote_id, work_orders(*)')
         .order('scheduled_date', { ascending: true }),
       (supabase as any)
         .from('blocked_slots')

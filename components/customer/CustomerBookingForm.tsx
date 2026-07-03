@@ -1,17 +1,19 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import DatePicker from 'react-datepicker'
 import { Calendar, Clock, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { format, isBefore, startOfDay } from 'date-fns'
+import { format } from 'date-fns'
 
 interface CustomerBookingFormProps {
   quoteId: string
 }
 
 export function CustomerBookingForm({ quoteId }: CustomerBookingFormProps) {
+  const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<string>('')
   const [slots, setSlots] = useState<string[]>([])
@@ -81,6 +83,8 @@ export function CustomerBookingForm({ quoteId }: CustomerBookingFormProps) {
 
       toast.success('Appointment requested!')
       setConfirmed(true)
+      // Refresh the page so the parent re-fetches the appointment
+      router.refresh()
     } catch (err) {
       console.error('Booking error:', err)
       toast.error('Network error. Please try again.')

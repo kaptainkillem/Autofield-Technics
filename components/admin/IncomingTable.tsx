@@ -41,15 +41,20 @@ export function IncomingTable({ requests }: IncomingTableProps) {
   async function handleAccept(id: string) {
     setAccepting(id)
     try {
-      await fetch(`/api/quotes/${id}`, {
+      const res = await fetch(`/api/quotes/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'draft' }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || 'Failed to accept request')
+      }
       toast.success('Request accepted. Opening quote builder...')
       router.push(`/dashboard/admin/quotes/builder?quoteId=${id}`)
-    } catch {
-      toast.error('Failed to accept request')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to accept request')
+    } finally {
       setAccepting(null)
     }
   }
@@ -57,15 +62,20 @@ export function IncomingTable({ requests }: IncomingTableProps) {
   async function handleDecline(id: string) {
     setDeclining(id)
     try {
-      await fetch(`/api/quotes/${id}`, {
+      const res = await fetch(`/api/quotes/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'declined' }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || 'Failed to decline request')
+      }
       toast.success('Request declined')
       router.refresh()
-    } catch {
-      toast.error('Failed to decline request')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to decline request')
+    } finally {
       setDeclining(null)
     }
   }
