@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Star, FileText, Wrench, MessageCircle, ArrowRight, Settings } from 'lucide-react'
+import { Star, FileText, Wrench, MessageCircle, ArrowRight, CalendarClock, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ClientQuoteList } from '@/components/user/ClientQuoteList'
+import { toast } from 'sonner'
 import { Database } from '@/types/database'
 
 type Quote = Database['public']['Tables']['quotes']['Row']
@@ -19,6 +20,17 @@ type ClientReview = {
   created_at: string | null
 }
 
+type ProposedAppointment = {
+  id: string
+  scheduled_date: string
+  scheduled_time: string | null
+  proposed_date: string | null
+  proposed_time: string | null
+  proposed_notes: string | null
+  service_type: string
+  quote_id: string | null
+}
+
 export default function ClientDashboardPage() {
   const router = useRouter()
   
@@ -27,6 +39,8 @@ export default function ClientDashboardPage() {
   const [name, setName] = useState('there')
   const [allQuotes, setAllQuotes] = useState<Quote[]>([])
   const [allReviews, setAllReviews] = useState<ClientReview[]>([])
+  const [proposedAppointments, setProposedAppointments] = useState<ProposedAppointment[]>([])
+  const [processingProposal, setProcessingProposal] = useState<string | null>(null)
 
   useEffect(() => {
     async function initializeClientWorkspace() {
@@ -64,7 +78,7 @@ export default function ClientDashboardPage() {
         }
 
         // 3. Parallel query execution retrieval for user statistics 
-        const [quotesRes, reviewsRes] = await Promise.all([
+        const [quotesRes, reviewsRes, proposedRes] = await Promise.all([
           supabase
             .from('quotes')
             .select('*')
@@ -76,11 +90,17 @@ export default function ClientDashboardPage() {
             .select('id, rating, comment, status, created_at')
             .eq('user_id', user.id)
             .is('deleted_at', null)
-            .order('created_at', { ascending: false })
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('appointments')
+            .select('id, scheduled_date, scheduled_time, proposed_date, proposed_time, proposed_notes, service_type, quote_id')
+            .eq('user_id', user.id)
+            .eq('status', 'proposed')
         ])
 
         setAllQuotes(quotesRes.data ?? [])
         setAllReviews(reviewsRes.data ?? [])
+        setProposedAppointments(proposedRes.data ?? [])
       } catch (error) {
         console.error('Workspace session alignment runtime error:', error)
       } finally {
@@ -90,6 +110,32 @@ export default function ClientDashboardPage() {
 
     initializeClientWorkspace()
   }, [router])
+
+  async function handleProposalResponse(appointmentId: string, action: 'accept' | 'decline') {
+    setProcessingProposal(appointmentId)
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}/respond`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Action failed')
+
+      if (action === 'accept') {
+        toast.success('New date accepted! Your appointment is confirmed.')
+        setProposedAppointments((prev) => prev.filter((a) => a.id !== appointmentId))
+      } else {
+        toast.success('Proposal declined. The mechanic will suggest another time.')
+        setProposedAppointments((prev) => prev.filter((a) => a.id !== appointmentId))
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      toast.error(msg)
+    } finally {
+      setProcessingProposal(null)
+    }
+  }
 
   // Overview snapshot metric parameters
   const totalQuotesRequested = allQuotes.length
@@ -116,6 +162,76 @@ export default function ClientDashboardPage() {
         <p className="text-sm text-grey">High-level snapshot profile tracking parameters loop dashboard.</p>
       </div>
 
+      {/* Proposed Appointments Alert */}
+      {proposedAppointments.length > 0 && (
+        <div className="flex flex-col gap-4">
+          {proposedAppointments.map((apt) => (
+            <div key={apt.id} className="bg-blue-50 border border-blue-200 rounded-base p-5">
+              <div className="flex items-start gap-3 mb-4">
+                <CalendarClock size={24} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-base font-bold text-grey-dark">New Date Proposed</h3>
+                  <p className="text-sm text-grey">
+                    The mechanic proposed a new date for your <strong>{apt.service_type}</strong> appointment:
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-base border border-blue-100 p-4 mb-4">
+                <div className="flex items-center gap-4 justify-center">
+                  <div className="text-center">
+                    <p className="text-[10px] text-grey uppercase tracking-wider mb-1">Original Date</p>
+                    <p className="text-sm text-grey line-through">{apt.scheduled_date}</p>
+                  </div>
+                  <ArrowRight size={16} className="text-grey-medium" />
+                  <div className="text-center">
+                    <p className="text-[10px] text-blue-600 uppercase tracking-wider mb-1 font-bold">New Date</p>
+                    <p className="text-lg font-bold text-grey-dark">{apt.proposed_date}</p>
+                    <p className="text-sm text-grey">{apt.proposed_time?.slice(0, 5)}</p>
+                  </div>
+                </div>
+                {apt.proposed_notes && (
+                  <p className="text-sm text-grey mt-3 pt-3 border-t border-grey-light text-center italic">
+                    "{apt.proposed_notes}"
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-3 justify-center">
+                <button
+                  onClick={() => handleProposalResponse(apt.id, 'accept')}
+                  disabled={processingProposal === apt.id}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-base shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {processingProposal === apt.id ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <CheckCircle size={14} />
+                  )}
+                  Accept New Date
+                </button>
+                <button
+                  onClick={() => handleProposalResponse(apt.id, 'decline')}
+                  disabled={processingProposal === apt.id}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 text-sm font-bold rounded-base shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <XCircle size={14} />
+                  Decline
+                </button>
+                {apt.quote_id && (
+                  <Link
+                    href={`/quote/${apt.quote_id}`}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-grey-medium/20 text-grey-dark hover:bg-grey-lightest text-sm font-semibold rounded-base shadow-sm transition-all no-underline"
+                  >
+                    View Quote Details
+                  </Link>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Dynamic Client Metrics Matrix Card Layout */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
         <div className="bg-white border border-grey-medium/10 rounded-base p-5 shadow-sm flex flex-col gap-1">
@@ -131,6 +247,16 @@ export default function ClientDashboardPage() {
           <span className="text-2xl font-black text-success">{totalReviewsPosted}</span>
         </div>
       </section>
+
+      {/* Quick link to appointments */}
+      <Link
+        href="/dashboard/appointments"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary-dark transition-colors no-underline"
+      >
+        <CalendarClock size={16} />
+        View all appointments
+        <ArrowRight size={14} />
+      </Link>
 
       {/* Split Block Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">

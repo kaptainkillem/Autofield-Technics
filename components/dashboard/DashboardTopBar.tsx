@@ -31,6 +31,7 @@ export function DashboardTopBar() {
   }, [])
 
   const isAdmin = pathname.startsWith('/dashboard/admin')
+  const isClient = pathname.startsWith('/dashboard') && !isAdmin
   const initial = getUserInitial(user)
 
   return (
@@ -42,6 +43,11 @@ export function DashboardTopBar() {
         {isAdmin && (
           <span className="ml-2 text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
             Admin
+          </span>
+        )}
+        {isClient && (
+          <span className="ml-2 text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
+            Client
           </span>
         )}
       </div>

@@ -36,34 +36,34 @@ export function AccountNudgeBanner({ customerEmail, quoteId }: { customerEmail: 
     : '/signup'
 
   return (
-    <div className="bg-gradient-to-r from-primary to-primary-dark text-white px-5 py-4 rounded-base shadow-md flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
-      <div className="flex items-center gap-3 min-w-0">
-        <UserPlus size={20} className="shrink-0 opacity-80" />
-        <div className="min-w-0">
-          <p className="text-sm font-bold">
+    <div className="bg-gradient-to-r from-primary to-primary-dark text-white px-4 py-4 rounded-base shadow-md animate-in fade-in slide-in-from-top-2">
+      <div className="flex items-start gap-3">
+        <UserPlus size={20} className="shrink-0 opacity-80 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold mb-1">
             Save this quote and track your repair history
           </p>
-          <p className="text-xs text-white/80">
+          <p className="text-xs text-white/80 mb-3">
             Create a free account in 30 seconds. Your quote will be waiting for you.
           </p>
+          <div className="flex items-center gap-2">
+            <Link
+              href={signupUrl}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-primary text-xs font-bold rounded-base hover:bg-grey-lightest transition-all shadow-sm whitespace-nowrap"
+            >
+              <UserPlus size={14} />
+              Create Free Account
+            </Link>
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="p-2 rounded-base hover:bg-white/10 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Link
-          href={signupUrl}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-primary text-xs font-bold rounded-base hover:bg-grey-lightest transition-all shadow-sm whitespace-nowrap"
-        >
-          <UserPlus size={14} />
-          Create Free Account
-        </Link>
-        <button
-          type="button"
-          onClick={handleDismiss}
-          className="p-1.5 rounded-base hover:bg-white/10 transition-colors"
-          aria-label="Dismiss"
-        >
-          <X size={16} />
-        </button>
       </div>
     </div>
   )

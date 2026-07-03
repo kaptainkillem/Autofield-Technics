@@ -47,8 +47,8 @@ interface NavItem {
 const CLIENT_NAV: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'My Quotes', href: '/dashboard/quotes', icon: FileText, badgeKey: 'quotes' },
+  { label: 'My Appointments', href: '/dashboard/appointments', icon: CalendarClock, badgeKey: 'appointmentActions' },
   { label: 'My Garage', href: '/dashboard/vehicles', icon: Wrench },
-  { label: 'Settings', href: '/dashboard/client/settings', icon: Settings },
   { label: 'Settings', href: '/dashboard/client/settings', icon: Settings },
 ]
 
@@ -115,13 +115,27 @@ export function DashboardSidebar() {
           pendingJobs: jobsRes.count ?? 0,
         })
       } else {
-        const { count } = await (supabase as any)
-          .from('quotes')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', currentUserId)
-          .is('deleted_at', null)
+        const [quotesRes, proposedApptsRes, revisionsRes] = await Promise.all([
+          (supabase as any)
+            .from('quotes')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', currentUserId)
+            .is('deleted_at', null),
+          (supabase as any)
+            .from('appointments')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', currentUserId)
+            .eq('status', 'proposed'),
+          (supabase as any)
+            .from('work_orders')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'revision_pending'),
+        ])
 
-        setBadges({ quotes: count ?? 0 })
+        setBadges({
+          quotes: quotesRes.count ?? 0,
+          appointmentActions: (proposedApptsRes.count ?? 0) + (revisionsRes.count ?? 0),
+        })
       }
     }
 
@@ -157,6 +171,22 @@ export function DashboardSidebar() {
         )
         .subscribe()
       channels.push(quotesChannel)
+
+      const apptsChannel = supabase
+        .channel('badges-client-appointments')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'appointments', filter: `user_id=eq.${currentUserId}` },
+          () => fetchBadgeCounts()
+        )
+        .subscribe()
+      channels.push(apptsChannel)
+
+      const workOrdersChannel = supabase
+        .channel('badges-client-work-orders')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'work_orders' }, () => fetchBadgeCounts())
+        .subscribe()
+      channels.push(workOrdersChannel)
     }
 
     return () => {
@@ -165,6 +195,7 @@ export function DashboardSidebar() {
   }, [user, pathname])
 
   const isAdmin = pathname.startsWith('/dashboard/admin')
+  const isClient = !isAdmin
   const navItems = isAdmin ? ADMIN_NAV : CLIENT_NAV
   const shortcuts = isAdmin ? [] : CLIENT_SHORTCUTS
   const initial = getUserInitial(user)
@@ -271,19 +302,26 @@ export function DashboardSidebar() {
           <Link href="/" className="no-underline">
             <SiteLogo />
           </Link>
-          {isAdmin && (
-            <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
-              Admin
-            </span>
-          )}
-          <button
-            type="button"
-            className="text-grey hover:text-grey-dark transition-colors"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Close menu"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
+                Admin
+              </span>
+            )}
+            {isClient && (
+              <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
+                Client
+              </span>
+            )}
+            <button
+              type="button"
+              className="text-grey hover:text-grey-dark transition-colors"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close menu"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Mobile user info */}
@@ -318,13 +356,20 @@ export function DashboardSidebar() {
           <Link href="/" className="no-underline">
             <SiteLogo />
           </Link>
-          {isAdmin && (
-            <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
-              Admin
-            </span>
-          )}
-          <div className="w-10 h-10 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
-            {user && initial ? initial : '?'}
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
+                Admin
+              </span>
+            )}
+            {isClient && (
+              <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
+                Client
+              </span>
+            )}
+            <div className="w-10 h-10 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
+              {user && initial ? initial : '?'}
+            </div>
           </div>
         </div>
       </header>

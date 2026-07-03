@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { X, Loader2, FileText, CheckCircle, Clock, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -26,6 +25,7 @@ interface EditAppointmentModalProps {
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending', color: 'text-amber-700' },
+  { value: 'proposed', label: 'Proposed', color: 'text-blue-700' },
   { value: 'confirmed', label: 'Confirmed', color: 'text-primary-dark' },
   { value: 'completed', label: 'Completed', color: 'text-green-700' },
   { value: 'cancelled', label: 'Cancelled', color: 'text-grey-medium' },
@@ -44,26 +44,31 @@ export function EditAppointmentModal({ appointment, onClose, onSuccess }: EditAp
 
     setLoading(true)
 
-    const { error } = await (supabase as any)
-      .from('appointments')
-      .update({
-        status,
-        notes: notes.trim() || null,
-        updated_at: new Date().toISOString(),
+    try {
+      const res = await fetch(`/api/appointments/${appointment.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status,
+          notes: notes.trim() || null,
+        }),
       })
-      .eq('id', appointment.id)
 
-    setLoading(false)
+      const data = await res.json()
+      setLoading(false)
 
-    if (error) {
-      console.error('Update appointment error:', error)
-      toast.error('Failed to update appointment')
-      return
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to update appointment')
+        return
+      }
+
+      toast.success('Appointment updated!')
+      onSuccess()
+      onClose()
+    } catch {
+      setLoading(false)
+      toast.error('Network error. Please try again.')
     }
-
-    toast.success('Appointment updated!')
-    onSuccess()
-    onClose()
   }
 
   async function handleDelete() {
@@ -72,22 +77,26 @@ export function EditAppointmentModal({ appointment, onClose, onSuccess }: EditAp
 
     setLoading(true)
 
-    const { error } = await (supabase as any)
-      .from('appointments')
-      .delete()
-      .eq('id', appointment.id)
+    try {
+      const res = await fetch(`/api/appointments/${appointment.id}`, {
+        method: 'DELETE',
+      })
 
-    setLoading(false)
+      const data = await res.json()
+      setLoading(false)
 
-    if (error) {
-      console.error('Delete appointment error:', error)
-      toast.error('Failed to delete appointment')
-      return
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to delete appointment')
+        return
+      }
+
+      toast.success('Appointment deleted')
+      onSuccess()
+      onClose()
+    } catch {
+      setLoading(false)
+      toast.error('Network error. Please try again.')
     }
-
-    toast.success('Appointment deleted')
-    onSuccess()
-    onClose()
   }
 
   const appointmentDate = parseISO(appointment.scheduled_date)

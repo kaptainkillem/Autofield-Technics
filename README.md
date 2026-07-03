@@ -28,6 +28,7 @@ A high-performance, mobile-first web application for a Johannesburg-based mechan
 | `start-project.ps1` | The "Start" button. | Runs Docker and checks your environment. |
 | `CHANGELOG.md` | Project history. | All major changes and fixes are recorded here. |
 | `.audit/RESULTS.md` | Audit results. | Consolidated results from all 5 audit checklists. |
+| `.github/workflows/deploy.yml` | Vercel CI/CD | Deploys the site on every push to `main`. |
 
 ---
 
@@ -49,6 +50,35 @@ NEXT_PUBLIC_MECHANIC_USER_ID=your_admin_uid    # Supabase auth uid of admin acco
 .\start-project.ps1
 ```
 Choose **Option 1** to start the dev server at [http://localhost:3000](http://localhost:3000).
+
+### 3. Prepare Supabase
+1. Create a Supabase project.
+2. Run `schema.sql` in the Supabase SQL Editor to create tables, policies, and triggers.
+3. For existing projects, apply any new migrations in `migrations/` in chronological order.
+4. Enable email/password Auth and the Resend provider if using email notifications.
+
+### 4. Deploy to Vercel
+We use GitHub Actions for CI/CD. Do not deploy manually through the Vercel dashboard.
+
+1. Install the Vercel CLI and link the project once:
+   ```bash
+   npm i -g vercel
+   vercel link
+   ```
+2. Pull environment variables into GitHub secrets:
+   ```bash
+   vercel env pull .env.local
+   ```
+   Then add the following as repository secrets at **Settings → Secrets and variables → Actions**:
+   - `VERCEL_TOKEN`
+   - `VERCEL_ORG_ID`
+   - `VERCEL_PROJECT_ID`
+3. Push to `main`. The workflow in `.github/workflows/deploy.yml` will:
+   - Install dependencies
+   - Run `next build`
+   - Deploy to Vercel production
+
+Production environment variables should match `.env.example` and be set in the Vercel dashboard.
 
 ### 🎨 Styling Protocol (Tailwind v4)
 We use a **Token-to-Utility** workflow.

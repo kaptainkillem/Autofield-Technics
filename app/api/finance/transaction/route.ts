@@ -52,23 +52,16 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const supabase = createSupabaseAdminClient()
+  const adminClient = createSupabaseAdminClient()
   const data = parseResult.data
+  const adminUserId = auth.userId
 
   try {
     if (data.type === 'revenue') {
-      // For manual revenue, we need a user_id. Use the admin's own ID or a system placeholder.
-      // In a single-mechanic shop, the admin IS the user. We'll accept user_id in payload.
-      const { user_id, ...revenueData } = body as Record<string, unknown>
-
-      if (!user_id || typeof user_id !== 'string') {
-        return NextResponse.json({ error: 'user_id is required for revenue entries' }, { status: 400 })
-      }
-
-      const { data: inserted, error } = await supabase
+      const { data: inserted, error } = await adminClient
         .from('receipts')
         .insert({
-          user_id,
+          user_id: adminUserId,
           customer_name: data.customer_name,
           amount_paid: data.amount_paid,
           payment_method: data.payment_method,
@@ -88,15 +81,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Expense
-    const { user_id, ...expenseBody } = body as Record<string, unknown>
-    if (!user_id || typeof user_id !== 'string') {
-      return NextResponse.json({ error: 'user_id is required for expense entries' }, { status: 400 })
-    }
-
-    const { data: inserted, error } = await supabase
+    const { data: inserted, error } = await adminClient
       .from('expenses')
       .insert({
-        user_id,
+        user_id: adminUserId,
         amount: data.amount,
         category: data.category,
         description: data.description,

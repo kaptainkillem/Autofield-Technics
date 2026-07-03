@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { notFound } from 'next/navigation'
 import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
-import { FileText, Wrench, User, CheckCircle, Clock } from 'lucide-react'
+import { FileText, Wrench, User, CheckCircle, Clock, XCircle } from 'lucide-react'
 import { QuoteActionButtons } from '@/components/public/QuoteActionButtons'
 import { AccountNudgeBanner } from '@/components/public/AccountNudgeBanner'
 import type { Json } from '@/types/database'
@@ -51,10 +51,10 @@ export default async function PublicQuotePage({ params }: PageProps) {
 
   const { data: existingAppointment } = await supabase
     .from('appointments')
-    .select('id, scheduled_date, scheduled_time, status')
+    .select('id, scheduled_date, scheduled_time, status, proposed_date, proposed_time, proposed_notes')
     .eq('quote_id', id)
     .neq('status', 'cancelled')
-    .single()
+    .maybeSingle()
 
   const lineItems = parseLineItems(quote.line_items)
   const subtotal = quote.subtotal ?? lineItems.reduce((sum, item) => sum + item.qty * item.unitPrice, 0)
@@ -70,6 +70,76 @@ export default async function PublicQuotePage({ params }: PageProps) {
 
   return (
     <>
+      {/* Hero Section */}
+      <section className="bg-grey-light px-4 pt-32 pb-12 md:px-20 md:pt-40 md:pb-16">
+        <div className="mx-auto max-w-4xl">
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center">
+              <FileText size={28} className="text-grey-dark" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-grey uppercase tracking-wider mb-1">
+                {quote.quote_number ?? `Quote #${id.slice(0, 8).toUpperCase()}`}
+              </p>
+              <h1 className="heading-1 mb-3">
+                {quote.service_type ?? 'Service Quote'}
+              </h1>
+              <p className="text-grey max-w-xl mx-auto text-sm">
+                {[quote.vehicle_year, quote.vehicle_make, quote.vehicle_model].filter(Boolean).join(' ') || 'Vehicle details'} — {quote.customer_name}
+              </p>
+            </div>
+
+            {/* Status Badge */}
+            <div className="mt-2">
+              {quote.status === 'pending' && (
+                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold">
+                  <Clock size={14} />
+                  Awaiting Quote
+                </span>
+              )}
+              {quote.status === 'sent' && (
+                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/80 border border-primary/20 text-primary text-xs font-bold">
+                  <FileText size={14} />
+                  Quote Sent — Action Required
+                </span>
+              )}
+              {quote.status === 'accepted' && (
+                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-green-100 border border-green-200 text-green-800 text-xs font-bold">
+                  <CheckCircle size={14} />
+                  Quote Accepted
+                </span>
+              )}
+              {quote.status === 'declined' && (
+                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-red-100 border border-red-200 text-red-800 text-xs font-bold">
+                  <XCircle size={14} />
+                  Quote Declined
+                </span>
+              )}
+              {quote.status === 'completed' && (
+                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-grey-lightest border border-grey-medium/20 text-grey text-xs font-bold">
+                  <CheckCircle size={14} />
+                  Completed
+                </span>
+              )}
+              {quote.status === 'draft' && (
+                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-grey-lightest border border-grey-medium/20 text-grey text-xs font-bold">
+                  <Clock size={14} />
+                  Preparing
+                </span>
+              )}
+            </div>
+
+            {/* Quick Stats */}
+            {(isSent || isAccepted) && total > 0 && (
+              <div className="mt-2 text-3xl font-black text-grey-dark">
+                {formatCurrency(total)}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Breadcrumb */}
       <div className="bg-grey-lightest border-t border-b border-grey-medium/10 px-4 py-4 md:px-20">
         <div className="mx-auto max-w-4xl">
           <Breadcrumb
@@ -85,54 +155,6 @@ export default async function PublicQuotePage({ params }: PageProps) {
         <div className="mx-auto max-w-4xl flex flex-col gap-8">
 
           <AccountNudgeBanner customerEmail={quote.customer_email} quoteId={id} />
-
-          {/* Header */}
-          <div className="border-b border-grey-light pb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-base bg-primary/10 flex items-center justify-center">
-                <FileText size={20} className="text-primary" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-extrabold text-grey-dark">Quote Details</h1>
-                <p className="text-xs text-grey">
-                  {quote.quote_number ?? `Quote #${id.slice(0, 8).toUpperCase()}`}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              {quote.status === 'pending' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-base bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold">
-                  <Clock size={12} />
-                  Awaiting Quote
-                </span>
-              )}
-              {quote.status === 'sent' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-base bg-primary/10 border border-primary/20 text-primary text-xs font-bold">
-                  <FileText size={12} />
-                  Quote Sent
-                </span>
-              )}
-              {quote.status === 'accepted' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-base bg-green-50 border border-green-200 text-green-700 text-xs font-bold">
-                  <CheckCircle size={12} />
-                  Quote Accepted
-                </span>
-              )}
-              {quote.status === 'completed' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-base bg-grey-light border border-grey-medium/20 text-grey text-xs font-bold">
-                  <CheckCircle size={12} />
-                  Completed
-                </span>
-              )}
-              {quote.status === 'draft' && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-base bg-grey-lightest border border-grey-medium/20 text-grey text-xs font-bold">
-                  <Clock size={12} />
-                  Preparing
-                </span>
-              )}
-            </div>
-          </div>
 
           {/* Customer + Vehicle Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -64,7 +64,7 @@ export async function PATCH(
       )
     }
 
-    const newStatus = body.action === 'accept' ? 'accepted' : 'cancelled'
+    const newStatus = body.action === 'accept' ? 'accepted' : 'declined'
 
     const updateFields: Record<string, unknown> = {
       status: newStatus,

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
 import { X, Loader2, Clock, Calendar, User, Wrench, FileText, Timer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -82,24 +81,30 @@ export function CreateAppointmentModal({ date, onClose, onSuccess }: CreateAppoi
       customer_name: form.customer_name.trim() || null,
       notes: form.notes.trim() || null,
       duration_minutes: form.duration_minutes,
-      status: 'pending',
     }
 
-    const { error } = await (supabase as any)
-      .from('appointments')
-      .insert(payload)
+    try {
+      const res = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
 
-    setLoading(false)
+      const data = await res.json()
+      setLoading(false)
 
-    if (error) {
-      console.error('Create appointment error:', error)
-      toast.error('Failed to create appointment')
-      return
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to create appointment')
+        return
+      }
+
+      toast.success('Appointment created!')
+      onSuccess()
+      onClose()
+    } catch {
+      setLoading(false)
+      toast.error('Network error. Please try again.')
     }
-
-    toast.success('Appointment created!')
-    onSuccess()
-    onClose()
   }
 
   if (!date) return null

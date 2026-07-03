@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Database } from '@/types/database'
 import { Trash2, Loader2, DollarSign, TrendingDown } from 'lucide-react'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
 
 type Receipt = Database['public']['Tables']['receipts']['Row']
 type Expense = Database['public']['Tables']['expenses']['Row']
@@ -36,21 +35,23 @@ export function FinanceLedger({ receipts, expenses, onRefresh }: FinanceLedgerPr
     setDeletingId(id)
     setDeletingType('receipt')
 
-    const { error } = await (supabase as any)
-      .from('receipts')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id)
+    try {
+      const res = await fetch(`/api/admin/finance/receipts/${id}`, { method: 'DELETE' })
+      const data = await res.json()
 
-    setDeletingId(null)
-    setDeletingType(null)
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to delete receipt')
+        return
+      }
 
-    if (error) {
-      toast.error('Failed to delete receipt')
-      return
+      toast.success('Receipt deleted')
+      onRefresh()
+    } catch {
+      toast.error('Network error. Please try again.')
+    } finally {
+      setDeletingId(null)
+      setDeletingType(null)
     }
-
-    toast.success('Receipt deleted')
-    onRefresh()
   }
 
   async function handleDeleteExpense(id: string) {
@@ -58,21 +59,23 @@ export function FinanceLedger({ receipts, expenses, onRefresh }: FinanceLedgerPr
     setDeletingId(id)
     setDeletingType('expense')
 
-    const { error } = await (supabase as any)
-      .from('expenses')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id)
+    try {
+      const res = await fetch(`/api/admin/finance/expenses/${id}`, { method: 'DELETE' })
+      const data = await res.json()
 
-    setDeletingId(null)
-    setDeletingType(null)
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to delete expense')
+        return
+      }
 
-    if (error) {
-      toast.error('Failed to delete expense')
-      return
+      toast.success('Expense deleted')
+      onRefresh()
+    } catch {
+      toast.error('Network error. Please try again.')
+    } finally {
+      setDeletingId(null)
+      setDeletingType(null)
     }
-
-    toast.success('Expense deleted')
-    onRefresh()
   }
 
   const visibleReceipts = activeTab === 'expenses' ? [] : receipts

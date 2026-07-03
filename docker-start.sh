@@ -26,14 +26,14 @@ echo -e "${GREEN}✓ Docker and Docker Compose found${NC}"
 # Check if .env.local exists
 if [ ! -f .env.local ]; then
     echo -e "${YELLOW}⚠️  Creating .env.local from .env.example...${NC}"
-    cp .env.example .env.local
+    cp .env.example .env.local 2>/dev/null || cp env.example .env.local 2>/dev/null
     echo -e "${YELLOW}⚠️  Please edit .env.local with your actual credentials:${NC}"
     echo -e "${YELLOW}   - NEXT_PUBLIC_SUPABASE_URL${NC}"
     echo -e "${YELLOW}   - NEXT_PUBLIC_SUPABASE_ANON_KEY${NC}"
     echo -e "${YELLOW}   - SUPABASE_SERVICE_ROLE_KEY${NC}"
-    echo -e "${YELLOW}   - NEXTAUTH_SECRET${NC}"
     echo -e "${YELLOW}   - RESEND_API_KEY${NC}"
-    echo -e "${YELLOW}   - MECHANIC_WHATSAPP_PHONE${NC}"
+    echo -e "${YELLOW}   - NEXT_PUBLIC_WHATSAPP_NUMBER${NC}"
+    echo -e "${YELLOW}   - NEXT_PUBLIC_MECHANIC_USER_ID${NC}"
     read -p "Press Enter to continue after updating .env.local..."
 fi
 
@@ -78,9 +78,9 @@ case $choice in
         docker compose exec app sh
         ;;
     6)
-        echo -e "${GREEN}Running database migrations...${NC}"
-        docker compose exec app npx prisma migrate deploy
-        echo -e "${GREEN}✓ Migrations complete!${NC}"
+        echo -e "${YELLOW}This project uses Supabase. Apply migrations manually in the Supabase SQL Editor:${NC}"
+        echo -e "${YELLOW}  - migrations/*.sql${NC}"
+        echo -e "${YELLOW}Or run schema.sql as a single source of truth.${NC}"
         ;;
     7)
         echo -e "${RED}⚠️  This will delete all volumes and data!${NC}"

@@ -1,8 +1,6 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 import { Plus, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageWrapper } from '@/components/layout/PageWrapper'
@@ -10,50 +8,38 @@ import { FinanceSummaryCards } from '@/components/admin/FinanceSummaryCards'
 import { FinanceLedger } from '@/components/admin/FinanceLedger'
 import { TransactionModal } from '@/components/admin/TransactionModal'
 import { Database } from '@/types/database'
+import { toast } from 'sonner'
 
 type Receipt = Database['public']['Tables']['receipts']['Row']
 type Expense = Database['public']['Tables']['expenses']['Row']
 
 export default function AdminFinancePage() {
-  const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState<string>('')
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [modalOpen, setModalOpen] = useState(false)
 
   const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/signin')
-      return
+    try {
+      const res = await fetch('/api/admin/finance')
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to load finance data')
+        setReceipts([])
+        setExpenses([])
+      } else {
+        setReceipts(data.receipts ?? [])
+        setExpenses(data.expenses ?? [])
+      }
+    } catch {
+      toast.error('Network error loading finance data')
+      setReceipts([])
+      setExpenses([])
+    } finally {
+      setLoading(false)
     }
-
-    const role = user.user_metadata?.role ?? 'client'
-    if (role !== 'admin') {
-      router.push('/dashboard')
-      return
-    }
-
-    setUserId(user.id)
-
-    const [receiptsRes, expensesRes] = await Promise.all([
-      (supabase as any)
-        .from('receipts')
-        .select('*')
-        .is('deleted_at', null)
-        .order('job_date', { ascending: false }),
-      (supabase as any)
-        .from('expenses')
-        .select('*')
-        .is('deleted_at', null)
-        .order('expense_date', { ascending: false }),
-    ])
-
-    setReceipts(receiptsRes.data ?? [])
-    setExpenses(expensesRes.data ?? [])
-    setLoading(false)
-  }, [router])
+  }, [])
 
   useEffect(() => {
     fetchData()
@@ -108,7 +94,6 @@ export default function AdminFinancePage() {
       {/* Modal */}
       {modalOpen && (
         <TransactionModal
-          userId={userId}
           onClose={() => setModalOpen(false)}
           onSaved={() => {
             setModalOpen(false)

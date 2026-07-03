@@ -237,11 +237,12 @@ ALTER TABLE public.quotes
   ADD COLUMN IF NOT EXISTS whatsapp_message_id TEXT;
 
 DO $$ BEGIN
+  ALTER TABLE public.quotes DROP CONSTRAINT IF EXISTS status_valid;
   ALTER TABLE public.quotes DROP CONSTRAINT IF EXISTS quotes_status_check;
   ALTER TABLE public.quotes ADD CONSTRAINT quotes_status_check
     CHECK (status IN ('draft', 'pending', 'sent', 'accepted', 'declined', 'completed', 'cancelled'));
 EXCEPTION WHEN duplicate_object THEN
-  ALTER TABLE public.quotes DROP CONSTRAINT quotes_status_check;
+  ALTER TABLE public.quotes DROP CONSTRAINT IF EXISTS quotes_status_check;
   ALTER TABLE public.quotes ADD CONSTRAINT quotes_status_check
     CHECK (status IN ('draft', 'pending', 'sent', 'accepted', 'declined', 'completed', 'cancelled'));
 END $$;
@@ -345,7 +346,7 @@ CREATE POLICY "Admins can manage FAQs" ON public.faqs FOR ALL USING (public.is_a
 CREATE TABLE IF NOT EXISTS public.notifications (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id      UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-    type         TEXT NOT NULL CHECK (type IN ('quote', 'appointment', 'lead', 'review')),
+    type         TEXT NOT NULL CHECK (type IN ('quote', 'appointment', 'lead', 'review', 'work_order')),
     reference_id UUID,
     title        TEXT NOT NULL,
     message      TEXT,
@@ -487,6 +488,108 @@ DROP TRIGGER IF EXISTS on_appointment_update_notification ON public.appointments
 CREATE TRIGGER on_appointment_update_notification
     AFTER UPDATE ON public.appointments
     FOR EACH ROW EXECUTE FUNCTION public.on_appointment_cancelled_notify();
+
+-- Helper function to notify a single user
+CREATE OR REPLACE FUNCTION public.notify_user(
+    p_user_id UUID,
+    p_type TEXT,
+    p_reference_id UUID,
+    p_title TEXT,
+    p_message TEXT DEFAULT NULL
+)
+RETURNS void AS $$
+BEGIN
+    INSERT INTO public.notifications (user_id, type, reference_id, title, message)
+    VALUES (p_user_id, p_type, p_reference_id, p_title, p_message);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger: Appointment Proposed (notify client)
+-- Fires when status becomes 'proposed' OR when proposed fields change on an already-proposed appointment
+CREATE OR REPLACE FUNCTION public.on_appointment_proposed_notify()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'proposed' AND (
+        OLD.status != 'proposed'
+        OR NEW.proposed_date IS DISTINCT FROM OLD.proposed_date
+        OR NEW.proposed_time IS DISTINCT FROM OLD.proposed_time
+    ) THEN
+        PERFORM public.notify_user(
+            NEW.user_id,
+            'appointment',
+            NEW.id,
+            'New date proposed',
+            'The mechanic proposed a new date for your appointment on ' || NEW.proposed_date || ' at ' || COALESCE(NEW.proposed_time, 'TBD')
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_appointment_proposed_notification ON public.appointments;
+CREATE TRIGGER on_appointment_proposed_notification
+    AFTER UPDATE ON public.appointments
+    FOR EACH ROW EXECUTE FUNCTION public.on_appointment_proposed_notify();
+
+-- Trigger: Appointment Confirmed (notify both parties)
+CREATE OR REPLACE FUNCTION public.on_appointment_confirmed_notify()
+RETURNS TRIGGER AS $$
+DECLARE
+    customer_name TEXT;
+BEGIN
+    IF NEW.status = 'confirmed' AND OLD.status != 'confirmed' THEN
+        PERFORM public.notify_user(
+            NEW.user_id,
+            'appointment',
+            NEW.id,
+            'Appointment confirmed',
+            'Your appointment on ' || NEW.scheduled_date || ' at ' || COALESCE(NEW.scheduled_time, 'TBD') || ' has been confirmed'
+        );
+
+        SELECT COALESCE(p.full_name, 'A customer') INTO customer_name
+        FROM public.profiles p WHERE p.id = NEW.user_id;
+
+        PERFORM public.notify_admins(
+            'appointment',
+            NEW.id,
+            'Appointment confirmed',
+            customer_name || '''s appointment on ' || NEW.scheduled_date || ' has been confirmed'
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_appointment_confirmed_notification ON public.appointments;
+CREATE TRIGGER on_appointment_confirmed_notification
+    AFTER UPDATE ON public.appointments
+    FOR EACH ROW EXECUTE FUNCTION public.on_appointment_confirmed_notify();
+
+-- Trigger: Proposal Declined (notify admin)
+CREATE OR REPLACE FUNCTION public.on_appointment_declined_proposal_notify()
+RETURNS TRIGGER AS $$
+DECLARE
+    customer_name TEXT;
+BEGIN
+    IF NEW.status = 'pending' AND OLD.status = 'proposed' THEN
+        SELECT COALESCE(p.full_name, 'A customer') INTO customer_name
+        FROM public.profiles p WHERE p.id = NEW.user_id;
+
+        PERFORM public.notify_admins(
+            'appointment',
+            NEW.id,
+            'Proposal declined',
+            customer_name || ' declined the proposed date. Please suggest another time.'
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_appointment_declined_proposal_notification ON public.appointments;
+CREATE TRIGGER on_appointment_declined_proposal_notification
+    AFTER UPDATE ON public.appointments
+    FOR EACH ROW EXECUTE FUNCTION public.on_appointment_declined_proposal_notify();
 
 -- Trigger: New Review Submitted
 CREATE OR REPLACE FUNCTION public.on_review_insert_notify()
@@ -667,11 +770,17 @@ CREATE TABLE IF NOT EXISTS public.appointments (
     scheduled_date DATE NOT NULL,
     scheduled_time TEXT,
     duration_minutes INTEGER DEFAULT 60,
-    status         TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled')),
+    status         TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'proposed', 'confirmed', 'completed', 'cancelled')),
+    customer_name  TEXT,
     notes          TEXT,
+    proposed_date  DATE,
+    proposed_time  TEXT,
+    proposed_notes TEXT,
     created_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+ALTER TABLE public.appointments ADD COLUMN IF NOT EXISTS customer_name TEXT;
 
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 
@@ -681,7 +790,179 @@ CREATE POLICY "Users can view own appointments" ON public.appointments FOR SELEC
 DROP POLICY IF EXISTS "Service role can manage appointments" ON public.appointments;
 CREATE POLICY "Service role can manage appointments" ON public.appointments FOR ALL USING (auth.role() = 'service_role');
 
+DROP POLICY IF EXISTS "Admins can view all appointments" ON public.appointments;
+CREATE POLICY "Admins can view all appointments" ON public.appointments
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
 ALTER TABLE public.appointments ADD COLUMN IF NOT EXISTS duration_minutes INTEGER DEFAULT 60;
+ALTER TABLE public.appointments ADD COLUMN IF NOT EXISTS proposed_date DATE;
+ALTER TABLE public.appointments ADD COLUMN IF NOT EXISTS proposed_time TEXT;
+ALTER TABLE public.appointments ADD COLUMN IF NOT EXISTS proposed_notes TEXT;
+
+-- Update status constraint to include 'proposed'
+ALTER TABLE public.appointments DROP CONSTRAINT IF EXISTS appointments_status_check;
+ALTER TABLE public.appointments ADD CONSTRAINT appointments_status_check
+  CHECK (status IN ('pending', 'proposed', 'confirmed', 'completed', 'cancelled'));
+
+-- ─── Work Orders (Workshop Engine) ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.work_orders (
+    id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    quote_id                 UUID NOT NULL REFERENCES public.quotes(id) ON DELETE CASCADE,
+    appointment_id           UUID REFERENCES public.appointments(id) ON DELETE SET NULL,
+    status                   TEXT NOT NULL DEFAULT 'checked_in' CHECK (status IN ('checked_in', 'in_progress', 'awaiting_parts', 'revision_pending', 'ready_for_pickup', 'completed')),
+    mechanic_notes           TEXT,
+    client_visible_notes     TEXT,
+    additional_work_items    JSONB NOT NULL DEFAULT '[]'::jsonb,
+    additional_work_total    NUMERIC NOT NULL DEFAULT 0,
+    revision_approved        BOOLEAN,
+    revision_responded_at    TIMESTAMP WITH TIME ZONE,
+    started_at               TIMESTAMP WITH TIME ZONE,
+    completed_at             TIMESTAMP WITH TIME ZONE,
+    created_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.work_orders ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Clients can view own work orders" ON public.work_orders;
+CREATE POLICY "Clients can view own work orders" ON public.work_orders
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.quotes q
+      WHERE q.id = work_orders.quote_id AND q.user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "Admins can manage work orders" ON public.work_orders;
+CREATE POLICY "Admins can manage work orders" ON public.work_orders
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid() AND p.role = 'admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "Service role full access on work orders" ON public.work_orders;
+CREATE POLICY "Service role full access on work orders" ON public.work_orders
+  FOR ALL USING (auth.role() = 'service_role');
+
+-- ─── Work Order Events (Audit Trail) ────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.work_order_events (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    work_order_id   UUID NOT NULL REFERENCES public.work_orders(id) ON DELETE CASCADE,
+    event_type      TEXT NOT NULL CHECK (event_type IN ('status_change', 'revision_submitted', 'revision_accepted', 'revision_declined', 'note_added')),
+    old_status      TEXT,
+    new_status      TEXT,
+    notes           TEXT,
+    created_by      UUID REFERENCES public.profiles(id),
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.work_order_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Clients can view own work order events" ON public.work_order_events;
+CREATE POLICY "Clients can view own work order events" ON public.work_order_events
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.work_orders wo
+      JOIN public.quotes q ON q.id = wo.quote_id
+      WHERE wo.id = work_order_events.work_order_id AND q.user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "Admins can manage work order events" ON public.work_order_events;
+CREATE POLICY "Admins can manage work order events" ON public.work_order_events
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = auth.uid() AND p.role = 'admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "Service role full access on work order events" ON public.work_order_events;
+CREATE POLICY "Service role full access on work order events" ON public.work_order_events
+  FOR ALL USING (auth.role() = 'service_role');
+
+-- Trigger: Work Order Status Changed (notify client)
+CREATE OR REPLACE FUNCTION public.on_work_order_status_notify()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status != OLD.status THEN
+        PERFORM public.notify_user(
+            (SELECT user_id FROM public.quotes WHERE id = NEW.quote_id),
+            'work_order',
+            NEW.id,
+            CASE NEW.status
+                WHEN 'in_progress' THEN 'Work has started'
+                WHEN 'awaiting_parts' THEN 'Awaiting parts'
+                WHEN 'ready_for_pickup' THEN 'Ready for pickup'
+                WHEN 'completed' THEN 'Job completed'
+                ELSE 'Work order updated'
+            END,
+            COALESCE(NEW.client_visible_notes, 'Your vehicle status has been updated to: ' || NEW.status)
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_work_order_status_notification ON public.work_orders;
+CREATE TRIGGER on_work_order_status_notification
+    AFTER UPDATE ON public.work_orders
+    FOR EACH ROW EXECUTE FUNCTION public.on_work_order_status_notify();
+
+-- Trigger: Revision Submitted (notify client)
+CREATE OR REPLACE FUNCTION public.on_work_order_revision_notify()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'revision_pending' AND OLD.status != 'revision_pending' THEN
+        PERFORM public.notify_user(
+            (SELECT user_id FROM public.quotes WHERE id = NEW.quote_id),
+            'work_order',
+            NEW.id,
+            'Additional work required',
+            'The mechanic found additional work needed. Total: R' || NEW.additional_work_total
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_work_order_revision_notification ON public.work_orders;
+CREATE TRIGGER on_work_order_revision_notification
+    AFTER UPDATE ON public.work_orders
+    FOR EACH ROW EXECUTE FUNCTION public.on_work_order_revision_notify();
+
+-- Trigger: Revision Responded (notify admins)
+CREATE OR REPLACE FUNCTION public.on_work_order_revision_response_notify()
+RETURNS TRIGGER AS $$
+DECLARE
+    customer_name TEXT;
+BEGIN
+    IF NEW.revision_approved IS NOT NULL AND OLD.revision_approved IS NULL THEN
+        SELECT COALESCE(p.full_name, 'A customer') INTO customer_name
+        FROM public.profiles p
+        WHERE p.id = (SELECT user_id FROM public.quotes WHERE id = NEW.quote_id);
+
+        PERFORM public.notify_admins(
+            'work_order',
+            NEW.id,
+            CASE WHEN NEW.revision_approved THEN 'Additional work accepted' ELSE 'Additional work declined' END,
+            customer_name || CASE WHEN NEW.revision_approved THEN ' accepted the additional work proposal' ELSE ' declined the additional work proposal' END
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_work_order_revision_response_notification ON public.work_orders;
+CREATE TRIGGER on_work_order_revision_response_notification
+    AFTER UPDATE ON public.work_orders
+    FOR EACH ROW EXECUTE FUNCTION public.on_work_order_revision_response_notify();
 
 -- ─── Working Hours ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.working_hours (
@@ -730,16 +1011,13 @@ CREATE POLICY "Admins can read blocked slots" ON public.blocked_slots FOR SELECT
 -- ─── Auto-create profile row on signup ──────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
-DECLARE
-    user_role TEXT;
 BEGIN
-    user_role := COALESCE(NEW.raw_user_meta_data->>'role', 'client');
-
+    -- Always create new users as clients. Admins must be promoted via service role.
     INSERT INTO public.profiles (id, full_name, role)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-        user_role
+        'client'
     );
     RETURN NEW;
 END;
@@ -758,6 +1036,14 @@ CREATE INDEX IF NOT EXISTS idx_receipts_user_id ON public.receipts(user_id);
 CREATE INDEX IF NOT EXISTS idx_appointments_user_id ON public.appointments(user_id);
 CREATE INDEX IF NOT EXISTS idx_appointments_status ON public.appointments(status);
 CREATE INDEX IF NOT EXISTS idx_appointments_scheduled_date ON public.appointments(scheduled_date);
+-- Prevent duplicate active appointments per quote (one booking at a time)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_appointments_one_active_per_quote
+ON public.appointments(quote_id)
+WHERE status IN ('pending', 'proposed', 'confirmed') AND quote_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_work_orders_quote_id ON public.work_orders(quote_id);
+CREATE INDEX IF NOT EXISTS idx_work_orders_appointment_id ON public.work_orders(appointment_id);
+CREATE INDEX IF NOT EXISTS idx_work_orders_status ON public.work_orders(status);
+CREATE INDEX IF NOT EXISTS idx_work_order_events_work_order_id ON public.work_order_events(work_order_id);
 CREATE INDEX IF NOT EXISTS idx_seo_registry_path ON public.seo_registry(path_url);
 -- Replaced by idx_seo_locations_province_city_suburb below
 CREATE INDEX IF NOT EXISTS idx_analytics_user_month_year ON public.analytics(user_id, month, year);
