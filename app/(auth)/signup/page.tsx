@@ -6,7 +6,7 @@ import { Mail, Lock, Loader2, AlertCircle, CheckCircle, CheckCircle2, XCircle, E
 import { toast } from 'sonner';
 import { supabaseHelpers } from '@/lib/supabase';
 import { SiteLogo } from '@/components/common/SiteLogo';
-import { SITE_CONFIG } from '@/lib/site-config';
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
 import { sanitizeAuthError } from '@/lib/auth-utils';
 
 const PASSWORD_CRITERIA = [
@@ -25,6 +25,7 @@ function getStrengthLabel(count: number) {
 }
 
 export default function SignUpPage() {
+  const config = useSiteConfig()
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -34,11 +35,14 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [workshopId, setWorkshopId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const emailParam = params.get('email')
     if (emailParam) setEmail(emailParam)
+    const wsId = params.get('workshop_id')
+    if (wsId) setWorkshopId(wsId)
   }, [])
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -86,7 +90,14 @@ export default function SignUpPage() {
 
     setLoading(true);
 
-    const { error: authError } = await supabaseHelpers.auth.signUp(email, password);
+    const rateCheck = await fetch('/api/auth/signup', { method: 'POST' })
+    if (!rateCheck.ok) {
+      setError('Too many sign-up attempts. Please wait a minute.')
+      setLoading(false)
+      return
+    }
+
+    const { error: authError } = await supabaseHelpers.auth.signUp(email, password, workshopId);
 
     setLoading(false);
 
@@ -111,7 +122,7 @@ export default function SignUpPage() {
             Almost<br />There
           </h1>
           <p className="mt-4 text-white/80 text-base leading-relaxed">
-            Just one more step to activate your {SITE_CONFIG.name} account.
+            Just one more step to activate your {config.name} account.
           </p>
         </div>
 
@@ -142,14 +153,14 @@ export default function SignUpPage() {
           <SiteLogo />
         </a>
         <h1 className="text-2xl md:text-3xl font-bold leading-tight">
-          Join<br />{SITE_CONFIG.name}
+          Join<br />{config.name}
         </h1>
         <p className="mt-4 text-white/80 text-base leading-relaxed">
           Create your account to start managing your services, quotes, and customer reviews from one dashboard.
         </p>
         <div className="mt-8 hidden md:block">
           <p className="text-white/60 text-sm">
-            &ldquo;{SITE_CONFIG.tagline}&rdquo;
+            &ldquo;{config.tagline}&rdquo;
           </p>
         </div>
       </div>

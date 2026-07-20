@@ -1,12 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
+import { getMergedSiteConfig } from '@/lib/get-site-config'
 
-export const metadata: Metadata = {
-  title: `Privacy Policy | ${SITE_CONFIG.name}`,
+export async function generateMetadata() {
+  const config = await getMergedSiteConfig()
+  return {
+    title: `Privacy Policy | ${config.name}`,
+  }
 }
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const config = await getMergedSiteConfig()
   return (
     <>
       <section className="bg-grey-light px-4 pt-16 md:px-20 md:pt-20">
@@ -38,7 +42,7 @@ export default function PrivacyPage() {
 
           <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">3. Data Security</h2>
-            <p className="text-grey-dark leading-relaxed">We implement appropriate technical and organisational measures to protect your personal data against unauthorised access, alteration, disclosure, or destruction. All data is processed within {SITE_CONFIG.privacy.dataLocation} in compliance with {SITE_CONFIG.privacy.complianceAct}.</p>
+            <p className="text-grey-dark leading-relaxed">We implement appropriate technical and organisational measures to protect your personal data against unauthorised access, alteration, disclosure, or destruction. All data is processed in compliance with applicable data protection laws including POPIA and GDPR.</p>
           </div>
 
           <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
@@ -53,7 +57,7 @@ export default function PrivacyPage() {
 
           <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">6. Contact</h2>
-            <p className="text-grey-dark leading-relaxed">For privacy-related enquiries, contact us at <a href={`tel:${SITE_CONFIG.phone}`} className="text-primary no-underline hover:underline">{SITE_CONFIG.phone}</a> or visit our <Link href="/quote" className="text-primary no-underline hover:underline">quote page</Link>.</p>
+            <p className="text-grey-dark leading-relaxed">For privacy-related enquiries, contact us at <a href={`tel:${config.phone}`} className="text-primary no-underline hover:underline">{config.phone}</a> or visit our <Link href="/quote" className="text-primary no-underline hover:underline">quote page</Link>.</p>
           </div>
 
           <p className="text-sm text-grey mt-4">Last updated: June 2026</p>

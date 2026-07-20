@@ -279,10 +279,10 @@ export function QuotesInbox({ quotes, initialFilter = '' }: QuotesInboxProps) {
                             onClick={async (e) => {
                               e.stopPropagation()
                               try {
-                                const res = await fetch(`/api/quotes/${quote.id}/pdf`, { method: 'POST' })
+                                const res = await fetch(`/api/quotes/${quote.id}/pdf?skipEmail=true`, { method: 'POST' })
                                 const data = await res.json()
-                                if (res.ok && data.url) {
-                                  window.open(data.url, '_blank')
+                                if (res.ok && data.storagePath) {
+                                  window.open(`/api/quotes/${quote.id}/pdf/download`, '_blank')
                                   toast.success('PDF ready!')
                                 } else {
                                   toast.error(data.error || 'Failed to generate PDF')

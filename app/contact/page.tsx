@@ -1,20 +1,25 @@
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { getMergedSiteConfig } from '@/lib/get-site-config'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { ContactForm } from '@/components/ContactForm'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { MapPin, Phone, Mail, Clock, ArrowRight } from 'lucide-react'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata = {
-  title: `Contact Us | ${SITE_CONFIG.name}`,
-  description: `Get in touch with ${SITE_CONFIG.name}. Mobile mechanic services in ${SITE_CONFIG.city}. Request a quote or call us directly.`,
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await getMergedSiteConfig()
+  return {
+    title: `Contact Us | ${config.name}`,
+    description: `Get in touch with ${config.name}. Mobile mechanic services in ${config.city}. Request a quote or call us directly.`,
+  }
 }
 
 export default async function ContactPage() {
-  const supabase = createSupabaseAdminClient()
+  const config = await getMergedSiteConfig()
+  const supabase = await createSupabaseServerClient()
   const { data: faqs } = await supabase
     .from('faqs')
     .select('question, answer')
@@ -30,7 +35,7 @@ export default async function ContactPage() {
         <div className="mx-auto max-w-4xl flex flex-col items-center text-center justify-center">
           <h1 className="text-3xl md:text-4xl font-black text-white mb-4 tracking-tight">Contact Us</h1>
           <p className="text-white/80 max-w-xl text-sm md:text-base">
-            Have a question or need a quote? Reach out and we will get back to you within {SITE_CONFIG.responseTime}.
+            Have a question or need a quote? Reach out and we will get back to you within {config.responseTime}.
           </p>
         </div>
       </section>
@@ -48,8 +53,8 @@ export default async function ContactPage() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-grey uppercase tracking-wide">Phone</p>
-                  <a href={`tel:${SITE_CONFIG.phone}`} className="text-sm font-bold text-grey-dark hover:text-primary transition-colors no-underline">
-                    {SITE_CONFIG.phone}
+                  <a href={`tel:${config.phone}`} className="text-sm font-bold text-grey-dark hover:text-primary transition-colors no-underline">
+                    {config.phone}
                   </a>
                 </div>
               </div>
@@ -60,8 +65,8 @@ export default async function ContactPage() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-grey uppercase tracking-wide">Email</p>
-                  <a href={`mailto:${SITE_CONFIG.contact.email}`} className="text-sm font-bold text-grey-dark hover:text-primary transition-colors no-underline">
-                    {SITE_CONFIG.contact.email}
+                  <a href={`mailto:${config.contact.email}`} className="text-sm font-bold text-grey-dark hover:text-primary transition-colors no-underline">
+                    {config.contact.email}
                   </a>
                 </div>
               </div>
@@ -73,8 +78,8 @@ export default async function ContactPage() {
                 <div>
                   <p className="text-xs font-semibold text-grey uppercase tracking-wide">Address</p>
                   <p className="text-sm text-grey-dark">
-                    {SITE_CONFIG.address.street}, {SITE_CONFIG.address.area}<br />
-                    {SITE_CONFIG.city}, {SITE_CONFIG.address.countryFull}
+                    {config.address || '50 Main Street, Marshalltown'}<br />
+                    {config.city}, South Africa
                   </p>
                 </div>
               </div>
@@ -85,7 +90,7 @@ export default async function ContactPage() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-grey uppercase tracking-wide">Business Hours</p>
-                  <p className="text-sm text-grey-dark">{SITE_CONFIG.contact.businessHours}</p>
+                  <p className="text-sm text-grey-dark">{config.contact.businessHours}</p>
                 </div>
               </div>
             </div>

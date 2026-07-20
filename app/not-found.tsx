@@ -1,8 +1,11 @@
+'use client'
+
 import Link from 'next/link'
 import { Wrench, Home, AlertTriangle } from 'lucide-react'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider'
 
 export default function NotFound() {
+  const config = useSiteConfig()
   return (
     <div className="min-h-[70vh] bg-grey-lightest flex items-center justify-center px-4 py-16 md:px-20">
       <div className="bg-white max-w-md w-full text-center flex flex-col items-center gap-6 border border-grey-medium/10 rounded-base shadow-sm p-6">
@@ -22,7 +25,7 @@ export default function NotFound() {
             Engine Misfire!
           </h1>
           <p className="text-body text-sm leading-relaxed mt-2">
-            {SITE_CONFIG.notFound.message}
+            The page you are looking for has been moved, removed, or never existed.
           </p>
         </div>
 

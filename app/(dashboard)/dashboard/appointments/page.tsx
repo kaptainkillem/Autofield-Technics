@@ -1,4 +1,4 @@
-import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { redirect } from 'next/navigation'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { ClientAppointmentList, type Appointment } from '@/components/user/ClientAppointmentList'
@@ -13,7 +13,7 @@ export default async function AppointmentsPage() {
     redirect('/signin')
   }
 
-  const adminClient = createSupabaseAdminClient()
+  const adminClient = await createSupabaseServerClient()
 
   const { data: appointments } = await adminClient
     .from('appointments')

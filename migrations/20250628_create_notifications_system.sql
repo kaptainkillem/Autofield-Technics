@@ -44,6 +44,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ─── Helper: Create Notification for All Admins ─────────────────────────────────
 CREATE OR REPLACE FUNCTION public.notify_admins(
+    p_workshop_id UUID,
     p_type TEXT,
     p_reference_id UUID,
     p_title TEXT,
@@ -53,10 +54,10 @@ RETURNS void AS $$
 DECLARE
     admin_id UUID;
 BEGIN
-    FOR admin_id IN SELECT id FROM public.get_admin_ids()
+    FOR admin_id IN SELECT id FROM public.get_admin_ids(p_workshop_id)
     LOOP
-        INSERT INTO public.notifications (user_id, type, reference_id, title, message)
-        VALUES (admin_id, p_type, p_reference_id, p_title, p_message);
+        INSERT INTO public.notifications (user_id, workshop_id, type, reference_id, title, message)
+        VALUES (admin_id, p_workshop_id, p_type, p_reference_id, p_title, p_message);
     END LOOP;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -66,6 +67,7 @@ CREATE OR REPLACE FUNCTION public.on_quote_insert_notify()
 RETURNS TRIGGER AS $$
 BEGIN
     PERFORM public.notify_admins(
+        NEW.workshop_id,
         'quote',
         NEW.id,
         'New quote request',
@@ -86,6 +88,7 @@ RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.status = 'accepted' AND OLD.status != 'accepted' THEN
         PERFORM public.notify_admins(
+            NEW.workshop_id,
             'quote',
             NEW.id,
             'Quote accepted',
@@ -111,6 +114,7 @@ BEGIN
     FROM public.profiles p WHERE p.id = NEW.user_id;
 
     PERFORM public.notify_admins(
+        NEW.workshop_id,
         'appointment',
         NEW.id,
         'New appointment booked',
@@ -136,6 +140,7 @@ BEGIN
         FROM public.profiles p WHERE p.id = NEW.user_id;
 
         PERFORM public.notify_admins(
+            NEW.workshop_id,
             'appointment',
             NEW.id,
             'Appointment cancelled',
@@ -156,6 +161,7 @@ CREATE OR REPLACE FUNCTION public.on_review_insert_notify()
 RETURNS TRIGGER AS $$
 BEGIN
     PERFORM public.notify_admins(
+        NEW.workshop_id,
         'review',
         NEW.id,
         'New review submitted',

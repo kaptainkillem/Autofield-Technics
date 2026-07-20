@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Star, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { supabase } from '@/lib/supabase'
+import { supabase, getWorkshopIdFromSession } from '@/lib/supabase'
 import { Database } from '@/types/database'
 import { sanitizeText } from '@/lib/input-sanitizer'
 
@@ -87,8 +87,12 @@ export function ReviewForm() {
 
     setLoading(true)
 
+    const { data: { session } } = await supabase.auth.getSession()
+    const workshopsId = getWorkshopIdFromSession(session)
+
     const payload: ReviewInsert = {
       user_id: user.id,
+      workshop_id: workshopsId ?? undefined,
       customer_name: sanitizeText(form.customerName, 200),
       customer_email: null,
       rating,

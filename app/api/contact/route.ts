@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
 import { sanitizeText, sanitizeName, sanitizeEmail, sanitizePhone } from '@/lib/input-sanitizer'
 import { z } from 'zod'
-import { Resend } from 'resend'
+import { sendEmail } from '@/lib/email'
 import { SITE_CONFIG } from '@/lib/site-config'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-const EMAIL_FROM = process.env.EMAIL_FROM ?? 'Autofield Technics <onboarding@resend.dev>'
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL ?? SITE_CONFIG.contact.email
 
 const CONTACT_SCHEMA = z.object({
@@ -52,12 +50,12 @@ export async function POST(req: NextRequest) {
   <p style="font-size: 12px; color: #9ca3af;">Sent from ${SITE_CONFIG.name} contact form</p>
 </div>`.trim()
 
-    await resend.emails.send({
-      from: EMAIL_FROM,
+    await sendEmail({
       to: ADMIN_EMAIL,
       subject: `Contact Form: ${name} from ${SITE_CONFIG.name}`,
       html: emailHtml,
       replyTo: email || undefined,
+      templateKey: 'contact_form',
     })
 
     return NextResponse.json(

@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { IncomingTable } from '@/components/admin/IncomingTable'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import Link from 'next/link'
@@ -6,7 +6,7 @@ import Link from 'next/link'
 export const dynamic = 'force-dynamic'
 
 export default async function IncomingPage() {
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
   const { data } = await supabase
     .from('quotes')
     .select('*')

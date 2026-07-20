@@ -3,6 +3,7 @@
 import { ReviewCard } from '@/components/ReviewCard'
 import type { Database } from '@/types/database'
 import Link from 'next/link'
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider'
 
  type ReviewRow = Database['public']['Tables']['reviews']['Row']
 
@@ -11,6 +12,7 @@ interface TestimonialsCarouselProps {
 }
 
 export function TestimonialsCarousel({ reviews }: TestimonialsCarouselProps) {
+  const config = useSiteConfig()
   if (reviews.length === 0) {
     return (
       <section className="bg-white py-16 px-4">
@@ -33,7 +35,7 @@ export function TestimonialsCarousel({ reviews }: TestimonialsCarouselProps) {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-grey-dark mb-4">What Our Customers Say</h2>
           <p className="text-body max-w-2xl mx-auto">
-            Trusted by drivers across Johannesburg. Here&apos;s what they have to say about our mobile mechanical services.
+            Trusted by drivers across {config.city}. Here&apos;s what they have to say about our mobile mechanical services.
           </p>
         </div>
 

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
+import { sendTemplateEmail } from '@/lib/email'
 import { z } from 'zod'
 
 const VALID_STATUSES = [
@@ -54,11 +55,11 @@ export async function PATCH(
     const { data: { user } } = await serverClient.auth.getUser()
     const adminId = user?.id ?? null
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     const { data: workOrder, error: fetchError } = await adminClient
       .from('work_orders')
-      .select('id, status, appointment_id')
+      .select('id, status, appointment_id, workshop_id, quote_id')
       .eq('id', id)
       .single()
 
@@ -107,6 +108,7 @@ export async function PATCH(
     // Record audit event
     await adminClient.from('work_order_events').insert({
       work_order_id: id,
+      workshop_id: workOrder.workshop_id!,
       event_type: 'status_change',
       old_status: workOrder.status,
       new_status: body.status,
@@ -120,6 +122,43 @@ export async function PATCH(
         .from('appointments')
         .update({ status: 'completed', updated_at: now })
         .eq('id', workOrder.appointment_id)
+    }
+
+    // Send status update email to customer
+    if (workOrder.quote_id) {
+      try {
+        const { data: quote } = await adminClient
+          .from('quotes')
+          .select('customer_name, customer_email, vehicle_year, vehicle_make, vehicle_model')
+          .eq('id', workOrder.quote_id)
+          .single() as { data: Record<string, any> | null; error: any }
+
+        if (quote?.customer_email) {
+          const statusLabels: Record<string, string> = {
+            checked_in: 'Vehicle Checked In',
+            in_progress: 'Work In Progress',
+            awaiting_parts: 'Awaiting Parts',
+            revision_pending: 'Additional Work Pending',
+            ready_for_pickup: 'Ready for Pickup',
+            completed: 'Service Completed',
+          }
+          const vehicleInfo = [quote.vehicle_year, quote.vehicle_make, quote.vehicle_model].filter(Boolean).join(' ') || 'Your vehicle'
+
+          sendTemplateEmail({
+            templateKey: 'work_order_status_update',
+            to: quote.customer_email,
+            variables: {
+              customerName: quote.customer_name || 'Customer',
+              vehicleInfo,
+              status: body.status,
+              statusLabel: statusLabels[body.status] || body.status.replace(/_/g, ' '),
+              businessName: '',
+              businessPhone: '',
+            },
+            workshopId: workOrder.workshop_id!,
+          }).catch(() => {})
+        }
+      } catch {}
     }
 
     return NextResponse.json({

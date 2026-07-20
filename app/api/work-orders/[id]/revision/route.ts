@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
+import { sendTemplateEmail } from '@/lib/email'
 import { z } from 'zod'
 
 const RevisionItemSchema = z.object({
@@ -51,11 +52,11 @@ export async function PATCH(
     const { data: { user } } = await serverClient.auth.getUser()
     const adminId = user?.id ?? null
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     const { data: workOrder, error: fetchError } = await adminClient
       .from('work_orders')
-      .select('id, status, quote_id')
+      .select('id, status, quote_id, workshop_id')
       .eq('id', id)
       .single()
 
@@ -93,12 +94,44 @@ export async function PATCH(
     // Record audit event
     await adminClient.from('work_order_events').insert({
       work_order_id: id,
+      workshop_id: workOrder.workshop_id!,
       event_type: 'revision_submitted',
       old_status: workOrder.status,
       new_status: 'revision_pending',
       notes: `Additional work: ${body.items.map((i) => `${i.name} (x${i.qty})`).join(', ')}`,
       created_by: adminId,
     })
+
+    // Send revision email to customer
+    if (workOrder.quote_id) {
+      try {
+        const { data: quote } = await adminClient
+          .from('quotes')
+          .select('customer_name, customer_email, vehicle_year, vehicle_make, vehicle_model, quote_token')
+          .eq('id', workOrder.quote_id)
+          .single() as { data: Record<string, any> | null; error: any }
+
+        if (quote?.customer_email) {
+          const revisionTotal = `R ${body.items.reduce((sum, i) => sum + i.qty * i.unitPrice, 0).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`
+          const vehicleInfo = [quote.vehicle_year, quote.vehicle_make, quote.vehicle_model].filter(Boolean).join(' ') || 'Your vehicle'
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''
+          const tokenParam = quote?.quote_token ? `?token=${quote.quote_token}` : ''
+
+          sendTemplateEmail({
+            templateKey: 'work_order_revision',
+            to: quote.customer_email,
+            variables: {
+              customerName: quote.customer_name || 'Customer',
+              vehicleInfo,
+              revisionNotes: body.client_visible_notes || body.items.map(i => `${i.name} (x${i.qty} @ R${i.unitPrice})`).join(', '),
+              revisionTotal,
+              revisionUrl: siteUrl ? `${siteUrl}/quote/${workOrder.quote_id}${tokenParam}` : '',
+            },
+            workshopId: workOrder.workshop_id!,
+          }).catch(() => {})
+        }
+      } catch {}
+    }
 
     return NextResponse.json({
       success: true,

@@ -68,12 +68,31 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     fontStyle: 'italic',
   },
+  depositInfo: {
+    fontSize: 9,
+    fontFamily: 'Helvetica',
+    color: '#374151',
+    marginBottom: 4,
+    padding: 8,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 4,
+  },
+  expiryText: {
+    fontSize: 8,
+    fontFamily: 'Helvetica',
+    color: '#9ca3af',
+    marginTop: 2,
+  },
 })
 
 export function QuotePDF({ data }: { data: PDFDocumentData }) {
   const dateLabel = data.createdAt
     ? new Date(data.createdAt).toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })
     : ''
+
+  const formatRand = (v: number) => `R ${v.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`
+  const depositPct = data.depositPercent ?? 0
+  const depositAmt = data.depositAmount ?? (depositPct > 0 ? data.total * (depositPct / 100) : 0)
 
   return (
     <Document>
@@ -125,6 +144,18 @@ export function QuotePDF({ data }: { data: PDFDocumentData }) {
           discountPercent={data.discountPercent}
           total={data.total}
         />
+
+        {(depositPct > 0 || depositAmt > 0) && (
+          <View style={styles.depositInfo}>
+            <Text style={{ fontFamily: 'Helvetica-Bold', color: '#374151' }}>
+              {depositPct > 0 ? `${depositPct}% ` : ''}Deposit Required: {formatRand(Number(depositAmt))}
+            </Text>
+          </View>
+        )}
+
+        {data.expiryDate && (
+          <Text style={styles.expiryText}>Quote valid until {new Date(data.expiryDate).toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
+        )}
 
         {data.notes && (
           <Text style={styles.notes}>{data.notes}</Text>

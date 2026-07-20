@@ -4,9 +4,17 @@ import { Toaster } from "sonner";
 import { ConditionalLayout } from "@/components/common/ConditionalLayout";
 import { SiteConfigProvider } from "@/components/providers/SiteConfigProvider";
 import { getMergedSiteConfig } from "@/lib/get-site-config";
-import { createSupabaseAdminClient } from '@/lib/supabaseServer';
+import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import "./globals.css";
-import { SITE_CONFIG, replaceVars } from '@/lib/site-config';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await getMergedSiteConfig()
+  return {
+    title: config.seo.defaultTitle,
+    description: config.seo.defaultDescription,
+    icons: { icon: config.images.favicon },
+  }
+}
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,25 +26,39 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export async function generateMetadata(): Promise<Metadata> {
-  // Fetch merged config for SEO metadata
-  const config = await getMergedSiteConfig()
-
-  return {
-    title: config.seo.defaultTitle,
-    description: config.seo.defaultDescription,
-    icons: { icon: SITE_CONFIG.images.favicon },
-  }
-}
-
 async function getBrandingCss() {
   try {
-    const supabase = createSupabaseAdminClient()
+    const slug = process.env.NEXT_PUBLIC_DEFAULT_WORKSHOP_SLUG
+    if (!slug) {
+      return `
+        :root {
+          --primary-color: #3B82F6;
+          --accent-color: #10B981;
+        }
+      `
+    }
+
+    const supabase = await createSupabaseServerClient()
+    const { data: workshop } = await supabase
+      .from('workshops')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle()
+
+    if (!workshop) {
+      return `
+        :root {
+          --primary-color: #3B82F6;
+          --accent-color: #10B981;
+        }
+      `
+    }
+
     const { data } = await supabase
       .from('business_settings')
-      .select('primary_color, accent_color, favicon_url')
-      .eq('id', 'config')
-      .single()
+      .select('primary_color, accent_color')
+      .eq('workshop_id', workshop.id)
+      .maybeSingle()
 
     if (data) {
       return `

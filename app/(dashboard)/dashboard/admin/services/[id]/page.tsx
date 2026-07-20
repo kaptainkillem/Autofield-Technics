@@ -1,8 +1,8 @@
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { Database } from '@/types/database'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { notFound } from 'next/navigation'
-import AdminServiceForm from '../new/AdminServiceForm'
+import AdminServiceForm from '@/app/(dashboard)/dashboard/admin/services/new/AdminServiceForm'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 
 type ServiceRow = Database['public']['Tables']['services']['Row']
@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function EditServicePage({ params }: PageProps) {
   const { id } = await params
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
 
   const [{ data: service }, { data: categories }] = await Promise.all([
     supabase.from('services').select('*').eq('id', id).single(),

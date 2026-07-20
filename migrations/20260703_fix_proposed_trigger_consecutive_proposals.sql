@@ -13,6 +13,7 @@ BEGIN
     ) THEN
         PERFORM public.notify_user(
             NEW.user_id,
+            NEW.workshop_id,
             'appointment',
             NEW.id,
             'New date proposed',

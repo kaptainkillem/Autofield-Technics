@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 
@@ -39,6 +39,10 @@ export async function POST(request: NextRequest) {
   if (!auth.authorized) {
     return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
+  const workshopId = auth.workshopId
+  if (!workshopId) {
+    return NextResponse.json({ error: 'Workshop context required' }, { status: 400 })
+  }
 
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
   const { allowed, remaining } = checkRateLimit(`admin:schedule:${ip}`, { maxRequests: 20, windowMs: 60_000 })
@@ -57,7 +61,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 400 })
   }
 
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
 
   if (body.type === 'working_hours') {
     const { error } = await supabase
@@ -68,8 +72,9 @@ export async function POST(request: NextRequest) {
           start_time: h.start_time,
           end_time: h.end_time,
           is_active: h.is_active,
+          workshop_id: workshopId,
         })),
-        { onConflict: 'day_of_week' }
+        { onConflict: 'day_of_week, workshop_id' }
       )
 
     if (error) {
@@ -86,6 +91,7 @@ export async function POST(request: NextRequest) {
         start_datetime: body.start_datetime,
         end_datetime: body.end_datetime,
         reason: body.reason ?? null,
+        workshop_id: workshopId,
       })
 
     if (error) {

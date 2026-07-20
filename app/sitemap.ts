@@ -1,11 +1,10 @@
 import { MetadataRoute } from 'next'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://autofieldstechnics.co.za'
 
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
 
   // Fetch dynamic routes
   const [

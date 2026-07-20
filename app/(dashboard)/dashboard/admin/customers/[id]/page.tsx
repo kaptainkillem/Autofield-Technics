@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { supabase, getWorkshopIdFromSession } from '@/lib/supabase'
 import { toast } from 'sonner'
 import {
   ArrowLeft,
@@ -43,6 +43,7 @@ export default function CustomerDetailPage() {
   const id = params.id as string
 
   const [loading, setLoading] = useState(true)
+  const [workshopsId, setWorkshopsId] = useState<string | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [quotes, setQuotes] = useState<Quote[]>([])
@@ -53,12 +54,16 @@ export default function CustomerDetailPage() {
 
   async function fetchData() {
     setLoading(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const workshopsId = getWorkshopIdFromSession(session)
+    setWorkshopsId(workshopsId)
+
     const [profileRes, vehiclesRes, quotesRes, apptsRes, receiptsRes] = await Promise.all([
-      (supabase as any).from('profiles').select('*').eq('id', id).single(),
-      (supabase as any).from('vehicles').select('*').eq('user_id', id).order('created_at', { ascending: false }),
-      (supabase as any).from('quotes').select('*').eq('user_id', id).is('deleted_at', null).order('created_at', { ascending: false }),
-      (supabase as any).from('appointments').select('*').eq('user_id', id).order('scheduled_date', { ascending: false }),
-      (supabase as any).from('receipts').select('*').eq('user_id', id).is('deleted_at', null).order('created_at', { ascending: false }),
+      (supabase as any).from('profiles').select('*').eq('id', id).eq('workshop_id', workshopsId).single(),
+      (supabase as any).from('vehicles').select('*').eq('user_id', id).eq('workshop_id', workshopsId).order('created_at', { ascending: false }),
+      (supabase as any).from('quotes').select('*').eq('user_id', id).eq('workshop_id', workshopsId).is('deleted_at', null).order('created_at', { ascending: false }),
+      (supabase as any).from('appointments').select('*').eq('user_id', id).eq('workshop_id', workshopsId).order('scheduled_date', { ascending: false }),
+      (supabase as any).from('receipts').select('*').eq('user_id', id).eq('workshop_id', workshopsId).is('deleted_at', null).order('created_at', { ascending: false }),
     ])
 
     if (profileRes.error) {
@@ -360,9 +365,10 @@ export default function CustomerDetailPage() {
       )}
 
       {addVehicleOpen && (
-        <AddVehicleModal
-          userId={id}
-          onClose={() => setAddVehicleOpen(false)}
+          <AddVehicleModal
+            userId={id}
+            workshopId={workshopsId ?? ''}
+            onClose={() => setAddVehicleOpen(false)}
           onSaved={() => {
             setAddVehicleOpen(false)
             fetchData()

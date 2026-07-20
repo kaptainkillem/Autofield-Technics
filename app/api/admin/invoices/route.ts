@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 
@@ -62,10 +62,11 @@ export async function POST(request: Request) {
   const total = Math.max(0, subtotal - discountAmount)
   const invoiceNumber = makeDocumentNumber('AF-I')
 
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('invoices')
     .insert({
+      workshop_id: auth.workshopId,
       user_id: auth.userId,
       quote_id: body.quoteId ?? null,
       invoice_number: invoiceNumber,

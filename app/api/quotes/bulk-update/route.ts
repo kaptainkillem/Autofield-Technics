@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 import { z } from 'zod'
@@ -27,11 +27,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { ids, status } = BULK_UPDATE_SCHEMA.parse(body)
 
-    const supabase = createSupabaseAdminClient()
+    const supabase = await createSupabaseServerClient()
 
     const { data, error } = await supabase
       .from('quotes')
       .update({ status })
+      .eq('workshop_id', auth.workshopId!)
       .in('id', ids)
       .select('id, status')
 

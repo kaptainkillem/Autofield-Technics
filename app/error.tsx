@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { Wrench, Home, RefreshCcw, AlertTriangle } from 'lucide-react'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider'
 
 export default function GlobalError({
   error,
@@ -12,6 +12,7 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const config = useSiteConfig()
   useEffect(() => {
     // Log to monitoring service (e.g., Sentry) in production
     console.error('Global error boundary caught:', error)

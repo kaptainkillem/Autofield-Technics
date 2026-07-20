@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { AdminCustomers } from '@/components/admin/AdminCustomers'
 import { Database } from '@/types/database'
 import { PageWrapper } from '@/components/layout/PageWrapper'
@@ -7,8 +7,22 @@ import { SITE_CONFIG } from '@/lib/site-config'
 export const dynamic = 'force-dynamic'
 
 export default async function AdminCustomersPage() {
-  const supabase = createSupabaseAdminClient()
-  const { data } = await supabase.from('profiles').select('*').eq('role', 'client').order('created_at', { ascending: false })
+  const supabase = await createSupabaseServerClient()
+  const { data: { session } } = await supabase.auth.getSession()
+
+  const workshopId = session ? (() => {
+    try {
+      const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+      return payload?.app_metadata?.workshop_id as string | null
+    } catch { return null }
+  })() : null
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('role', 'client')
+    .eq('workshop_id', workshopId as string)
+    .order('created_at', { ascending: false })
   const customers = (data ?? []) as Database['public']['Tables']['profiles']['Row'][]
 
   return (

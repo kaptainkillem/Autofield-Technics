@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
+import crypto from 'node:crypto'
 
 const LineItemSchema = z.object({
   id: z.string(),
@@ -23,8 +24,11 @@ const EditQuoteSchema = z.object({
   notes: z.string().trim().optional(),
   status: z.enum(['draft', 'pending', 'sent', 'accepted', 'declined', 'completed', 'cancelled']).optional(),
   discountPercent: z.number().min(0).max(100).optional(),
+  depositPercent: z.number().min(0).max(100).optional(),
+  depositAmount: z.number().min(0).optional().nullable(),
+  expiryDate: z.string().optional().nullable(),
   lineItems: z.array(LineItemSchema).min(1).optional(),
-  pdfUrl: z.string().url().optional(),
+  pdfUrl: z.string().optional(),
 })
 
 export async function PATCH(
@@ -56,11 +60,11 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status: 400 })
   }
 
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
 
   const { data: existing, error: fetchError } = await supabase
     .from('quotes')
-    .select('id')
+    .select('id, quote_token')
     .eq('id', id)
     .is('deleted_at', null)
     .single()
@@ -86,6 +90,9 @@ export async function PATCH(
     }
   }
   if (body.discountPercent !== undefined) updates.discount_percent = body.discountPercent
+  if (body.depositPercent !== undefined) updates.deposit_percent = body.depositPercent
+  if (body.depositAmount !== undefined) updates.deposit_amount = body.depositAmount
+  if (body.expiryDate !== undefined) updates.expiry_date = body.expiryDate || null
   if (body.pdfUrl !== undefined) updates.pdf_url = body.pdfUrl
 
   if (body.vehicleYear !== undefined) {
@@ -103,6 +110,10 @@ export async function PATCH(
     updates.total = total
     updates.description = body.description || body.lineItems.map((item) => item.name).join(', ')
     updates.estimated_quote = total
+  }
+
+  if (!(existing as any).quote_token) {
+    updates.quote_token = crypto.randomUUID()
   }
 
   const { data, error } = await supabase

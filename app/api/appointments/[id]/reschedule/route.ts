@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
 export async function PATCH(
   request: NextRequest,
@@ -16,7 +16,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     // 2. Verify appointment exists and belongs to user
     const { data: appointment, error: fetchError } = await adminClient

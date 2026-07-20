@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 
@@ -33,12 +33,13 @@ export async function DELETE(
       )
     }
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     const { data: existing, error: fetchError } = await adminClient
       .from(type)
       .select('id')
       .eq('id', id)
+      .eq('workshop_id', auth.workshopId!)
       .single()
 
     if (fetchError || !existing) {

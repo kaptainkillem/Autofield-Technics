@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, getWorkshopIdFromSession } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { Car, Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,7 @@ interface ClientGarageFormProps {
 export function ClientGarageForm({ userId }: ClientGarageFormProps) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(true)
+  const [workshopId, setWorkshopId] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -39,6 +40,12 @@ export function ClientGarageForm({ userId }: ClientGarageFormProps) {
     setVehicles(data ?? [])
     setLoading(false)
   }, [userId])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setWorkshopId(getWorkshopIdFromSession(session) ?? '')
+    })
+  }, [])
 
   useEffect(() => {
     fetchVehicles()
@@ -188,6 +195,7 @@ export function ClientGarageForm({ userId }: ClientGarageFormProps) {
       {modalOpen && (
         <VehicleFormModal
           userId={userId}
+          workshopId={workshopId}
           vehicle={editingVehicle}
           onClose={handleModalClose}
           onSaved={handleSaved}

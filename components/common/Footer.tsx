@@ -1,7 +1,10 @@
+'use client'
+
 import React, { ComponentPropsWithoutRef } from 'react'
 import Link from 'next/link'
 import { SiteLogo } from './SiteLogo'
-import { SITE_CONFIG, replaceVars, buildFooterTagline } from '@/lib/site-config'
+import { SITE_CONFIG, buildFooterTagline } from '@/lib/site-config'
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider'
 
 interface FooterProps extends ComponentPropsWithoutRef<'footer'> {}
 
@@ -9,9 +12,10 @@ export const Footer: React.FC<FooterProps> = ({
   className,
   ...props
 }) => {
-  const { footer, contact, socialMedia, business, navigation } = SITE_CONFIG
+  const config = useSiteConfig()
+  const { footer, navigation } = SITE_CONFIG
 
-  const socialEntries = Object.entries(socialMedia).filter(
+  const socialEntries = Object.entries(config.socialMedia).filter(
     ([, url]) => !!url
   ) as [string, string][]
 
@@ -31,7 +35,6 @@ export const Footer: React.FC<FooterProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Quick Links */}
           <div className="flex flex-col gap-4">
             <h3 className="text-base font-semibold tracking-wide">Quick Links</h3>
             <nav className="flex flex-col gap-2">
@@ -47,17 +50,16 @@ export const Footer: React.FC<FooterProps> = ({
             </nav>
           </div>
 
-          {/* Contact */}
           <div className="flex flex-col gap-4">
             <h3 className="text-base font-semibold tracking-wide">Contact</h3>
             <div className="flex flex-col gap-2 text-small text-white/80">
-              <a href={`tel:${SITE_CONFIG.phone}`} className="no-underline font-bold text-white/80 hover:text-white transition-colors duration-200">
-                {SITE_CONFIG.phone}
+              <a href={`tel:${config.phone}`} className="no-underline font-bold text-white/80 hover:text-white transition-colors duration-200">
+                {config.phone}
               </a>
 
-              {footer.showEmail && contact.email && (
-                <a href={`mailto:${contact.email}`} className="no-underline font-bold text-white/80 hover:text-white transition-colors duration-200">
-                  {contact.email}
+              {footer.showEmail && config.contact.email && (
+                <a href={`mailto:${config.contact.email}`} className="no-underline font-bold text-white/80 hover:text-white transition-colors duration-200">
+                  {config.contact.email}
                 </a>
               )}
 
@@ -67,17 +69,16 @@ export const Footer: React.FC<FooterProps> = ({
                 rel="noopener noreferrer"
                 className="no-underline font-bold text-white/80 hover:text-white transition-colors duration-200"
               >
-                {SITE_CONFIG.address.street}, {SITE_CONFIG.address.area},<br />{SITE_CONFIG.city}, {SITE_CONFIG.address.countryFull}
+                {SITE_CONFIG.address.street}, {SITE_CONFIG.address.area},<br />{config.city}, {SITE_CONFIG.address.countryFull}
               </a>
 
               <Link
                 href="/quote"
                 className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 rounded-base px-3 py-1.5 text-white text-xs font-medium w-fit no-underline transition-colors duration-200"
               >
-                {SITE_CONFIG.serviceTagline}
+                {config.serviceTagline}
               </Link>
 
-              {/* Social Media Icons */}
               {footer.showSocial && socialEntries.length > 0 && (
                 <div className="flex items-center gap-3 mt-2">
                   {socialEntries.map(([platform, url]) => (
@@ -104,9 +105,6 @@ export const Footer: React.FC<FooterProps> = ({
                       {platform === 'tiktok' && (
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1.01.03-1.51.19-1.95 1.08-3.77 2.52-5.04 1.46-1.35 3.41-2.06 5.41-2.09.78-.01 1.57.08 2.32.29v4.13c-.64-.23-1.32-.35-2.01-.34-1.41.03-2.78.75-3.61 1.89-.62.84-.91 1.89-.88 2.94.02.74.19 1.48.52 2.14.53 1.02 1.47 1.78 2.58 2.08.74.21 1.53.19 2.27-.06.89-.3 1.65-.91 2.11-1.72.23-.41.39-.86.47-1.32.02-.15.02-.31.02-.46V.02h.01z"/></svg>
                       )}
-                      {platform === 'youtube' && (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                      )}
                     </a>
                   ))}
                 </div>
@@ -114,7 +112,6 @@ export const Footer: React.FC<FooterProps> = ({
             </div>
           </div>
 
-          {/* Legal */}
           <div className="flex flex-col gap-4">
             <h3 className="text-base font-semibold tracking-wide">Legal</h3>
             <nav className="flex flex-col gap-2">
@@ -135,11 +132,11 @@ export const Footer: React.FC<FooterProps> = ({
       <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <p className="text-small text-white/60 text-center m-0">
-            &copy; 2026 {SITE_CONFIG.name}. All Rights Reserved.
-            {footer.showCompanyReg && business.companyRegistration && (
+            &copy; 2026 {config.name}. All Rights Reserved.
+            {footer.showCompanyReg && SITE_CONFIG.business.companyRegistration && (
               <span className="block mt-1 text-xs">
-                Reg: {business.companyRegistration}
-                {business.vatNumber && ` | VAT: ${business.vatNumber}`}
+                Reg: {SITE_CONFIG.business.companyRegistration}
+                {SITE_CONFIG.business.vatNumber && ` | VAT: ${SITE_CONFIG.business.vatNumber}`}
               </span>
             )}
           </p>

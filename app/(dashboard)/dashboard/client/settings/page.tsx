@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, getRoleFromSession } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import {
   Settings, ArrowLeft, Loader2, User, Car, Bell, Shield,
@@ -58,7 +58,8 @@ export default function ClientSettingsPage() {
       }
 
       // Redirect admins to admin settings
-      const role = user.user_metadata?.role ?? 'client'
+      const { data: { session } } = await supabase.auth.getSession()
+      const role = getRoleFromSession(session)
       if (role === 'admin') {
         router.replace('/dashboard/admin/settings')
         return

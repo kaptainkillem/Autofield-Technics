@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { Mail, Loader2, AlertCircle, MailCheck } from 'lucide-react';
 import { supabaseHelpers } from '@/lib/supabase';
 import { SiteLogo } from '@/components/common/SiteLogo';
-import { SITE_CONFIG } from '@/lib/site-config';
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
 import { sanitizeAuthError } from '@/lib/auth-utils';
 
 export default function ForgotPasswordPage() {
+  const config = useSiteConfig()
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,13 @@ export default function ForgotPasswordPage() {
     }
 
     setLoading(true);
+
+    const rateCheck = await fetch('/api/auth/forgot-password', { method: 'POST' })
+    if (!rateCheck.ok) {
+      setError('Too many attempts. Please wait a few minutes.')
+      setLoading(false)
+      return
+    }
 
     const { error: resetError } = await supabaseHelpers.auth.resetPassword(email);
 
@@ -97,11 +105,11 @@ export default function ForgotPasswordPage() {
           Reset Your<br />Password
         </h1>
         <p className="mt-4 text-white/80 text-base leading-relaxed">
-          Enter your email and we&apos;ll send you a link to reset your password for your {SITE_CONFIG.name} account.
+          Enter your email and we&apos;ll send you a link to reset your password for your {config.name} account.
         </p>
         <div className="mt-8 hidden md:block">
           <p className="text-white/60 text-sm">
-            &ldquo;{SITE_CONFIG.tagline}&rdquo;
+            &ldquo;{config.tagline}&rdquo;
           </p>
         </div>
       </div>

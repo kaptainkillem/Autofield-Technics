@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 
@@ -43,7 +43,7 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status: 400 })
   }
 
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
 
   const updates: Record<string, unknown> = {}
 
@@ -56,10 +56,15 @@ export async function PATCH(
   if (body.client_status !== undefined) updates.client_status = body.client_status
   if (body.internal_notes !== undefined) updates.internal_notes = body.internal_notes || null
 
+  if (!auth.workshopId) {
+    return NextResponse.json({ error: 'No workshop assigned to this account' }, { status: 400 })
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .update(updates as never)
     .eq('id', id)
+    .eq('workshop_id', auth.workshopId)
     .select()
     .single()
 

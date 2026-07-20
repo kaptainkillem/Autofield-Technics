@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { supabase, getRoleFromSession } from '@/lib/supabase'
 
 export default function SettingsRedirectPage() {
   const router = useRouter()
@@ -10,7 +10,8 @@ export default function SettingsRedirectPage() {
   useEffect(() => {
     async function checkRoleAndRedirect() {
       const { data: { user } } = await supabase.auth.getUser()
-      const role = user?.user_metadata?.role ?? 'client'
+      const { data: { session } } = await supabase.auth.getSession()
+      const role = getRoleFromSession(session) ?? 'client'
       if (role === 'admin') {
         router.replace('/dashboard/admin/settings')
       } else {

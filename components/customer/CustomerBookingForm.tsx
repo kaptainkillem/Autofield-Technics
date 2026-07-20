@@ -10,9 +10,10 @@ import { format } from 'date-fns'
 
 interface CustomerBookingFormProps {
   quoteId: string
+  quoteToken?: string
 }
 
-export function CustomerBookingForm({ quoteId }: CustomerBookingFormProps) {
+export function CustomerBookingForm({ quoteId, quoteToken }: CustomerBookingFormProps) {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<string>('')
@@ -64,13 +65,15 @@ export function CustomerBookingForm({ quoteId }: CustomerBookingFormProps) {
     setSubmitting(true)
 
     try {
+      const body: Record<string, unknown> = {
+        scheduled_date: format(selectedDate, 'yyyy-MM-dd'),
+        scheduled_time: selectedSlot,
+      }
+      if (quoteToken) body.quote_token = quoteToken
       const res = await fetch(`/api/quotes/${quoteId}/book`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scheduled_date: format(selectedDate, 'yyyy-MM-dd'),
-          scheduled_time: selectedSlot,
-        }),
+        body: JSON.stringify(body),
       })
 
       const data = await res.json()

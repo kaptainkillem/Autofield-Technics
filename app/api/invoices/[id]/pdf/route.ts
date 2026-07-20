@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSuperAdminClient } from '@/lib/super-admin'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { InvoicePDF } from '@/lib/pdf-templates/InvoicePDF'
+import { sendTemplateEmail } from '@/lib/email'
 import type { PDFDocumentData } from '@/lib/pdf-templates/types'
 import type { PDFLineItem } from '@/lib/pdf-templates/shared/LineItemTable'
 import type { Json } from '@/types/database'
@@ -24,7 +26,7 @@ function parseLineItems(value: Json | null): PDFLineItem[] {
     .filter((item): item is PDFLineItem => Boolean(item?.name))
 }
 
-async function fetchLogoBase64(supabase: ReturnType<typeof createSupabaseAdminClient>, logoUrl: string | null): Promise<string | null> {
+async function fetchLogoBase64(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, logoUrl: string | null): Promise<string | null> {
   if (!logoUrl) return null
   try {
     const match = logoUrl.match(/\/logos\/(.+?)(?:\?|$)/)
@@ -35,6 +37,14 @@ async function fetchLogoBase64(supabase: ReturnType<typeof createSupabaseAdminCl
     if (error || !data) return null
 
     const buffer = Buffer.from(await data.arrayBuffer())
+
+    const isValidPNG = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47
+    const isValidJPEG = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF
+    if (!isValidPNG && !isValidJPEG) {
+      console.warn(`[pdf:logo] Corrupted or invalid image at ${path}; falling back to business name.`)
+      return null
+    }
+
     const ext = path.split('.').pop()?.toLowerCase() ?? 'png'
     const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png'
     return `data:${mime};base64,${buffer.toString('base64')}`
@@ -49,6 +59,7 @@ export async function POST(
 ) {
   try {
     const { id } = await params
+    const skipEmail = new URL(request.url).searchParams.get('skipEmail') === 'true'
 
   const auth = await verifyStaffUser()
   if (!auth.authorized) {
@@ -64,12 +75,13 @@ export async function POST(
     )
   }
 
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
 
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
     .select('*')
     .eq('id', id)
+    .eq('workshop_id', auth.workshopId as string)
     .is('deleted_at', null)
     .single() as any
 
@@ -79,10 +91,10 @@ export async function POST(
 
   const [{ data: profile }, { data: settings }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', auth.userId).single() as any,
-    supabase.from('business_settings').select('*').eq('id', 'config').single() as any,
+    supabase.from('business_settings').select('*').eq('workshop_id', auth.workshopId!).single() as any,
   ])
 
-  const logoBase64 = await fetchLogoBase64(supabase, profile?.logo_url ?? null)
+  const logoBase64 = null
 
   const lineItems = parseLineItems(invoice.line_items)
   const subtotal = invoice.subtotal ?? lineItems.reduce((sum, item) => sum + item.qty * item.unitPrice, 0)
@@ -90,21 +102,21 @@ export async function POST(
 
   const pdfData: PDFDocumentData = {
     business: {
-      companyName: profile?.company_name || settings?.site_name || 'Autofield Technics',
-      address: profile?.address ?? null,
-      phone: profile?.phone || settings?.phone || null,
+      companyName: settings?.company_name || settings?.site_name || 'Autofield Technics',
+      address: settings?.address ?? null,
+      phone: settings?.phone ?? null,
       email: settings?.contact_email ?? null,
-      vatNumber: profile?.vat_number ?? null,
-      registrationNumber: profile?.registration_number ?? null,
+      vatNumber: settings?.vat_number ?? null,
+      registrationNumber: settings?.registration_number ?? null,
       logoBase64,
     },
     banking: {
-      bankName: profile?.bank_name ?? null,
-      accountHolder: profile?.account_holder ?? null,
-      accountNumber: profile?.account_number ?? null,
-      branchCode: profile?.branch_code ?? null,
+      bankName: settings?.bank_name ?? null,
+      accountHolder: settings?.account_holder ?? null,
+      accountNumber: settings?.account_number ?? null,
+      branchCode: settings?.branch_code ?? null,
     },
-    terms: [profile?.terms_conditions, settings?.document_footer].filter(Boolean).join('\n\n') || null,
+    terms: [settings?.terms_conditions, settings?.document_footer].filter(Boolean).join('\n\n') || null,
     documentNumber: invoice.invoice_number ?? invoice.id.slice(0, 8),
     documentType: 'Invoice',
     createdAt: invoice.created_at ?? new Date().toISOString(),
@@ -120,13 +132,17 @@ export async function POST(
     subtotal,
     total,
     paymentMethod: invoice.payment_method ?? null,
+    depositPercent: 0,
+    depositAmount: null,
+    expiryDate: null,
   }
 
   try {
     const buffer = await renderToBuffer(InvoicePDF({ data: pdfData }))
 
     const storagePath = `invoices/${id}.pdf`
-    const { error: uploadError } = await supabase.storage
+    const adminClient = createSuperAdminClient()
+    const { error: uploadError } = await adminClient.storage
       .from('documents')
       .upload(storagePath, buffer, {
         contentType: 'application/pdf',
@@ -135,11 +151,35 @@ export async function POST(
 
     if (uploadError) {
       console.error('PDF upload error:', uploadError)
+      return NextResponse.json({ error: 'Failed to store PDF' }, { status: 500 })
     }
 
-    const { data: publicUrl } = supabase.storage.from('documents').getPublicUrl(storagePath)
+    await adminClient
+      .from('invoices')
+      .update({ pdf_url: storagePath, updated_at: new Date().toISOString() } as never)
+      .eq('id', id)
 
-    return NextResponse.json({ url: publicUrl.publicUrl })
+    // Send invoice email to customer
+    if (invoice.customer_email && !skipEmail) {
+      const totalFormatted = `R ${Number(total).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`
+      sendTemplateEmail({
+        templateKey: 'invoice_sent',
+        to: invoice.customer_email,
+        variables: {
+          customerName: invoice.customer_name || 'Customer',
+          invoiceNumber: invoice.invoice_number || id.slice(0, 8),
+          total: totalFormatted,
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-ZA'),
+          invoiceUrl: '',
+          bankName: settings?.bank_name || '',
+          accountNumber: settings?.account_number || '',
+          branchCode: settings?.branch_code || '',
+        },
+        workshopId: auth.workshopId!,
+      }).catch(() => {})
+    }
+
+    return NextResponse.json({ storagePath })
   } catch (err) {
     console.error('PDF generation error:', err)
     return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 })

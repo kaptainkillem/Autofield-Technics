@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 import { z } from 'zod'
@@ -42,12 +42,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid service data' }, { status: 400 })
     }
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     const { data: existing, error: fetchError } = await adminClient
       .from('services')
       .select('id')
       .eq('id', id)
+      .eq('workshop_id', auth.workshopId!)
       .single()
 
     if (fetchError || !existing) {
@@ -70,6 +71,7 @@ export async function PATCH(
       .from('services')
       .update(updates as never)
       .eq('id', id)
+      .eq('workshop_id', auth.workshopId!)
       .select()
       .single()
 

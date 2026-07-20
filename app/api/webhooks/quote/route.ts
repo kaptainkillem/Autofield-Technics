@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Resend } from 'resend'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { buildQuoteNotificationEmail } from '@/lib/email-templates'
+import { sendEmail } from '@/lib/email'
 import { z } from 'zod'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-const EMAIL_FROM = process.env.EMAIL_FROM ?? 'Autofield Alerts <onboarding@resend.dev>'
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL ?? SITE_CONFIG.contact.email
 
 const WebhookPayloadSchema = z.object({
@@ -81,20 +79,20 @@ export async function POST(request: NextRequest) {
       description: cleanDescription,
     })
 
-    const { data, error } = await resend.emails.send({
-      from: EMAIL_FROM,
+    const result = await sendEmail({
       to: ADMIN_EMAIL,
       subject,
-      text,
       html,
+      text,
+      templateKey: 'quote_notification_admin',
     })
 
-    if (error) {
-      console.error('Mail system error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    if (!result.success) {
+      console.error('Mail system error:', result.error)
+      return NextResponse.json({ error: result.error }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, messageId: data?.id })
+    return NextResponse.json({ success: true, messageId: result.messageId })
   } catch (err: any) {
     console.error('Webhook execution crash flag:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })

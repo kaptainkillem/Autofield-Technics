@@ -8,18 +8,23 @@ import { ServicesHero } from '@/components/features/ServicesHero'
 import { DynamicIcon } from '@/components/common/DynamicIcon'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MobileStickyCTA } from '@/components/ui/MobileStickyCTA'
-import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
+import { getMergedSiteConfig } from '@/lib/get-site-config'
+import { replaceVars } from '@/lib/site-config'
 import { Wrench } from 'lucide-react'
 import type { Database } from '@/types/database'
 
-export const metadata: Metadata = {
-  title: `Our Services | ${SITE_CONFIG.name}`,
-  description: `Explore professional mechanical services in ${SITE_CONFIG.city}. Mobile mechanic, workshop repairs, diagnostics, and more.`,
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await getMergedSiteConfig()
+  return {
+    title: `Our Services | ${config.name}`,
+    description: `Explore professional mechanical services in ${config.city}. Mobile mechanic, workshop repairs, diagnostics, and more.`,
+  }
 }
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 
 export default async function ServicesPage() {
+  const config = await getMergedSiteConfig()
   const { data: dbCategories, error } = await supabase
     .from('categories')
     .select('*')
@@ -31,8 +36,8 @@ export default async function ServicesPage() {
     return (
       <>
         <ServicesHero
-          title={SITE_CONFIG.services.heroTitle}
-          description={SITE_CONFIG.services.heroDescription}
+          title={config.services.title}
+          description={config.services.description}
           showQuoteButton={false}
         />
         <section className="bg-white px-4 py-16 md:px-20">
@@ -52,8 +57,8 @@ export default async function ServicesPage() {
   return (
     <>
       <ServicesHero
-        title={SITE_CONFIG.services.heroTitle}
-        description={SITE_CONFIG.services.heroDescription}
+        title={config.services.title}
+        description={config.services.description}
         showQuoteButton
       />
 
@@ -69,7 +74,7 @@ export default async function ServicesPage() {
             <EmptyState
               icon={Wrench}
               title="Custom Mechanical Bookings"
-              description={replaceVars(SITE_CONFIG.services.categoryFallbackDescription, { city: SITE_CONFIG.city })}
+              description={replaceVars('Our dynamic response units handle everything from precision brake overhauls to deep computerized diagnostics directly at your location in {city}.', { city: config.city })}
               actions={[
                 { label: 'Get a Custom Quote', href: '/quote', variant: 'primary' },
                 { label: 'Return Home', href: '/', variant: 'secondary' },
@@ -99,7 +104,7 @@ export default async function ServicesPage() {
 
       <MobileStickyCTA
         title="Our Services"
-        subtitle={`Professional mechanics in ${SITE_CONFIG.city}`}
+        subtitle={`Professional mechanics in ${config.city}`}
         buttonText="Get a Free Quote"
         href="/quote"
       />

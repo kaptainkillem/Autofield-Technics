@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, getRoleFromSession } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Star, ArrowLeft, CheckCircle, XCircle, Trash2, Loader2, MessageSquare } from 'lucide-react'
 import { toast } from 'sonner'
@@ -36,7 +36,8 @@ export default function AdminReviewsPage() {
       return
     }
 
-    const role = user.user_metadata?.role ?? 'client'
+    const { data: { session } } = await supabase.auth.getSession()
+    const role = getRoleFromSession(session)
     if (role !== 'admin') {
       router.replace('/dashboard')
       return

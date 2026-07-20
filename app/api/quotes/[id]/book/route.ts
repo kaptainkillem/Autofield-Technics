@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
 import { z } from 'zod'
 import { parseISO, getDay } from 'date-fns'
@@ -10,6 +10,7 @@ const TIMEZONE = 'Africa/Johannesburg'
 const BookBodySchema = z.object({
   scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
   scheduled_time: z.string().regex(/^\d{2}:\d{2}$/, 'Time must be HH:mm'),
+  quote_token: z.string().uuid().optional(),
 })
 
 /**
@@ -79,23 +80,78 @@ export async function POST(
       body = BookBodySchema.parse(raw)
     } catch {
       return NextResponse.json(
-        { error: 'Invalid body. Expected: { scheduled_date: "YYYY-MM-DD", scheduled_time: "HH:mm" }' },
+        { error: 'Invalid body. Expected: { scheduled_date: "YYYY-MM-DD", scheduled_time: "HH:mm", quote_token?: string }' },
         { status: 400 }
       )
     }
 
     const { scheduled_date, scheduled_time } = body
-    const supabase = createSupabaseAdminClient()
+    const supabase = await createSupabaseServerClient()
 
     // 2. Verify quote exists and is accepted
     const { data: quote, error: quoteError } = await supabase
       .from('quotes')
-      .select('id, user_id, service_type, status')
+      .select('id, user_id, service_type, status, workshop_id, quote_token')
       .eq('id', id)
       .single()
 
     if (quoteError || !quote) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
+    }
+
+    // 3. Authentication + claim check
+    if (quote.user_id) {
+      // Cryptographically verify the session
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        return NextResponse.json({ error: 'Please sign in to book this appointment' }, { status: 401 })
+      }
+
+      if (quote.user_id !== user.id) {
+        return NextResponse.json({ error: 'This quote does not belong to you' }, { status: 403 })
+      }
+    } else {
+      // Quote is unclaimed — user must provide the quote_token to claim it
+      if (!body.quote_token) {
+        return NextResponse.json({ error: 'Please sign in and provide your quote token to book this appointment' }, { status: 401 })
+      }
+
+      if (body.quote_token !== quote.quote_token) {
+        return NextResponse.json({ error: 'Invalid quote token' }, { status: 403 })
+      }
+
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        return NextResponse.json({ error: 'Please sign in to claim and book this quote' }, { status: 401 })
+      }
+
+      // Claim: link this quote to the authenticated user
+      const { error: claimError } = await supabase
+        .from('quotes')
+        .update({ user_id: user.id, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .is('user_id', null)
+
+      if (claimError) {
+        return NextResponse.json({ error: 'Failed to claim quote. It may already be claimed.' }, { status: 409 })
+      }
+
+      quote.user_id = user.id
+    }
+
+    // Booking implies acceptance — auto-accept if quote is still in 'sent' status
+    if (quote.status === 'sent') {
+      const { error: acceptError } = await supabase
+        .from('quotes')
+        .update({ status: 'accepted', updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('status', 'sent')
+
+      if (acceptError) {
+        return NextResponse.json({ error: 'Failed to accept quote before booking' }, { status: 500 })
+      }
+
+      quote.status = 'accepted'
     }
 
     // Only allow booking on accepted quotes
@@ -106,14 +162,7 @@ export async function POST(
       )
     }
 
-    if (!quote.user_id) {
-      return NextResponse.json(
-        { error: 'Quote must be linked to a user account before booking' },
-        { status: 400 }
-      )
-    }
-
-    // 3. Check for existing non-cancelled appointment on this quote
+    // 4. Check for existing non-cancelled appointment on this quote
     const { data: existingAppointment } = await supabase
       .from('appointments')
       .select('id, status')
@@ -128,7 +177,7 @@ export async function POST(
       )
     }
 
-    // 4. Verify slot is still available (double-booking protection)
+    // 5. Verify slot is still available (double-booking protection)
     const sastDate = parseISO(scheduled_date)
     const dayOfWeek = getDay(sastDate)
 
@@ -195,11 +244,12 @@ export async function POST(
       }
     }
 
-    // 4. Create appointment with pending status (awaits mechanic approval)
+    // 6. Create appointment with pending status (awaits mechanic approval)
     const { data: appointment, error: insertError } = await supabase
       .from('appointments')
       .insert({
         user_id: quote.user_id,
+        workshop_id: quote.workshop_id,
         quote_id: quote.id,
         service_type: quote.service_type ?? 'General Service',
         scheduled_date,
@@ -216,7 +266,7 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to create appointment' }, { status: 500 })
     }
 
-    // 5. Return success
+    // 7. Return success
     return NextResponse.json({
       success: true,
       appointment: {

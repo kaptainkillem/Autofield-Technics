@@ -8,7 +8,6 @@ import { HowItWorks } from '@/components/features/HowItWorks';
 import { ServicesGrid } from '@/components/features/ServicesGrid';
 import { BottomCTA } from '@/components/features/BottomCTA';
 import { supabase } from '@/lib/supabase';
-import { SITE_CONFIG } from '@/lib/site-config';
 import { getMergedSiteConfig } from '@/lib/get-site-config';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -19,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title: config.name,
       description: config.tagline,
-      images: [SITE_CONFIG.images.ogImage],
+      images: [config.images.favicon],
     },
   }
 }

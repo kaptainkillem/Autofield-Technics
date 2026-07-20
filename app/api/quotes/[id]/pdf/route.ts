@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSuperAdminClient } from '@/lib/super-admin'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 import { renderToBuffer } from '@react-pdf/renderer'
@@ -25,7 +26,7 @@ function parseLineItems(value: Json | null): PDFLineItem[] {
     .filter((item): item is PDFLineItem => Boolean(item?.name))
 }
 
-async function fetchLogoBase64(supabase: ReturnType<typeof createSupabaseAdminClient>, logoUrl: string | null): Promise<string | null> {
+async function fetchLogoBase64(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, logoUrl: string | null): Promise<string | null> {
   if (!logoUrl) return null
   try {
     const match = logoUrl.match(/\/logos\/(.+?)(?:\?|$)/)
@@ -36,6 +37,14 @@ async function fetchLogoBase64(supabase: ReturnType<typeof createSupabaseAdminCl
     if (error || !data) return null
 
     const buffer = Buffer.from(await data.arrayBuffer())
+
+    const isValidPNG = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47
+    const isValidJPEG = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF
+    if (!isValidPNG && !isValidJPEG) {
+      console.warn(`[pdf:logo] Corrupted or invalid image at ${path}; falling back to business name.`)
+      return null
+    }
+
     const ext = path.split('.').pop()?.toLowerCase() ?? 'png'
     const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png'
     return `data:${mime};base64,${buffer.toString('base64')}`
@@ -50,6 +59,7 @@ export async function POST(
 ) {
   try {
     const { id } = await params
+    const skipEmail = new URL(request.url).searchParams.get('skipEmail') === 'true'
 
   const auth = await verifyStaffUser()
   if (!auth.authorized) {
@@ -65,7 +75,7 @@ export async function POST(
     )
   }
 
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
 
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
@@ -80,10 +90,10 @@ export async function POST(
 
   const [{ data: profile }, { data: settings }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', auth.userId).single() as any,
-    supabase.from('business_settings').select('*').eq('id', 'config').single() as any,
+    supabase.from('business_settings').select('*').eq('workshop_id', auth.workshopId!).single() as any,
   ])
 
-  const logoBase64 = await fetchLogoBase64(supabase, profile?.logo_url ?? null)
+  const logoBase64 = null
 
   const lineItems = parseLineItems(quote.line_items)
   const subtotal = quote.subtotal ?? lineItems.reduce((sum, item) => sum + item.qty * item.unitPrice, 0)
@@ -91,21 +101,21 @@ export async function POST(
 
   const pdfData: PDFDocumentData = {
     business: {
-      companyName: profile?.company_name || settings?.site_name || 'Autofield Technics',
-      address: profile?.address ?? null,
-      phone: profile?.phone || settings?.phone || null,
+      companyName: settings?.company_name || settings?.site_name || 'Autofield Technics',
+      address: settings?.address ?? null,
+      phone: settings?.phone ?? null,
       email: settings?.contact_email ?? null,
-      vatNumber: profile?.vat_number ?? null,
-      registrationNumber: profile?.registration_number ?? null,
+      vatNumber: settings?.vat_number ?? null,
+      registrationNumber: settings?.registration_number ?? null,
       logoBase64,
     },
     banking: {
-      bankName: profile?.bank_name ?? null,
-      accountHolder: profile?.account_holder ?? null,
-      accountNumber: profile?.account_number ?? null,
-      branchCode: profile?.branch_code ?? null,
+      bankName: settings?.bank_name ?? null,
+      accountHolder: settings?.account_holder ?? null,
+      accountNumber: settings?.account_number ?? null,
+      branchCode: settings?.branch_code ?? null,
     },
-    terms: [profile?.terms_conditions, settings?.document_footer].filter(Boolean).join('\n\n') || null,
+    terms: [settings?.terms_conditions, settings?.document_footer].filter(Boolean).join('\n\n') || null,
     documentNumber: quote.quote_number ?? quote.id.slice(0, 8),
     documentType: 'Quote',
     createdAt: quote.created_at ?? new Date().toISOString(),
@@ -121,13 +131,17 @@ export async function POST(
     subtotal,
     total,
     paymentMethod: null,
+    depositPercent: Number(quote.deposit_percent ?? 0),
+    depositAmount: quote.deposit_amount ?? null,
+    expiryDate: quote.expiry_date ?? null,
   }
 
   try {
     const buffer = await renderToBuffer(QuotePDF({ data: pdfData }))
 
     const storagePath = `quotes/${id}.pdf`
-    const { error: uploadError } = await supabase.storage
+    const adminClient = createSuperAdminClient()
+    const { error: uploadError } = await adminClient.storage
       .from('documents')
       .upload(storagePath, buffer, {
         contentType: 'application/pdf',
@@ -136,20 +150,20 @@ export async function POST(
 
     if (uploadError) {
       console.error('PDF upload error:', uploadError)
+      return NextResponse.json({ error: 'Failed to store PDF' }, { status: 500 })
     }
 
-    const { data: publicUrl } = supabase.storage.from('documents').getPublicUrl(storagePath)
-    const url = publicUrl.publicUrl
-
-    await supabase
+    await adminClient
       .from('quotes')
-      .update({ pdf_url: url, updated_at: new Date().toISOString() } as never)
+      .update({ pdf_url: storagePath, updated_at: new Date().toISOString() } as never)
       .eq('id', id)
 
-    if (quote.status === 'sent' && quote.customer_email) {
+    if (quote.status === 'sent' && quote.customer_email && !skipEmail) {
       const vehicleInfo = [quote.vehicle_year, quote.vehicle_make, quote.vehicle_model].filter(Boolean).join(' ') || 'Not specified'
       const serviceType = quote.service_type ?? 'General Service'
       const totalFormatted = `R ${Number(total).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}`
+
+      console.log('[pdf:quote] Sending quote ready email to', quote.customer_email)
 
       sendQuoteReadyEmail({
         customerName: quote.customer_name,
@@ -158,11 +172,15 @@ export async function POST(
         serviceType,
         quoteNumber: quote.quote_number ?? id.slice(0, 8),
         quoteId: id,
+        quoteToken: quote.quote_token ?? '',
         total: totalFormatted,
+        workshopId: auth.workshopId,
       }).catch((err) => console.error('[email] Quote ready email failed:', err))
+    } else {
+      console.log('[pdf:quote] Skipping email: status=%s, hasEmail=%s', quote.status, !!quote.customer_email)
     }
 
-    return NextResponse.json({ url })
+    return NextResponse.json({ storagePath })
   } catch (err) {
     console.error('PDF generation error:', err)
     return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 })

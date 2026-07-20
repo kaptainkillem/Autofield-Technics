@@ -1,10 +1,12 @@
 export const dynamic = 'force-dynamic'
 
 import { notFound } from 'next/navigation'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSuperAdminClient } from '@/lib/super-admin'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { FileText, Wrench, User, CheckCircle, Clock, XCircle } from 'lucide-react'
 import { QuoteActionButtons } from '@/components/public/QuoteActionButtons'
+import { QuoteClaimPrompt } from '@/components/public/QuoteClaimPrompt'
 import { AccountNudgeBanner } from '@/components/public/AccountNudgeBanner'
 import type { Json } from '@/types/database'
 
@@ -35,21 +37,42 @@ function parseLineItems(value: Json | null): ParsedLineItem[] {
     .filter((item): item is ParsedLineItem => Boolean(item?.name))
 }
 
-export default async function PublicQuotePage({ params }: PageProps) {
+export default async function PublicQuotePage({ params, searchParams }: PageProps & { searchParams?: Promise<{ token?: string }> }) {
   const { id } = await params
-  const supabase = createSupabaseAdminClient()
+  const urlToken = (await searchParams)?.token ?? null
 
-  const { data: quote, error: quoteError } = await supabase
+  const adminSupabase = createSuperAdminClient()
+
+  const { data: quote } = await adminSupabase
     .from('quotes')
-    .select('id, customer_name, customer_email, customer_phone, vehicle_year, vehicle_make, vehicle_model, service_type, description, status, estimated_quote, line_items, subtotal, discount_percent, total, notes, pdf_url, quote_number')
+    .select('id, customer_name, customer_email, customer_phone, vehicle_year, vehicle_make, vehicle_model, service_type, description, status, estimated_quote, line_items, subtotal, discount_percent, total, notes, pdf_url, quote_number, workshop_id, deposit_percent, deposit_amount, expiry_date, quote_token, user_id')
     .eq('id', id)
+    .is('deleted_at', null)
     .single() as { data: Record<string, any> | null; error: any }
 
   if (!quote) {
     notFound()
   }
 
-  const { data: existingAppointment } = await supabase
+  const authSupabase = await createSupabaseServerClient()
+  const { data: { user } } = await authSupabase.auth.getUser()
+
+  const isAuthenticatedOwner = !!(user && user.id === quote.user_id)
+  const isValidToken = !!(urlToken && urlToken === quote.quote_token)
+
+  if (!isAuthenticatedOwner && !isValidToken) {
+    notFound()
+  }
+
+  const { data: bizSettings } = await adminSupabase
+    .from('business_settings')
+    .select('bank_name, account_holder, account_number, branch_code, terms_conditions, document_footer')
+    .eq('workshop_id', quote.workshop_id)
+    .maybeSingle() as { data: Record<string, any> | null; error: any }
+
+  const hasBanking = bizSettings?.bank_name || bizSettings?.account_number
+
+  const { data: existingAppointment } = await adminSupabase
     .from('appointments')
     .select('id, scheduled_date, scheduled_time, status, proposed_date, proposed_time, proposed_notes')
     .eq('quote_id', id)
@@ -64,6 +87,12 @@ export default async function PublicQuotePage({ params }: PageProps) {
 
   const formatCurrency = (value: number) =>
     `R ${value.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  const isQuoteOwner = isAuthenticatedOwner
+  const effectiveQuoteToken = isValidToken ? quote.quote_token : null
+
+  const showClaimPrompt = !isQuoteOwner && effectiveQuoteToken && !quote.user_id
+  const showActionButtons = isQuoteOwner && quote.status === 'sent'
 
   const isSent = quote.status === 'sent'
   const isAccepted = quote.status === 'accepted'
@@ -248,6 +277,50 @@ export default async function PublicQuotePage({ params }: PageProps) {
             </div>
           )}
 
+          {/* Deposit Info */}
+          {((quote.deposit_percent > 0 || quote.deposit_amount) && (isSent || isAccepted)) && (
+            <div className="bg-green-50 border border-green-200 rounded-base p-5">
+              <h3 className="text-sm font-bold text-green-800 uppercase tracking-wide mb-2">Deposit Required</h3>
+              <p className="text-sm text-green-700">
+                {quote.deposit_percent > 0 && `${Number(quote.deposit_percent)}% of total`}
+                {quote.deposit_percent > 0 && quote.deposit_amount && ' — '}
+                {quote.deposit_amount && formatCurrency(Number(quote.deposit_amount))}
+              </p>
+            </div>
+          )}
+
+          {/* Expiry Date */}
+          {quote.expiry_date && (isSent || isAccepted) && (
+            <div className="flex items-center gap-2 text-xs text-grey-medium">
+              <Clock size={12} />
+              Quote valid until {new Date(quote.expiry_date).toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+          )}
+
+          {/* Banking Details */}
+          {hasBanking && (isSent || isAccepted) && (
+            <div className="border rounded-base overflow-hidden">
+              <div className="bg-grey-dark text-white px-5 py-3">
+                <h3 className="text-sm font-bold uppercase tracking-wide">Banking Details</h3>
+              </div>
+              <div className="p-5 flex flex-col gap-2">
+                {bizSettings?.bank_name && <p className="text-sm text-grey-dark"><strong>Bank:</strong> {bizSettings.bank_name}</p>}
+                {bizSettings?.account_holder && <p className="text-sm text-grey-dark"><strong>Account Holder:</strong> {bizSettings.account_holder}</p>}
+                {bizSettings?.account_number && <p className="text-sm text-grey-dark"><strong>Account:</strong> {bizSettings.account_number}</p>}
+                {bizSettings?.branch_code && <p className="text-sm text-grey-dark"><strong>Branch Code:</strong> {bizSettings.branch_code}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* Terms & Conditions */}
+          {(bizSettings?.terms_conditions || bizSettings?.document_footer) && (isSent || isAccepted) && (
+            <div className="bg-grey-lightest/50 border border-grey-light rounded-base p-5">
+              <h3 className="text-sm font-bold text-grey-dark uppercase tracking-wide mb-2">Terms & Conditions</h3>
+              {bizSettings?.terms_conditions && <p className="text-xs text-grey leading-relaxed mb-2">{bizSettings.terms_conditions}</p>}
+              {bizSettings?.document_footer && <p className="text-xs text-grey-medium leading-relaxed">{bizSettings.document_footer}</p>}
+            </div>
+          )}
+
           {/* Notes */}
           {quote.notes && (
             <div className="bg-amber-50 border border-amber-200 rounded-base p-5">
@@ -256,13 +329,22 @@ export default async function PublicQuotePage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Action Buttons (Accept/Decline/PDF) — client component */}
-          <QuoteActionButtons
-            quoteId={id}
-            status={quote.status}
-            pdfUrl={quote.pdf_url ?? null}
-            existingAppointment={existingAppointment as any}
-          />
+          {/* Action Buttons or Claim Prompt */}
+          {showClaimPrompt ? (
+            <QuoteClaimPrompt
+              quoteId={id}
+              quoteServiceType={quote.service_type}
+              quoteTotal={total}
+            />
+          ) : (
+            <QuoteActionButtons
+              quoteId={id}
+              status={quote.status}
+              pdfUrl={quote.pdf_url ?? null}
+              existingAppointment={existingAppointment as any}
+              quoteToken={effectiveQuoteToken}
+            />
+          )}
         </div>
       </section>
     </>

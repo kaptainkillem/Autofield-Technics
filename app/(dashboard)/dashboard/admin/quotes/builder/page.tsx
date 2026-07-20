@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { QuoteBuilder } from '@/components/admin/documents/QuoteBuilder'
 import type { QuoteData, DocumentLineItem } from '@/components/admin/documents/QuoteBuilder'
@@ -39,7 +39,7 @@ export default async function QuoteBuilderPage({ searchParams }: Props) {
     )
   }
 
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
   const { data: quote } = await supabase
     .from('quotes')
     .select('*')
@@ -67,6 +67,9 @@ export default async function QuoteBuilderPage({ searchParams }: Props) {
     notes: quote.notes,
     lineItems: parseLineItems(quote.line_items),
     discountPercent: Number(quote.discount_percent ?? 0),
+    depositPercent: Number((quote as any).deposit_percent ?? 0),
+    depositAmount: (quote as any).deposit_amount ?? null,
+    expiryDate: (quote as any).expiry_date ?? null,
     status: quote.status ?? 'draft',
   }
 

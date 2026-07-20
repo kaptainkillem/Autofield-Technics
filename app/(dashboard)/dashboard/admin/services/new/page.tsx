@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { Database } from '@/types/database'
 import { SITE_CONFIG } from '@/lib/site-config'
 import AdminServiceForm from './AdminServiceForm'
@@ -9,7 +9,7 @@ type CategoryRow = Database['public']['Tables']['categories']['Row']
 export const dynamic = 'force-dynamic'
 
 export default async function NewServicePage() {
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
   const { data: categories } = await supabase.from('categories').select('*').order('display_order', { ascending: true })
   const cats = (categories ?? []) as CategoryRow[]
 

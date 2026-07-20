@@ -16,6 +16,7 @@ ALTER TABLE public.appointments ADD CONSTRAINT appointments_status_check
 -- 3. Helper function to notify a single user
 CREATE OR REPLACE FUNCTION public.notify_user(
     p_user_id UUID,
+    p_workshop_id UUID,
     p_type TEXT,
     p_reference_id UUID,
     p_title TEXT,
@@ -23,8 +24,8 @@ CREATE OR REPLACE FUNCTION public.notify_user(
 )
 RETURNS void AS $$
 BEGIN
-    INSERT INTO public.notifications (user_id, type, reference_id, title, message)
-    VALUES (p_user_id, p_type, p_reference_id, p_title, p_message);
+    INSERT INTO public.notifications (user_id, workshop_id, type, reference_id, title, message)
+    VALUES (p_user_id, p_workshop_id, p_type, p_reference_id, p_title, p_message);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -35,6 +36,7 @@ BEGIN
     IF NEW.status = 'proposed' AND OLD.status != 'proposed' THEN
         PERFORM public.notify_user(
             NEW.user_id,
+            NEW.workshop_id,
             'appointment',
             NEW.id,
             'New date proposed',
@@ -60,6 +62,7 @@ BEGIN
         -- Notify client
         PERFORM public.notify_user(
             NEW.user_id,
+            NEW.workshop_id,
             'appointment',
             NEW.id,
             'Appointment confirmed',
@@ -71,6 +74,7 @@ BEGIN
         FROM public.profiles p WHERE p.id = NEW.user_id;
 
         PERFORM public.notify_admins(
+            NEW.workshop_id,
             'appointment',
             NEW.id,
             'Appointment confirmed',
@@ -97,6 +101,7 @@ BEGIN
         FROM public.profiles p WHERE p.id = NEW.user_id;
 
         PERFORM public.notify_admins(
+            NEW.workshop_id,
             'appointment',
             NEW.id,
             'Proposal declined',

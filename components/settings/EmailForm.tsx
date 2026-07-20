@@ -14,10 +14,11 @@ interface EmailSettings {
 
 interface EmailFormProps {
   settings: EmailSettings
+  workshopId: string | null
   onUpdate: (settings: EmailSettings) => void
 }
 
-export function EmailForm({ settings, onUpdate }: EmailFormProps) {
+export function EmailForm({ settings, workshopId, onUpdate }: EmailFormProps) {
   const [form, setForm] = useState<EmailSettings>({
     email_display_name: settings.email_display_name ?? 'Autofield Technics',
     email_reply_to: settings.email_reply_to ?? 'info@autofieldstechnics.co.za',
@@ -29,12 +30,12 @@ export function EmailForm({ settings, onUpdate }: EmailFormProps) {
     setSaving(true)
     const { error } = await (supabase as any)
       .from('business_settings')
-      .update({
+      .upsert({
+        workshop_id: workshopId,
         email_display_name: form.email_display_name?.trim() || null,
         email_reply_to: form.email_reply_to?.trim() || null,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', 'config')
 
     setSaving(false)
 

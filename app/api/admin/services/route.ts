@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 import { z } from 'zod'
@@ -14,13 +14,19 @@ const ServiceSchema = z.object({
   image_url: z.string().trim().url().optional().or(z.literal('')),
 })
 
-async function getBusinessUserId(adminClient: ReturnType<typeof createSupabaseAdminClient>): Promise<string | null> {
-  const mechanicUserId = process.env.NEXT_PUBLIC_MECHANIC_USER_ID
-  if (mechanicUserId) return mechanicUserId
+async function getWorkshopUserId(serverClient: Awaited<ReturnType<typeof createSupabaseServerClient>>) {
+  const { data: { session } } = await serverClient.auth.getSession()
+  if (!session) return { userId: null, workshopId: null }
 
-  const { data, error } = await adminClient.from('users').select('id').limit(1).single()
-  if (error || !data) return null
-  return data.id
+  try {
+    const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+    return {
+      userId: session.user?.id ?? null,
+      workshopId: payload?.app_metadata?.workshop_id ?? null,
+    }
+  } catch {
+    return { userId: null, workshopId: null }
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -46,16 +52,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid service data' }, { status: 400 })
     }
 
-    const adminClient = createSupabaseAdminClient()
-    const userId = await getBusinessUserId(adminClient)
-    if (!userId) {
-      return NextResponse.json({ error: 'No business user found' }, { status: 500 })
+    const adminClient = await createSupabaseServerClient()
+    const { userId, workshopId } = await getWorkshopUserId(adminClient)
+    if (!userId || !workshopId) {
+      return NextResponse.json({ error: 'Unable to resolve user' }, { status: 500 })
     }
 
     const { data, error } = await adminClient
       .from('services')
       .insert({
         user_id: userId,
+        workshop_id: workshopId,
         name: body.name,
         description: body.description || null,
         category_id: body.category_id || null,

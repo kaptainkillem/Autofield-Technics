@@ -15,6 +15,7 @@ interface BrandingSettings {
 
 interface BrandingFormProps {
   settings: BrandingSettings
+  workshopId: string | null
   onUpdate: (settings: BrandingSettings) => void
 }
 
@@ -23,7 +24,7 @@ const PRESET_COLORS = [
   '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1',
 ]
 
-export function BrandingForm({ settings, onUpdate }: BrandingFormProps) {
+export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormProps) {
   const [form, setForm] = useState<BrandingSettings>({
     primary_color: settings.primary_color ?? '#3B82F6',
     accent_color: settings.accent_color ?? '#10B981',
@@ -37,13 +38,13 @@ export function BrandingForm({ settings, onUpdate }: BrandingFormProps) {
     setSaving(true)
     const { error } = await (supabase as any)
       .from('business_settings')
-      .update({
+      .upsert({
+        workshop_id: workshopId,
         primary_color: sanitizeText(form.primary_color),
         accent_color: sanitizeText(form.accent_color),
         favicon_url: form.favicon_url,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', 'config')
 
     setSaving(false)
 

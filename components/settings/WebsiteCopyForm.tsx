@@ -21,10 +21,11 @@ type WebsiteCopyFormData = z.infer<typeof WebsiteCopySchema>
 
 interface WebsiteCopyFormProps {
   initialData: WebsiteCopyFormData
+  workshopId: string | null
   onSaved?: () => void
 }
 
-export function WebsiteCopyForm({ initialData, onSaved }: WebsiteCopyFormProps) {
+export function WebsiteCopyForm({ initialData, workshopId, onSaved }: WebsiteCopyFormProps) {
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof WebsiteCopyFormData, string>>>({})
   const [form, setForm] = useState<WebsiteCopyFormData>(initialData)
@@ -56,7 +57,7 @@ export function WebsiteCopyForm({ initialData, onSaved }: WebsiteCopyFormProps) 
     const { error } = await (supabase as any)
       .from('business_settings')
       .upsert({
-        id: 'config',
+        workshop_id: workshopId,
         site_name: sanitizeText(form.site_name),
         phone: sanitizePhone(form.phone),
         city: sanitizeText(form.city),

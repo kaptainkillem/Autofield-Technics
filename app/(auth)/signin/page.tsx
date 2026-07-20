@@ -2,17 +2,21 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Mail, Lock, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { SiteLogo } from '@/components/common/SiteLogo';
-import { SITE_CONFIG } from '@/lib/site-config';
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
 
 export default function SignInPage() {
+  const config = useSiteConfig()
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || '/dashboard'
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const emailTouched = email.length > 0;
@@ -52,7 +56,7 @@ export default function SignInPage() {
 
       toast.success('Signed in successfully!');
 
-      window.location.href = '/dashboard';
+      window.location.href = redirectTo;
     } catch {
       setError('Something went wrong. Please try again.');
       setLoading(false);
@@ -66,14 +70,14 @@ export default function SignInPage() {
           <SiteLogo />
         </a>
         <h1 className="text-2xl md:text-3xl font-bold leading-tight">
-          {SITE_CONFIG.dashboard.clientTitle}
+          {config.name} Dashboard
         </h1>
         <p className="mt-4 text-white/80 text-base leading-relaxed">
-          Sign in to manage your services, quotes, and reviews from your {SITE_CONFIG.name} dashboard.
+          Sign in to manage your services, quotes, and reviews from your {config.name} dashboard.
         </p>
         <div className="mt-8 hidden md:block">
           <p className="text-white/60 text-sm">
-            &ldquo;{SITE_CONFIG.tagline}&rdquo;
+            &ldquo;{config.tagline}&rdquo;
           </p>
         </div>
       </div>

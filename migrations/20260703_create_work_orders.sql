@@ -93,6 +93,7 @@ BEGIN
     IF NEW.status != OLD.status THEN
         PERFORM public.notify_user(
             (SELECT user_id FROM public.quotes WHERE id = NEW.quote_id),
+            NEW.workshop_id,
             'work_order',
             NEW.id,
             CASE NEW.status
@@ -120,6 +121,7 @@ BEGIN
     IF NEW.status = 'revision_pending' AND OLD.status != 'revision_pending' THEN
         PERFORM public.notify_user(
             (SELECT user_id FROM public.quotes WHERE id = NEW.quote_id),
+            NEW.workshop_id,
             'work_order',
             NEW.id,
             'Additional work required',
@@ -146,6 +148,7 @@ BEGIN
         WHERE p.id = (SELECT user_id FROM public.quotes WHERE id = NEW.quote_id);
 
         PERFORM public.notify_admins(
+            NEW.workshop_id,
             'work_order',
             NEW.id,
             CASE WHEN NEW.revision_approved THEN 'Additional work accepted' ELSE 'Additional work declined' END,

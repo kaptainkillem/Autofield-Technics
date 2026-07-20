@@ -1,5 +1,6 @@
 import { DashboardTopBar } from '@/components/dashboard/DashboardTopBar'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
+import { DashboardLayoutClient } from './layout-client'
 
 export default function DashboardLayout({
   children,
@@ -7,6 +8,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
+    <DashboardLayoutClient>
     <div className="min-h-screen bg-grey-lightest">
       <DashboardTopBar />
       <DashboardSidebar />
@@ -16,5 +18,6 @@ export default function DashboardLayout({
         </main>
       </div>
     </div>
+    </DashboardLayoutClient>
   )
 }

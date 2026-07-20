@@ -14,10 +14,11 @@ interface NotificationSettings {
 
 interface NotificationsFormProps {
   settings: NotificationSettings
+  workshopId: string | null
   onUpdate: (settings: NotificationSettings) => void
 }
 
-export function NotificationsForm({ settings, onUpdate }: NotificationsFormProps) {
+export function NotificationsForm({ settings, workshopId, onUpdate }: NotificationsFormProps) {
   const [form, setForm] = useState(settings)
   const [saving, setSaving] = useState(false)
 
@@ -29,13 +30,13 @@ export function NotificationsForm({ settings, onUpdate }: NotificationsFormProps
     setSaving(true)
     const { error } = await (supabase as any)
       .from('business_settings')
-      .update({
+      .upsert({
+        workshop_id: workshopId,
         notification_email: form.notification_email,
         notification_push: form.notification_push,
         notification_whatsapp: form.notification_whatsapp,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', 'config')
 
     setSaving(false)
 
