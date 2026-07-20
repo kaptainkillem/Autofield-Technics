@@ -10,6 +10,7 @@ import { sanitizeText } from '@/lib/input-sanitizer'
 interface LegalSettingsFormProps {
   termsConditions: string
   documentFooter: string
+  workshopId: string | null
   onTermsChange: (value: string) => void
   onDocumentFooterChange: (value: string) => void
 }
@@ -17,6 +18,7 @@ interface LegalSettingsFormProps {
 export function LegalSettingsForm({
   termsConditions,
   documentFooter,
+  workshopId,
   onTermsChange,
   onDocumentFooterChange,
 }: LegalSettingsFormProps) {
@@ -26,7 +28,7 @@ export function LegalSettingsForm({
     setSaving(true)
     const { error } = await (supabase as any)
       .from('business_settings')
-      .upsert({ id: 'config', document_footer: sanitizeText(documentFooter) || null })
+      .upsert({ workshop_id: workshopId, document_footer: sanitizeText(documentFooter) || null })
     setSaving(false)
 
     if (error) {

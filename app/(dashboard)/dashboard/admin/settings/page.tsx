@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, getWorkshopIdFromSession } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import {
+import { 
   Settings, ArrowLeft, Loader2, Building2, Banknote, FileText, Clock, CalendarX,
-  Bell, MessageCircle, Mail, Palette, Type, Scale,
+  Bell, MessageCircle, Mail, Palette, Type, Scale, 
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -22,6 +22,7 @@ import { EmailForm } from '@/components/settings/EmailForm'
 import { BrandingForm } from '@/components/settings/BrandingForm'
 import { WebsiteCopyForm } from '@/components/settings/WebsiteCopyForm'
 import { LegalSettingsForm } from '@/components/settings/LegalSettingsForm'
+import { EmailTemplatesForm } from '@/components/settings/EmailTemplatesForm'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 
 type Tab =
@@ -36,6 +37,7 @@ type Tab =
   | 'email'
   | 'branding'
   | 'website_copy'
+  | 'email_templates'
 
 interface FormData {
   full_name: string
@@ -106,11 +108,12 @@ const tabs = [
   { id: 'branding' as Tab, label: 'Branding', icon: Palette },
   { id: 'working_hours' as Tab, label: 'Hours', icon: Clock },
   { id: 'blocked_slots' as Tab, label: 'Blocked', icon: CalendarX },
+  { id: 'email_templates' as Tab, label: 'Templates', icon: Mail },
 ]
 
 const profileTabs: Tab[] = ['business', 'financials', 'quotes', 'legal']
 const contentTabs: Tab[] = ['website_copy']
-const settingsTabs: Tab[] = ['notifications', 'whatsapp', 'email', 'branding']
+const settingsTabs: Tab[] = ['notifications', 'whatsapp', 'email', 'branding', 'email_templates']
 const calendarTabs: Tab[] = ['working_hours', 'blocked_slots']
 
 export default function AdminSettingsPage() {
@@ -119,6 +122,7 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('business')
   const [userId, setUserId] = useState<string>('')
+  const [workshopId, setWorkshopId] = useState<string | null>(null)
   const [formData, setFormData] = useState<FormData>(defaultFormData)
   const [bizSettings, setBizSettings] = useState<BusinessSettings>(defaultBusinessSettings)
   const [websiteCopy, setWebsiteCopy] = useState({
@@ -140,23 +144,34 @@ export default function AdminSettingsPage() {
       }
       setUserId(user.id)
 
+      const { data: { session } } = await supabase.auth.getSession()
+      const workshopsId = getWorkshopIdFromSession(session)
+      setWorkshopId(workshopsId)
+
       const [profileRes, settingsRes] = await Promise.all([
         (supabase as any).from('profiles').select('*').eq('id', user.id).single(),
-        (supabase as any).from('business_settings').select('*').eq('id', 'config').single(),
+        (supabase as any).from('business_settings').select('*').eq('workshop_id', workshopsId).single(),
       ])
 
       if (profileRes.data) {
         const d = profileRes.data
+        const s = settingsRes.data
         setFormData({
-          full_name: d.full_name ?? '', phone: d.phone ?? '', company_name: d.company_name ?? '',
-          logo_url: d.logo_url ?? '', address: d.address ?? '', whatsapp_number: d.whatsapp_number ?? '',
-          vat_number: d.vat_number ?? '', registration_number: d.registration_number ?? '',
-          bank_name: d.bank_name ?? '', account_holder: d.account_holder ?? '',
-          account_number: d.account_number ?? '', branch_code: d.branch_code ?? '',
-          hourly_rate: d.hourly_rate?.toString() ?? '', callout_fee: d.callout_fee?.toString() ?? '',
-          diagnostic_fee: d.diagnostic_fee?.toString() ?? '',
-          default_deposit_percent: d.default_deposit_percent?.toString() ?? '',
-          terms_conditions: d.terms_conditions ?? '',
+          full_name: d.full_name ?? '', phone: d.phone ?? '',
+          company_name: s?.company_name ?? '',
+          logo_url: s?.logo_url ?? '', address: s?.address ?? '',
+          whatsapp_number: d.whatsapp_number ?? '',
+          vat_number: s?.vat_number ?? '',
+          registration_number: s?.registration_number ?? '',
+          bank_name: s?.bank_name ?? '',
+          account_holder: s?.account_holder ?? '',
+          account_number: s?.account_number ?? '',
+          branch_code: s?.branch_code ?? '',
+          hourly_rate: s?.hourly_rate?.toString() ?? '',
+          callout_fee: s?.callout_fee?.toString() ?? '',
+          diagnostic_fee: s?.diagnostic_fee?.toString() ?? '',
+          default_deposit_percent: s?.default_deposit_percent?.toString() ?? '',
+          terms_conditions: s?.terms_conditions ?? '',
         })
       } else {
         setFormData((prev) => ({
@@ -209,14 +224,18 @@ export default function AdminSettingsPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const payload = {
+    const profilePayload = {
       id: user.id,
       full_name: formData.full_name.trim() || null,
       phone: formData.phone.trim() || null,
+      whatsapp_number: formData.whatsapp_number.trim() || null,
+    }
+
+    const bizPayload = {
+      workshop_id: workshopId,
       company_name: formData.company_name.trim() || null,
       logo_url: formData.logo_url.trim() || null,
       address: formData.address.trim() || null,
-      whatsapp_number: formData.whatsapp_number.trim() || null,
       vat_number: formData.vat_number.trim() || null,
       registration_number: formData.registration_number.trim() || null,
       bank_name: formData.bank_name.trim() || null,
@@ -230,11 +249,15 @@ export default function AdminSettingsPage() {
       terms_conditions: formData.terms_conditions.trim() || null,
     }
 
-    const { error } = await (supabase as any).from('profiles').upsert(payload)
+    const [profileRes, bizRes] = await Promise.all([
+      (supabase as any).from('profiles').upsert(profilePayload),
+      (supabase as any).from('business_settings').upsert(bizPayload),
+    ])
+
     setSaving(false)
 
-    if (error) {
-      console.error('Save error:', error)
+    if (profileRes.error || bizRes.error) {
+      console.error('Save error:', profileRes.error || bizRes.error)
       toast.error('Failed to save settings')
       return
     }
@@ -302,6 +325,7 @@ export default function AdminSettingsPage() {
               <LegalSettingsForm
                 termsConditions={formData.terms_conditions}
                 documentFooter={documentFooter}
+                workshopId={workshopId}
                 onTermsChange={(v) => handleChange('terms_conditions', v)}
                 onDocumentFooterChange={setDocumentFooter}
               />
@@ -330,6 +354,7 @@ export default function AdminSettingsPage() {
           {activeTab === 'website_copy' && (
             <WebsiteCopyForm
               initialData={websiteCopy}
+              workshopId={workshopId}
               onSaved={() => {
                 // Refresh data after save
                 window.location.reload()
@@ -342,26 +367,33 @@ export default function AdminSettingsPage() {
           {activeTab === 'notifications' && (
             <NotificationsForm
               settings={bizSettings}
+              workshopId={workshopId}
               onUpdate={(s) => setBizSettings((prev) => ({ ...prev, ...s }))}
             />
           )}
           {activeTab === 'whatsapp' && (
             <WhatsAppForm
               settings={bizSettings}
+              workshopId={workshopId}
               onUpdate={(s) => setBizSettings((prev) => ({ ...prev, ...s }))}
             />
           )}
           {activeTab === 'email' && (
             <EmailForm
               settings={bizSettings}
+              workshopId={workshopId}
               onUpdate={(s) => setBizSettings((prev) => ({ ...prev, ...s }))}
             />
           )}
           {activeTab === 'branding' && (
             <BrandingForm
               settings={bizSettings}
+              workshopId={workshopId}
               onUpdate={(s) => setBizSettings((prev) => ({ ...prev, ...s }))}
             />
+          )}
+          {activeTab === 'email_templates' && (
+            <EmailTemplatesForm workshopId={workshopId} />
           )}
         </div>
       ) : (

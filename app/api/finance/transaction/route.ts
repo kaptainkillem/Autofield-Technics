@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const adminClient = createSupabaseAdminClient()
+  const adminClient = await createSupabaseServerClient()
   const data = parseResult.data
   const adminUserId = auth.userId
 
@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
         .from('receipts')
         .insert({
           user_id: adminUserId,
+          workshop_id: auth.workshopId!,
           customer_name: data.customer_name,
           amount_paid: data.amount_paid,
           payment_method: data.payment_method,
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
       .from('expenses')
       .insert({
         user_id: adminUserId,
+        workshop_id: auth.workshopId!,
         amount: data.amount,
         category: data.category,
         description: data.description,

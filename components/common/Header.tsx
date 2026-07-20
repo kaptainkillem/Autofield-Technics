@@ -5,32 +5,40 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LogIn, LogOut, Loader2, User } from 'lucide-react'
 import { SiteLogo } from './SiteLogo'
-import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
-import { supabase } from '@/lib/supabase'
+import { replaceVars } from '@/lib/site-config'
+import { supabase, getRoleFromSession } from '@/lib/supabase'
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider'
 
 interface HeaderProps extends ComponentPropsWithoutRef<'header'> {}
-
-const NAV_LINKS = SITE_CONFIG.navigation.header.map((link) => ({
-  ...link,
-  href: replaceVars(link.href, { phone: SITE_CONFIG.phone }),
-}))
 
 export const Header: React.FC<HeaderProps> = ({
   className,
   ...props
 }) => {
+  const config = useSiteConfig()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [role, setRole] = useState<string>('client')
   const router = useRouter()
 
+  const navLinks = config.nav.map((link) => ({
+    ...link,
+    href: replaceVars(link.href, { phone: config.phone }),
+  }))
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    function updateFromSession(session: any) {
       setUser(session?.user ?? null)
+      setRole(getRoleFromSession(session))
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      updateFromSession(session)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
+      updateFromSession(session)
     })
 
     return () => subscription.unsubscribe()
@@ -55,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
     router.refresh()
   }
 
-  const dashboardHref = user?.user_metadata?.role === 'admin' ? '/dashboard/admin' : '/dashboard'
+  const dashboardHref = role === 'admin' || role === 'super_admin' ? '/dashboard/admin' : '/dashboard'
   const initial = (() => {
     if (!user) return ''
     const name = user.user_metadata?.full_name ?? user.user_metadata?.name ?? ''
@@ -105,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <nav className="flex flex-col gap-1 px-4 py-4">
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             link.external ? (
               <a
                 key={link.label}
@@ -172,7 +180,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <nav className="hidden md:flex items-center gap-3">
-            {NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               link.external ? (
                 <a
                   key={link.label}

@@ -14,12 +14,13 @@ interface WhatsAppSettings {
 
 interface WhatsAppFormProps {
   settings: WhatsAppSettings
+  workshopId: string | null
   onUpdate: (settings: WhatsAppSettings) => void
 }
 
 const DEFAULT_AUTO_REPLY = `👋 Hi there! Thanks for messaging Autofield Technics.\n\nWe're currently busy in the workshop, but we'll get back to you as soon as possible.\n\nFor urgent repairs, please call us directly.\n\n— Prince, Lead Mechanic`
 
-export function WhatsAppForm({ settings, onUpdate }: WhatsAppFormProps) {
+export function WhatsAppForm({ settings, workshopId, onUpdate }: WhatsAppFormProps) {
   const [form, setForm] = useState<WhatsAppSettings>({
     whatsapp_auto_reply: settings.whatsapp_auto_reply ?? DEFAULT_AUTO_REPLY,
     whatsapp_business_only: settings.whatsapp_business_only ?? false,
@@ -31,12 +32,12 @@ export function WhatsAppForm({ settings, onUpdate }: WhatsAppFormProps) {
     setSaving(true)
     const { error } = await (supabase as any)
       .from('business_settings')
-      .update({
+      .upsert({
+        workshop_id: workshopId,
         whatsapp_auto_reply: form.whatsapp_auto_reply ? sanitizeText(form.whatsapp_auto_reply) : null,
         whatsapp_business_only: form.whatsapp_business_only,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', 'config')
 
     setSaving(false)
 

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { z } from 'zod'
 
@@ -34,7 +33,7 @@ export async function PATCH(
       )
     }
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     // 3. Verify appointment exists, belongs to user, and is proposed
     const { data: appointment, error: fetchError } = await adminClient

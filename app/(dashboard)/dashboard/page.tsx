@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Star, FileText, Wrench, MessageCircle, ArrowRight, CalendarClock, CheckCircle, XCircle, Loader2 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { supabase, getRoleFromSession, getWorkshopIdFromSession } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -52,28 +52,39 @@ export default function ClientDashboardPage() {
           return
         }
 
-        const meta = user.user_metadata ?? {}
-        const role = meta.role ?? 'client'
+        const { data: { session } } = await supabase.auth.getSession()
+        const role = getRoleFromSession(session)
         if (role === 'admin') {
           router.push('/dashboard/admin')
           return
         }
 
         // Set display name parameters safely
-        setName(meta.full_name ?? meta.name ?? user.email?.split('@')[0] ?? 'there')
+        setName(user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email?.split('@')[0] ?? 'there')
 
         // 🚀 2. "Capture & Convert" Check: Claim anonymous quotes from localStorage
         const pendingQuoteId = localStorage.getItem('pending_quote_id')
         if (pendingQuoteId) {
-          await (supabase as any)
+          const { data: pendingQuote } = await (supabase as any)
             .from('quotes')
-            .update({ 
-              user_id: user.id,
-              customer_email: user.email 
-            })
+            .select('customer_email, workshop_id')
             .eq('id', pendingQuoteId)
+            .single()
 
-          // Flush cache storage cleanly right after the database updates
+          const { data: { session: claimSession } } = await supabase.auth.getSession()
+          const userWorkshopId = getWorkshopIdFromSession(claimSession)
+
+          if (
+            pendingQuote &&
+            pendingQuote.customer_email?.toLowerCase() === user.email?.toLowerCase() &&
+            pendingQuote.workshop_id === userWorkshopId
+          ) {
+            await (supabase as any)
+              .from('quotes')
+              .update({ user_id: user.id, customer_email: user.email })
+              .eq('id', pendingQuoteId)
+          }
+
           localStorage.removeItem('pending_quote_id')
         }
 

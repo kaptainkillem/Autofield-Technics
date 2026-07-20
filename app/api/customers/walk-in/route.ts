@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSuperAdminClient } from '@/lib/super-admin'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
 import { z } from 'zod'
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createSupabaseAdminClient()
+    const supabase = createSuperAdminClient()
 
     // 2. Generate a dummy email if not provided
     const email = body.email?.trim() || `${Date.now()}@walkin.autofield.local`
@@ -85,6 +85,8 @@ export async function POST(request: NextRequest) {
         phone: body.phone.trim(),
         physical_address: body.physical_address?.trim() || null,
         onboarding_completed: true,
+        role: 'client',
+        workshop_id: auth.workshopId!,
       })
       .eq('id', userId)
 
@@ -100,6 +102,7 @@ export async function POST(request: NextRequest) {
         .from('vehicles')
         .insert({
           user_id: userId,
+          workshop_id: auth.workshopId!,
           make: body.vehicle.make.trim(),
           model: body.vehicle.model.trim(),
           year: body.vehicle.year,

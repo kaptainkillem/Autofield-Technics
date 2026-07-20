@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, getRoleFromSession } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import {
   BarChart3, Loader2, ArrowLeft, TrendingUp, Users, FileText, Star, Wrench,
@@ -34,7 +34,8 @@ export default function AdminAnalyticsPage() {
       return
     }
 
-    const role = user.user_metadata?.role ?? 'client'
+    const { data: { session } } = await supabase.auth.getSession()
+    const role = getRoleFromSession(session)
     if (role !== 'admin') {
       router.push('/dashboard')
       return

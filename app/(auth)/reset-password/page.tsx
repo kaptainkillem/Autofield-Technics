@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Lock, Loader2, AlertCircle, CheckCircle, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
 import { supabaseHelpers } from '@/lib/supabase';
 import { SiteLogo } from '@/components/common/SiteLogo';
-import { SITE_CONFIG } from '@/lib/site-config';
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
 import { sanitizeAuthError } from '@/lib/auth-utils';
 
 const PASSWORD_CRITERIA = [
@@ -24,6 +24,7 @@ function getStrengthLabel(count: number) {
 }
 
 export default function ResetPasswordPage() {
+  const config = useSiteConfig()
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -73,6 +74,13 @@ export default function ResetPasswordPage() {
     }
 
     setLoading(true);
+
+    const rateCheck = await fetch('/api/auth/reset-password', { method: 'POST' })
+    if (!rateCheck.ok) {
+      setError('Too many attempts. Please wait a few minutes.')
+      setLoading(false)
+      return
+    }
 
     const { error: updateError } = await supabaseHelpers.auth.updatePassword(password);
 
@@ -145,7 +153,7 @@ export default function ResetPasswordPage() {
             Password<br />Updated
           </h1>
           <p className="mt-4 text-white/80 text-base leading-relaxed">
-            Your {SITE_CONFIG.name} account password has been successfully changed.
+            Your {config.name} account password has been successfully changed.
           </p>
         </div>
 
@@ -184,11 +192,11 @@ export default function ResetPasswordPage() {
           Set New<br />Password
         </h1>
         <p className="mt-4 text-white/80 text-base leading-relaxed">
-          Choose a strong password for your {SITE_CONFIG.name} account.
+          Choose a strong password for your {config.name} account.
         </p>
         <div className="mt-8 hidden md:block">
           <p className="text-white/60 text-sm">
-            &ldquo;{SITE_CONFIG.tagline}&rdquo;
+            &ldquo;{config.tagline}&rdquo;
           </p>
         </div>
       </div>

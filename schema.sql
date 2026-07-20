@@ -1,45 +1,74 @@
--- schema.sql — Autofield-Technics
+-- schema.sql — Autofield-Technics (Multi-Tenant)
 -- Single source of truth — synced with live Supabase database
 -- Standardized on gen_random_uuid() (Postgres native, no extension needed)
 -- IDEMPOTENT: safe to run multiple times on an existing database
 
--- ─── Users (standalone business contacts) ─────────────────────────────────────
-CREATE TABLE IF NOT EXISTS public.users (
-    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email                 TEXT NOT NULL,
-    phone                 TEXT,
-    business_name         TEXT,
-    whatsapp_number       TEXT,
-    password_hash         TEXT,
-    bio                   TEXT,
-    profile_image_url     TEXT,
-    notifications_enabled BOOLEAN NOT NULL DEFAULT true,
-    auto_reply_message    TEXT,
-    created_at            TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at            TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    deleted_at            TIMESTAMP WITH TIME ZONE
+-- ═══════════════════════════════════════════════════════════════
+-- Helper functions (JWT-based tenant isolation)
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE OR REPLACE FUNCTION public.current_workshop_id()
+RETURNS UUID AS $$
+BEGIN
+    RETURN (auth.jwt() -> 'app_metadata' ->> 'workshop_id')::uuid;
+EXCEPTION WHEN OTHERS THEN
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+CREATE OR REPLACE FUNCTION public.current_user_role()
+RETURNS TEXT AS $$
+BEGIN
+    RETURN auth.jwt() -> 'app_metadata' ->> 'role';
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN public.current_user_role() = 'super_admin';
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Workshops (public lookup + CI/CD)
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS public.workshops (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name           TEXT NOT NULL,
+    slug           TEXT NOT NULL UNIQUE,
+    owner_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    contact_email  TEXT,
+    contact_phone  TEXT,
+    created_at     TIMESTAMPTZ DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.workshops ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Users can view own data" ON public.users;
-CREATE POLICY "Users can view own data" ON public.users FOR SELECT USING (auth.uid() = id);
+DROP POLICY IF EXISTS "Workshops are publicly readable" ON public.workshops;
+CREATE POLICY "Workshops are publicly readable" ON public.workshops
+FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Users can update own data" ON public.users;
-CREATE POLICY "Users can update own data" ON public.users FOR UPDATE USING (auth.uid() = id);
+DROP POLICY IF EXISTS "Super admins can manage workshops" ON public.workshops;
+CREATE POLICY "Super admins can manage workshops" ON public.workshops
+FOR ALL USING (public.is_super_admin());
 
-DROP POLICY IF EXISTS "Service role full access on users" ON public.users;
-CREATE POLICY "Service role full access on users" ON public.users FOR ALL USING (auth.role() = 'service_role');
+CREATE INDEX IF NOT EXISTS idx_workshops_owner_id ON public.workshops(owner_id);
+CREATE INDEX IF NOT EXISTS idx_workshops_slug     ON public.workshops(slug);
 
-ALTER TABLE public.users
-  ADD COLUMN IF NOT EXISTS bio TEXT,
-  ADD COLUMN IF NOT EXISTS profile_image_url TEXT,
-  ADD COLUMN IF NOT EXISTS notifications_enabled BOOLEAN NOT NULL DEFAULT true,
-  ADD COLUMN IF NOT EXISTS auto_reply_message TEXT;
+-- ═══════════════════════════════════════════════════════════════
+-- Profiles (one-to-one with auth.users)
+-- ═══════════════════════════════════════════════════════════════
+
+-- ─── Users (legacy standalone business contacts) ─────────────────────────────────
+-- REMOVED: public.users table dropped in favour of auth.users + public.profiles
 
 -- ─── Categories ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.categories (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workshop_id   UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
     name          TEXT NOT NULL,
     slug          TEXT NOT NULL UNIQUE,
     icon_name     TEXT NOT NULL DEFAULT 'Wrench',
@@ -51,15 +80,25 @@ CREATE TABLE IF NOT EXISTS public.categories (
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Anyone can read categories" ON public.categories;
-CREATE POLICY "Anyone can read categories" ON public.categories FOR SELECT USING (true);
-
 DROP POLICY IF EXISTS "Service role can manage categories" ON public.categories;
-CREATE POLICY "Service role can manage categories" ON public.categories FOR ALL USING (auth.role() = 'service_role');
+DROP POLICY IF EXISTS "Admin Manage Categories" ON public.categories;
+DROP POLICY IF EXISTS "Allow public read access on categories" ON public.categories;
+DROP POLICY IF EXISTS "Public Read Categories" ON public.categories;
+DROP POLICY IF EXISTS "Categories manage super admin" ON public.categories;
+
+CREATE POLICY "Categories read global" ON public.categories
+FOR SELECT USING (true);
+
+CREATE POLICY "Categories manage staff" ON public.categories FOR ALL USING (
+  public.current_user_role() IN ('admin', 'super_admin')
+  AND (public.current_workshop_id() = workshop_id OR public.is_super_admin())
+);
 
 -- ─── Services ───────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.services (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id       UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    workshop_id   UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
+    user_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     name          TEXT NOT NULL,
     description   TEXT,
     category      TEXT,
@@ -84,8 +123,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id                    UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name             TEXT,
     phone                 TEXT,
-    role                  TEXT NOT NULL DEFAULT 'client' CHECK (role IN ('client', 'admin')),
+    role                  TEXT NOT NULL DEFAULT 'client' CHECK (role IN ('client', 'admin', 'super_admin')),
     onboarding_completed  BOOLEAN NOT NULL DEFAULT false,
+    workshop_id           UUID REFERENCES public.workshops(id) ON DELETE SET NULL,
     company_name          TEXT,
     logo_url              TEXT,
     address               TEXT,
@@ -114,53 +154,48 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
+  ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_client_status_check;
+  ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+  ALTER TABLE public.profiles ADD CONSTRAINT profiles_role_check CHECK (role IN ('client', 'admin', 'super_admin'));
   ALTER TABLE public.profiles ADD CONSTRAINT profiles_client_status_check CHECK (client_status IS NULL OR client_status IN ('active', 'vip', 'blacklisted'));
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
-CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
-
 DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
-CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
-
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
-CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
--- CRM & business columns (safe re-add on existing DBs)
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS company_name TEXT,
-  ADD COLUMN IF NOT EXISTS logo_url TEXT,
-  ADD COLUMN IF NOT EXISTS address TEXT,
-  ADD COLUMN IF NOT EXISTS whatsapp_number TEXT,
-  ADD COLUMN IF NOT EXISTS vat_number TEXT,
-  ADD COLUMN IF NOT EXISTS registration_number TEXT,
-  ADD COLUMN IF NOT EXISTS bank_name TEXT,
-  ADD COLUMN IF NOT EXISTS account_holder TEXT,
-  ADD COLUMN IF NOT EXISTS account_number TEXT,
-  ADD COLUMN IF NOT EXISTS branch_code TEXT,
-  ADD COLUMN IF NOT EXISTS hourly_rate NUMERIC,
-  ADD COLUMN IF NOT EXISTS callout_fee NUMERIC,
-  ADD COLUMN IF NOT EXISTS diagnostic_fee NUMERIC,
-  ADD COLUMN IF NOT EXISTS terms_conditions TEXT,
-  ADD COLUMN IF NOT EXISTS default_deposit_percent NUMERIC,
-  ADD COLUMN IF NOT EXISTS alternate_phone TEXT,
-  ADD COLUMN IF NOT EXISTS physical_address TEXT,
-  ADD COLUMN IF NOT EXISTS prefers_whatsapp BOOLEAN DEFAULT true,
-  ADD COLUMN IF NOT EXISTS service_reminders_opt_in BOOLEAN DEFAULT true,
-  ADD COLUMN IF NOT EXISTS client_status TEXT DEFAULT 'active',
-  ADD COLUMN IF NOT EXISTS internal_notes TEXT;
+CREATE POLICY "Profiles tenant isolated" ON public.profiles
+FOR SELECT USING (
+    auth.uid() = id
+    OR (
+        public.current_user_role() = 'admin'
+        AND workshop_id = public.current_workshop_id()
+    )
+    OR public.is_super_admin()
+);
 
--- Client notification preferences
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS notification_quotes_whatsapp BOOLEAN DEFAULT true,
-  ADD COLUMN IF NOT EXISTS notification_appointments_email BOOLEAN DEFAULT true,
-  ADD COLUMN IF NOT EXISTS notification_marketing BOOLEAN DEFAULT false;
+CREATE POLICY "Profiles insert own" ON public.profiles
+FOR INSERT WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Profiles update own or admin" ON public.profiles
+FOR UPDATE USING (
+    auth.uid() = id
+    OR (
+        public.current_user_role() = 'admin'
+        AND workshop_id = public.current_workshop_id()
+    )
+    OR public.is_super_admin()
+);
+
+CREATE POLICY "Profiles delete own" ON public.profiles
+FOR DELETE USING (auth.uid() = id);
 
 -- ─── Vehicles ───────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.vehicles (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    workshop_id   UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
     make          TEXT NOT NULL,
     model         TEXT NOT NULL,
     year          INT NOT NULL CHECK (year >= 1900 AND year <= 2030),
@@ -173,21 +208,41 @@ CREATE TABLE IF NOT EXISTS public.vehicles (
 ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own vehicles" ON public.vehicles;
-CREATE POLICY "Users can view own vehicles" ON public.vehicles FOR SELECT USING (auth.uid() = user_id);
-
 DROP POLICY IF EXISTS "Users can insert own vehicles" ON public.vehicles;
-CREATE POLICY "Users can insert own vehicles" ON public.vehicles FOR INSERT WITH CHECK (auth.uid() = user_id);
-
 DROP POLICY IF EXISTS "Users can update own vehicles" ON public.vehicles;
-CREATE POLICY "Users can update own vehicles" ON public.vehicles FOR UPDATE USING (auth.uid() = user_id);
-
 DROP POLICY IF EXISTS "Users can delete own vehicles" ON public.vehicles;
-CREATE POLICY "Users can delete own vehicles" ON public.vehicles FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Vehicles tenant isolated" ON public.vehicles
+FOR SELECT USING (
+    user_id = auth.uid()
+    OR (
+        public.current_user_role() = 'admin'
+        AND workshop_id = public.current_workshop_id()
+    )
+    OR public.is_super_admin()
+);
+
+CREATE POLICY "Vehicles insert tenant isolated" ON public.vehicles
+FOR INSERT WITH CHECK (workshop_id = public.current_workshop_id());
+
+CREATE POLICY "Vehicles update tenant isolated" ON public.vehicles
+FOR UPDATE USING (
+    user_id = auth.uid()
+    AND workshop_id = public.current_workshop_id()
+);
+
+CREATE POLICY "Vehicles delete tenant isolated" ON public.vehicles
+FOR DELETE USING (
+    user_id = auth.uid()
+    AND workshop_id = public.current_workshop_id()
+);
 
 -- ─── Quotes ─────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.quotes (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    quote_token         UUID DEFAULT gen_random_uuid() UNIQUE,
     user_id             UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    workshop_id         UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
     customer_name       TEXT NOT NULL,
     customer_email      TEXT,
     customer_phone      TEXT NOT NULL,
@@ -217,40 +272,44 @@ CREATE TABLE IF NOT EXISTS public.quotes (
 ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own quotes" ON public.quotes;
-CREATE POLICY "Users can view own quotes" ON public.quotes FOR SELECT USING (auth.uid() = user_id AND deleted_at IS NULL);
-
 DROP POLICY IF EXISTS "Anyone can submit a quote" ON public.quotes;
-CREATE POLICY "Anyone can submit a quote" ON public.quotes FOR INSERT WITH CHECK (true);
-
 DROP POLICY IF EXISTS "Service role can manage quotes" ON public.quotes;
-CREATE POLICY "Service role can manage quotes" ON public.quotes FOR ALL USING (auth.role() = 'service_role');
 
-ALTER TABLE public.quotes
-  ADD COLUMN IF NOT EXISTS quote_number VARCHAR,
-  ADD COLUMN IF NOT EXISTS line_items JSONB NOT NULL DEFAULT '[]'::jsonb,
-  ADD COLUMN IF NOT EXISTS discount_percent NUMERIC NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS subtotal NUMERIC NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS total NUMERIC NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS source VARCHAR DEFAULT 'request',
-  ADD COLUMN IF NOT EXISTS pdf_url TEXT,
-  ADD COLUMN IF NOT EXISTS whatsapp_sent_at TIMESTAMP WITH TIME ZONE,
-  ADD COLUMN IF NOT EXISTS whatsapp_message_id TEXT;
+CREATE POLICY "Quotes tenant isolated" ON public.quotes
+FOR SELECT USING (
+    workshop_id = public.current_workshop_id()
+    AND (
+        public.current_user_role() IN ('admin', 'super_admin')
+        OR user_id = auth.uid()
+    )
+);
 
-DO $$ BEGIN
-  ALTER TABLE public.quotes DROP CONSTRAINT IF EXISTS status_valid;
-  ALTER TABLE public.quotes DROP CONSTRAINT IF EXISTS quotes_status_check;
-  ALTER TABLE public.quotes ADD CONSTRAINT quotes_status_check
-    CHECK (status IN ('draft', 'pending', 'sent', 'accepted', 'declined', 'completed', 'cancelled'));
-EXCEPTION WHEN duplicate_object THEN
-  ALTER TABLE public.quotes DROP CONSTRAINT IF EXISTS quotes_status_check;
-  ALTER TABLE public.quotes ADD CONSTRAINT quotes_status_check
-    CHECK (status IN ('draft', 'pending', 'sent', 'accepted', 'declined', 'completed', 'cancelled'));
-END $$;
+CREATE POLICY "Quotes insert valid workshop" ON public.quotes
+FOR INSERT WITH CHECK (
+    workshop_id IS NOT NULL
+    AND EXISTS (SELECT 1 FROM public.workshops WHERE id = workshop_id)
+);
+
+CREATE POLICY "Quotes update tenant isolated" ON public.quotes
+FOR UPDATE USING (
+    workshop_id = public.current_workshop_id()
+    AND (
+        public.current_user_role() IN ('admin', 'super_admin')
+        OR user_id = auth.uid()
+    )
+);
+
+CREATE POLICY "Quotes delete tenant isolated" ON public.quotes
+FOR DELETE USING (
+    workshop_id = public.current_workshop_id()
+    AND public.current_user_role() IN ('admin', 'super_admin')
+);
 
 -- ─── Reviews ─────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.reviews (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id          UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    workshop_id      UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
     quote_id         UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
     rating           INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
     comment          TEXT,
@@ -267,31 +326,37 @@ CREATE TABLE IF NOT EXISTS public.reviews (
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Anyone can read approved reviews" ON public.reviews;
-CREATE POLICY "Anyone can read approved reviews" ON public.reviews FOR SELECT USING (status = 'approved' AND deleted_at IS NULL);
-
 DROP POLICY IF EXISTS "Anyone can submit a review" ON public.reviews;
-CREATE POLICY "Anyone can submit a review" ON public.reviews FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role can update reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Admins can update reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Admins can delete reviews" ON public.reviews;
 
-DO $$ BEGIN
-  DROP POLICY IF EXISTS "Service role can update reviews" ON public.reviews;
-  DROP POLICY IF EXISTS "Admins can update reviews" ON public.reviews;
-  DROP POLICY IF EXISTS "Admins can delete reviews" ON public.reviews;
-END $$;
+CREATE POLICY "Reviews read tenant isolated" ON public.reviews
+FOR SELECT USING (
+    status = 'approved'
+    AND deleted_at IS NULL
+    AND (
+        workshop_id = public.current_workshop_id()
+        OR auth.uid() IS NULL
+    )
+);
 
-DO $$ BEGIN
-  CREATE POLICY "Admins can update reviews" ON public.reviews FOR UPDATE USING (auth.role() = 'service_role');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
+CREATE POLICY "Reviews insert tenant isolated" ON public.reviews
+FOR INSERT WITH CHECK (
+    workshop_id = public.current_workshop_id()
+);
 
-DO $$ BEGIN
-  CREATE POLICY "Admins can delete reviews" ON public.reviews FOR DELETE USING (auth.role() = 'service_role');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
+CREATE POLICY "Reviews admin tenant isolated" ON public.reviews
+FOR ALL USING (
+    workshop_id = public.current_workshop_id()
+    AND public.current_user_role() IN ('admin', 'super_admin')
+);
 
 -- ─── Invoices ───────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.invoices (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id          UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    workshop_id      UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
     quote_id         UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
     invoice_number   VARCHAR UNIQUE,
     customer_name    VARCHAR NOT NULL,
@@ -317,14 +382,27 @@ CREATE TABLE IF NOT EXISTS public.invoices (
 ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own invoices" ON public.invoices;
-CREATE POLICY "Users can view own invoices" ON public.invoices FOR SELECT USING (auth.uid() = user_id AND deleted_at IS NULL);
-
 DROP POLICY IF EXISTS "Service role can manage invoices" ON public.invoices;
-CREATE POLICY "Service role can manage invoices" ON public.invoices FOR ALL USING (auth.role() = 'service_role');
 
--- ─── FAQs ───────────────────────────────────────────────────────────────────────
+CREATE POLICY "Invoices tenant isolated" ON public.invoices
+FOR SELECT USING (
+    workshop_id = public.current_workshop_id()
+    AND (
+        public.current_user_role() IN ('admin', 'super_admin')
+        OR user_id = auth.uid()
+    )
+);
+
+CREATE POLICY "Invoices modify tenant isolated" ON public.invoices
+FOR ALL USING (
+    workshop_id = public.current_workshop_id()
+    AND public.current_user_role() IN ('admin', 'super_admin')
+);
+
+-- ─── FAQs (global — super_admin managed) ────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.faqs (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workshop_id   UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
     question      TEXT NOT NULL,
     answer        TEXT NOT NULL,
     category      TEXT DEFAULT 'general',
@@ -337,15 +415,22 @@ CREATE TABLE IF NOT EXISTS public.faqs (
 ALTER TABLE public.faqs ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Anyone can read active FAQs" ON public.faqs;
-CREATE POLICY "Anyone can read active FAQs" ON public.faqs FOR SELECT USING (is_active = true);
-
 DROP POLICY IF EXISTS "Admins can manage FAQs" ON public.faqs;
-CREATE POLICY "Admins can manage FAQs" ON public.faqs FOR ALL USING (public.is_admin());
+DROP POLICY IF EXISTS "FAQs manage super admin" ON public.faqs;
 
--- ─── Notifications ──────────────────────────────────────────────────────────────
+CREATE POLICY "FAQs read global" ON public.faqs
+FOR SELECT USING (is_active = true);
+
+CREATE POLICY "FAQs manage staff" ON public.faqs FOR ALL USING (
+  public.current_user_role() IN ('admin', 'super_admin')
+  AND (public.current_workshop_id() = workshop_id OR public.is_super_admin())
+);
+
+-- ─── Notifications (tenant-isolated) ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.notifications (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id      UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    workshop_id  UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
     type         TEXT NOT NULL CHECK (type IN ('quote', 'appointment', 'lead', 'review', 'work_order')),
     reference_id UUID,
     title        TEXT NOT NULL,
@@ -357,23 +442,38 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own notifications" ON public.notifications;
-CREATE POLICY "Users can view own notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
-
 DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
-CREATE POLICY "Users can update own notifications" ON public.notifications FOR UPDATE USING (auth.uid() = user_id);
-
 DROP POLICY IF EXISTS "Service role can manage notifications" ON public.notifications;
-CREATE POLICY "Service role can manage notifications" ON public.notifications FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Notifications tenant isolated" ON public.notifications
+FOR SELECT USING (
+    workshop_id = public.current_workshop_id()
+    AND (
+        user_id = auth.uid()
+        OR public.current_user_role() IN ('admin', 'super_admin')
+    )
+);
+
+CREATE POLICY "Notifications update tenant isolated" ON public.notifications
+FOR UPDATE USING (
+    workshop_id = public.current_workshop_id()
+    AND user_id = auth.uid()
+);
 
 -- ─── Notification Helpers ───────────────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION public.get_admin_ids()
+CREATE OR REPLACE FUNCTION public.get_admin_ids(p_workshop_id UUID)
 RETURNS TABLE(id UUID) AS $$
 BEGIN
-    RETURN QUERY SELECT p.id FROM public.profiles p WHERE p.role = 'admin';
+    IF p_workshop_id IS NULL THEN
+        RETURN;
+    END IF;
+    RETURN QUERY SELECT p.id FROM public.profiles p
+    WHERE p.role = 'admin' AND p.workshop_id = p_workshop_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION public.notify_admins(
+    p_workshop_id UUID,
     p_type TEXT,
     p_reference_id UUID,
     p_title TEXT,
@@ -383,10 +483,13 @@ RETURNS void AS $$
 DECLARE
     admin_id UUID;
 BEGIN
-    FOR admin_id IN SELECT id FROM public.get_admin_ids()
+    IF p_workshop_id IS NULL THEN
+        RETURN;
+    END IF;
+    FOR admin_id IN SELECT id FROM public.get_admin_ids(p_workshop_id)
     LOOP
-        INSERT INTO public.notifications (user_id, type, reference_id, title, message)
-        VALUES (admin_id, p_type, p_reference_id, p_title, p_message);
+        INSERT INTO public.notifications (user_id, workshop_id, type, reference_id, title, message)
+        VALUES (admin_id, p_workshop_id, p_type, p_reference_id, p_title, p_message);
     END LOOP;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -398,12 +501,30 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+CREATE OR REPLACE FUNCTION public.notify_user(
+    p_user_id UUID,
+    p_workshop_id UUID,
+    p_type TEXT,
+    p_reference_id UUID,
+    p_title TEXT,
+    p_message TEXT DEFAULT NULL
+)
+RETURNS void AS $$
+BEGIN
+    IF p_workshop_id IS NULL THEN
+        RETURN;
+    END IF;
+    INSERT INTO public.notifications (user_id, workshop_id, type, reference_id, title, message)
+    VALUES (p_user_id, p_workshop_id, p_type, p_reference_id, p_title, p_message);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- ─── Notification Triggers ───────────────────────────────────────────────────────
--- Trigger: New Quote Submitted
 CREATE OR REPLACE FUNCTION public.on_quote_insert_notify()
 RETURNS TRIGGER AS $$
 BEGIN
     PERFORM public.notify_admins(
+        NEW.workshop_id,
         'quote',
         NEW.id,
         'New quote request',
@@ -418,12 +539,12 @@ CREATE TRIGGER on_quote_insert_notification
     AFTER INSERT ON public.quotes
     FOR EACH ROW EXECUTE FUNCTION public.on_quote_insert_notify();
 
--- Trigger: Quote Accepted
 CREATE OR REPLACE FUNCTION public.on_quote_accepted_notify()
 RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.status = 'accepted' AND OLD.status != 'accepted' THEN
         PERFORM public.notify_admins(
+            NEW.workshop_id,
             'quote',
             NEW.id,
             'Quote accepted',
@@ -439,7 +560,6 @@ CREATE TRIGGER on_quote_update_notification
     AFTER UPDATE ON public.quotes
     FOR EACH ROW EXECUTE FUNCTION public.on_quote_accepted_notify();
 
--- Trigger: New Appointment Booked
 CREATE OR REPLACE FUNCTION public.on_appointment_insert_notify()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -449,6 +569,7 @@ BEGIN
     FROM public.profiles p WHERE p.id = NEW.user_id;
 
     PERFORM public.notify_admins(
+        NEW.workshop_id,
         'appointment',
         NEW.id,
         'New appointment booked',
@@ -463,7 +584,6 @@ CREATE TRIGGER on_appointment_insert_notification
     AFTER INSERT ON public.appointments
     FOR EACH ROW EXECUTE FUNCTION public.on_appointment_insert_notify();
 
--- Trigger: Appointment Cancelled
 CREATE OR REPLACE FUNCTION public.on_appointment_cancelled_notify()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -474,6 +594,7 @@ BEGIN
         FROM public.profiles p WHERE p.id = NEW.user_id;
 
         PERFORM public.notify_admins(
+            NEW.workshop_id,
             'appointment',
             NEW.id,
             'Appointment cancelled',
@@ -489,23 +610,6 @@ CREATE TRIGGER on_appointment_update_notification
     AFTER UPDATE ON public.appointments
     FOR EACH ROW EXECUTE FUNCTION public.on_appointment_cancelled_notify();
 
--- Helper function to notify a single user
-CREATE OR REPLACE FUNCTION public.notify_user(
-    p_user_id UUID,
-    p_type TEXT,
-    p_reference_id UUID,
-    p_title TEXT,
-    p_message TEXT DEFAULT NULL
-)
-RETURNS void AS $$
-BEGIN
-    INSERT INTO public.notifications (user_id, type, reference_id, title, message)
-    VALUES (p_user_id, p_type, p_reference_id, p_title, p_message);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Trigger: Appointment Proposed (notify client)
--- Fires when status becomes 'proposed' OR when proposed fields change on an already-proposed appointment
 CREATE OR REPLACE FUNCTION public.on_appointment_proposed_notify()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -516,6 +620,7 @@ BEGIN
     ) THEN
         PERFORM public.notify_user(
             NEW.user_id,
+            NEW.workshop_id,
             'appointment',
             NEW.id,
             'New date proposed',
@@ -531,7 +636,6 @@ CREATE TRIGGER on_appointment_proposed_notification
     AFTER UPDATE ON public.appointments
     FOR EACH ROW EXECUTE FUNCTION public.on_appointment_proposed_notify();
 
--- Trigger: Appointment Confirmed (notify both parties)
 CREATE OR REPLACE FUNCTION public.on_appointment_confirmed_notify()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -540,6 +644,7 @@ BEGIN
     IF NEW.status = 'confirmed' AND OLD.status != 'confirmed' THEN
         PERFORM public.notify_user(
             NEW.user_id,
+            NEW.workshop_id,
             'appointment',
             NEW.id,
             'Appointment confirmed',
@@ -550,6 +655,7 @@ BEGIN
         FROM public.profiles p WHERE p.id = NEW.user_id;
 
         PERFORM public.notify_admins(
+            NEW.workshop_id,
             'appointment',
             NEW.id,
             'Appointment confirmed',
@@ -565,7 +671,6 @@ CREATE TRIGGER on_appointment_confirmed_notification
     AFTER UPDATE ON public.appointments
     FOR EACH ROW EXECUTE FUNCTION public.on_appointment_confirmed_notify();
 
--- Trigger: Proposal Declined (notify admin)
 CREATE OR REPLACE FUNCTION public.on_appointment_declined_proposal_notify()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -576,6 +681,7 @@ BEGIN
         FROM public.profiles p WHERE p.id = NEW.user_id;
 
         PERFORM public.notify_admins(
+            NEW.workshop_id,
             'appointment',
             NEW.id,
             'Proposal declined',
@@ -591,11 +697,11 @@ CREATE TRIGGER on_appointment_declined_proposal_notification
     AFTER UPDATE ON public.appointments
     FOR EACH ROW EXECUTE FUNCTION public.on_appointment_declined_proposal_notify();
 
--- Trigger: New Review Submitted
 CREATE OR REPLACE FUNCTION public.on_review_insert_notify()
 RETURNS TRIGGER AS $$
 BEGIN
     PERFORM public.notify_admins(
+        NEW.workshop_id,
         'review',
         NEW.id,
         'New review submitted',
@@ -613,6 +719,7 @@ CREATE TRIGGER on_review_insert_notification
 -- ─── Receipts ────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.receipts (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workshop_id    UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
     user_id        UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     quote_id       UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
     invoice_number TEXT,
@@ -651,6 +758,7 @@ ALTER TABLE public.receipts
 -- ─── Expenses ────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.expenses (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workshop_id  UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
     user_id      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     amount       NUMERIC NOT NULL CHECK (amount >= 0),
     category     TEXT NOT NULL CHECK (category IN ('Parts', 'Fuel', 'Tools', 'Rent', 'Data', 'Misc')),
@@ -743,6 +851,7 @@ CREATE POLICY "Service role can manage SEO locations" ON public.seo_locations FO
 -- ─── Analytics ───────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.analytics (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workshop_id   UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
     user_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     month         INT NOT NULL CHECK (month >= 1 AND month <= 12),
     year          INT NOT NULL,
@@ -764,6 +873,7 @@ CREATE POLICY "Service role can manage analytics" ON public.analytics FOR ALL US
 -- ─── Appointments (Jobs) ────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.appointments (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workshop_id    UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
     user_id        UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     quote_id       UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
     service_type   TEXT NOT NULL,
@@ -785,18 +895,23 @@ ALTER TABLE public.appointments ADD COLUMN IF NOT EXISTS customer_name TEXT;
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own appointments" ON public.appointments;
-CREATE POLICY "Users can view own appointments" ON public.appointments FOR SELECT USING (auth.uid() = user_id);
-
 DROP POLICY IF EXISTS "Service role can manage appointments" ON public.appointments;
-CREATE POLICY "Service role can manage appointments" ON public.appointments FOR ALL USING (auth.role() = 'service_role');
-
 DROP POLICY IF EXISTS "Admins can view all appointments" ON public.appointments;
-CREATE POLICY "Admins can view all appointments" ON public.appointments
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+
+CREATE POLICY "Appointments tenant isolated" ON public.appointments
+FOR SELECT USING (workshop_id = public.current_workshop_id() AND (public.current_user_role() IN ('admin', 'super_admin') OR user_id = auth.uid()));
+
+CREATE POLICY "Appointments insert valid workshop" ON public.appointments
+FOR INSERT WITH CHECK (workshop_id IS NOT NULL AND EXISTS (SELECT 1 FROM public.workshops WHERE id = workshop_id) AND (auth.uid() IS NULL OR workshop_id = public.current_workshop_id() OR public.is_super_admin()));
+
+CREATE POLICY "Appointments update tenant isolated" ON public.appointments
+FOR UPDATE USING (workshop_id = public.current_workshop_id() AND public.current_user_role() IN ('admin', 'super_admin'));
+
+CREATE POLICY "Appointments update own" ON public.appointments
+FOR UPDATE USING (user_id = auth.uid());
+
+CREATE POLICY "Appointments delete tenant isolated" ON public.appointments
+FOR DELETE USING (workshop_id = public.current_workshop_id() AND public.current_user_role() IN ('admin', 'super_admin'));
 
 ALTER TABLE public.appointments ADD COLUMN IF NOT EXISTS duration_minutes INTEGER DEFAULT 60;
 ALTER TABLE public.appointments ADD COLUMN IF NOT EXISTS proposed_date DATE;
@@ -811,6 +926,7 @@ ALTER TABLE public.appointments ADD CONSTRAINT appointments_status_check
 -- ─── Work Orders (Workshop Engine) ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.work_orders (
     id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workshop_id              UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
     quote_id                 UUID NOT NULL REFERENCES public.quotes(id) ON DELETE CASCADE,
     appointment_id           UUID REFERENCES public.appointments(id) ON DELETE SET NULL,
     status                   TEXT NOT NULL DEFAULT 'checked_in' CHECK (status IN ('checked_in', 'in_progress', 'awaiting_parts', 'revision_pending', 'ready_for_pickup', 'completed')),
@@ -829,30 +945,22 @@ CREATE TABLE IF NOT EXISTS public.work_orders (
 ALTER TABLE public.work_orders ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Clients can view own work orders" ON public.work_orders;
-CREATE POLICY "Clients can view own work orders" ON public.work_orders
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.quotes q
-      WHERE q.id = work_orders.quote_id AND q.user_id = auth.uid()
-    )
-  );
-
 DROP POLICY IF EXISTS "Admins can manage work orders" ON public.work_orders;
-CREATE POLICY "Admins can manage work orders" ON public.work_orders
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = auth.uid() AND p.role = 'admin'
-    )
-  );
-
 DROP POLICY IF EXISTS "Service role full access on work orders" ON public.work_orders;
-CREATE POLICY "Service role full access on work orders" ON public.work_orders
-  FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Work orders tenant isolated" ON public.work_orders
+FOR SELECT USING (workshop_id = public.current_workshop_id() AND (public.current_user_role() IN ('admin', 'super_admin') OR EXISTS (SELECT 1 FROM public.quotes q WHERE q.id = work_orders.quote_id AND q.user_id = auth.uid())));
+
+CREATE POLICY "Work orders modify tenant isolated" ON public.work_orders
+FOR ALL USING (workshop_id = public.current_workshop_id() AND public.current_user_role() IN ('admin', 'super_admin'));
+
+CREATE POLICY "Work orders update own" ON public.work_orders
+FOR UPDATE USING (EXISTS (SELECT 1 FROM public.quotes q WHERE q.id = work_orders.quote_id AND q.user_id = auth.uid()) AND workshop_id = public.current_workshop_id());
 
 -- ─── Work Order Events (Audit Trail) ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.work_order_events (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workshop_id     UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
     work_order_id   UUID NOT NULL REFERENCES public.work_orders(id) ON DELETE CASCADE,
     event_type      TEXT NOT NULL CHECK (event_type IN ('status_change', 'revision_submitted', 'revision_accepted', 'revision_declined', 'note_added')),
     old_status      TEXT,
@@ -894,6 +1002,7 @@ BEGIN
     IF NEW.status != OLD.status THEN
         PERFORM public.notify_user(
             (SELECT user_id FROM public.quotes WHERE id = NEW.quote_id),
+            NEW.workshop_id,
             'work_order',
             NEW.id,
             CASE NEW.status
@@ -922,6 +1031,7 @@ BEGIN
     IF NEW.status = 'revision_pending' AND OLD.status != 'revision_pending' THEN
         PERFORM public.notify_user(
             (SELECT user_id FROM public.quotes WHERE id = NEW.quote_id),
+            NEW.workshop_id,
             'work_order',
             NEW.id,
             'Additional work required',
@@ -949,6 +1059,7 @@ BEGIN
         WHERE p.id = (SELECT user_id FROM public.quotes WHERE id = NEW.quote_id);
 
         PERFORM public.notify_admins(
+            NEW.workshop_id,
             'work_order',
             NEW.id,
             CASE WHEN NEW.revision_approved THEN 'Additional work accepted' ELSE 'Additional work declined' END,
@@ -967,6 +1078,7 @@ CREATE TRIGGER on_work_order_revision_response_notification
 -- ─── Working Hours ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.working_hours (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workshop_id UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
     day_of_week INT NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
     start_time  TIME NOT NULL,
     end_time    TIME NOT NULL,
@@ -987,6 +1099,7 @@ CREATE POLICY "Service role can manage working hours" ON public.working_hours FO
 -- ─── Blocked Slots ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.blocked_slots (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workshop_id     UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
     mechanic_id     UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     start_datetime  TIMESTAMP WITH TIME ZONE NOT NULL,
     end_datetime    TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -998,15 +1111,13 @@ CREATE TABLE IF NOT EXISTS public.blocked_slots (
 ALTER TABLE public.blocked_slots ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role can manage blocked slots" ON public.blocked_slots;
-CREATE POLICY "Service role can manage blocked slots" ON public.blocked_slots FOR ALL USING (auth.role() = 'service_role');
-
 DROP POLICY IF EXISTS "Admins can read blocked slots" ON public.blocked_slots;
-CREATE POLICY "Admins can read blocked slots" ON public.blocked_slots FOR SELECT USING (
-    EXISTS (
-        SELECT 1 FROM public.profiles 
-        WHERE id = auth.uid() AND role = 'admin'
-    )
-);
+
+CREATE POLICY "Blocked slots read by workshop" ON public.blocked_slots
+FOR SELECT USING (EXISTS (SELECT 1 FROM public.workshops WHERE id = workshop_id));
+
+CREATE POLICY "Blocked slots tenant isolated" ON public.blocked_slots
+FOR ALL USING (workshop_id = public.current_workshop_id() AND public.current_user_role() IN ('admin', 'super_admin'));
 
 -- ─── Auto-create profile row on signup ──────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -1017,7 +1128,7 @@ BEGIN
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-        'client'
+        COALESCE(NEW.raw_user_meta_data->>'role', 'client')
     );
     RETURN NEW;
 END;
@@ -1053,7 +1164,7 @@ CREATE INDEX IF NOT EXISTS idx_leads_created_at ON public.leads(created_at);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON public.leads(status);
 CREATE INDEX IF NOT EXISTS idx_reviews_status ON public.reviews(status);
 CREATE INDEX IF NOT EXISTS idx_vehicles_user_id ON public.vehicles(user_id);
-CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
+-- CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email); -- table removed
 CREATE INDEX IF NOT EXISTS idx_working_hours_day ON public.working_hours(day_of_week);
 CREATE INDEX IF NOT EXISTS idx_blocked_slots_mechanic_id ON public.blocked_slots(mechanic_id);
 CREATE INDEX IF NOT EXISTS idx_blocked_slots_start_datetime ON public.blocked_slots(start_datetime);
@@ -1085,7 +1196,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ─── Business Settings ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.business_settings (
-    id                  TEXT PRIMARY KEY DEFAULT 'config',
+    workshop_id         UUID PRIMARY KEY REFERENCES public.workshops(id) ON DELETE CASCADE,
     primary_color       TEXT NOT NULL DEFAULT '#3B82F6',
     accent_color        TEXT NOT NULL DEFAULT '#10B981',
     favicon_url         TEXT,
@@ -1112,10 +1223,17 @@ CREATE TABLE IF NOT EXISTS public.business_settings (
 ALTER TABLE public.business_settings ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Anyone can read business settings" ON public.business_settings;
-CREATE POLICY "Anyone can read business settings" ON public.business_settings FOR SELECT USING (true);
-
 DROP POLICY IF EXISTS "Admins can manage business settings" ON public.business_settings;
-CREATE POLICY "Admins can manage business settings" ON public.business_settings FOR ALL USING (public.is_admin());
+
+CREATE POLICY "Business settings read public" ON public.business_settings
+FOR SELECT USING (EXISTS (SELECT 1 FROM public.workshops WHERE id = workshop_id));
+
+CREATE POLICY "Business settings modify tenant isolated" ON public.business_settings
+FOR ALL USING (
+    (workshop_id = public.current_workshop_id()
+     AND public.current_user_role() IN ('admin', 'super_admin'))
+    OR public.is_super_admin()
+);
 
 ALTER TABLE public.business_settings
   ADD COLUMN IF NOT EXISTS site_name TEXT DEFAULT 'Autofields Technics',
@@ -1125,4 +1243,98 @@ ALTER TABLE public.business_settings
   ADD COLUMN IF NOT EXISTS hero_description TEXT DEFAULT 'From emergency roadside assistance to expert workshop repairs in {city}.',
   ADD COLUMN IF NOT EXISTS contact_email TEXT DEFAULT 'info@autofieldstechnics.co.za',
   ADD COLUMN IF NOT EXISTS document_footer TEXT,
-  ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS company_name TEXT,
+  ADD COLUMN IF NOT EXISTS logo_url TEXT,
+  ADD COLUMN IF NOT EXISTS address TEXT,
+  ADD COLUMN IF NOT EXISTS vat_number TEXT,
+  ADD COLUMN IF NOT EXISTS registration_number TEXT,
+  ADD COLUMN IF NOT EXISTS bank_name TEXT,
+  ADD COLUMN IF NOT EXISTS account_holder TEXT,
+  ADD COLUMN IF NOT EXISTS account_number TEXT,
+  ADD COLUMN IF NOT EXISTS branch_code TEXT,
+  ADD COLUMN IF NOT EXISTS terms_conditions TEXT,
+  ADD COLUMN IF NOT EXISTS hourly_rate NUMERIC(10,2),
+  ADD COLUMN IF NOT EXISTS callout_fee NUMERIC(10,2),
+  ADD COLUMN IF NOT EXISTS diagnostic_fee NUMERIC(10,2),
+  ADD COLUMN IF NOT EXISTS default_deposit_percent NUMERIC(5,2);
+
+-- ─── Quote Deposit & Expiry Fields ──────────────────────────────────────────────
+ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS deposit_percent NUMERIC(5,2);
+ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS deposit_amount NUMERIC(10,2);
+ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS expiry_date DATE;
+
+-- ─── Email Logs ─────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.email_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workshop_id UUID REFERENCES public.workshops(id) ON DELETE SET NULL,
+  template_key TEXT NOT NULL,
+  to_email TEXT NOT NULL,
+  from_display TEXT,
+  subject TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'sent' CHECK (status IN ('sent', 'failed')),
+  error_message TEXT,
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.email_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Staff can view their workshop email logs" ON public.email_logs
+FOR SELECT USING (
+  workshop_id = public.current_workshop_id()
+  AND public.current_user_role() IN ('admin', 'super_admin')
+);
+
+CREATE POLICY "Super admins can view all email logs" ON public.email_logs
+FOR SELECT USING (public.is_super_admin());
+
+-- ─── Email Templates ───────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.email_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workshop_id UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
+  template_key TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  html_body TEXT NOT NULL,
+  text_body TEXT,
+  is_default BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(workshop_id, template_key)
+);
+
+ALTER TABLE public.email_templates ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Staff can manage their workshop email templates" ON public.email_templates
+FOR ALL USING (
+  workshop_id = public.current_workshop_id()
+  AND public.current_user_role() IN ('admin', 'super_admin')
+);
+
+CREATE POLICY "Super admins can manage all templates" ON public.email_templates
+FOR ALL USING (public.is_super_admin());
+
+-- ─── Storage RLS Policies ──────────────────────────────────────────────────────
+-- Bucket: documents (quote & invoice PDFs — admin only, customer via API route)
+CREATE POLICY "Documents read by workshop admin" ON storage.objects FOR SELECT USING (
+  bucket_id = 'documents'
+  AND auth.role() = 'authenticated'
+  AND (public.is_super_admin() OR (storage.foldername(name))[1] = public.current_workshop_id()::text)
+);
+
+CREATE POLICY "Documents insert by admin" ON storage.objects FOR INSERT WITH CHECK (
+  bucket_id = 'documents'
+  AND auth.role() = 'authenticated'
+  AND public.current_user_role() IN ('admin', 'super_admin')
+);
+
+-- Bucket: logos (workshop branding — public read, admin write)
+CREATE POLICY "Logos read public" ON storage.objects FOR SELECT USING (
+  bucket_id = 'logos'
+);
+
+CREATE POLICY "Logos insert by admin" ON storage.objects FOR INSERT WITH CHECK (
+  bucket_id = 'logos'
+  AND auth.role() = 'authenticated'
+  AND public.current_user_role() IN ('admin', 'super_admin')
+);

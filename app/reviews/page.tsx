@@ -2,18 +2,26 @@ export const dynamic = 'force-dynamic'
 
 import type { Metadata } from 'next'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { ServicesHero } from '@/components/features/ServicesHero'
 import { ReviewForm } from '@/components/features/ReviewForm'
 import { ReviewCard } from '@/components/ReviewCard'
-import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
+import { getMergedSiteConfig } from '@/lib/get-site-config'
+import { replaceVars } from '@/lib/site-config'
 
-export const metadata: Metadata = {
-  title: `Customer Reviews | ${SITE_CONFIG.name}`,
-  description: `Read verified customer reviews for ${SITE_CONFIG.name}. ${SITE_CONFIG.business.yearsOfExperience} years of experience in ${SITE_CONFIG.city}.`,
+type ReviewRow = Database['public']['Tables']['reviews']['Row']
+
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await getMergedSiteConfig()
+  return {
+    title: `Customer Reviews | ${config.name}`,
+    description: `Read verified customer reviews for ${config.name}. Professional mobile mechanic services in ${config.city}.`,
+  }
 }
 
 export default async function ReviewsPage() {
+  const config = await getMergedSiteConfig()
   const { data: reviews } = await (supabase as any)
     .from('reviews')
     .select('*')
@@ -60,18 +68,18 @@ export default async function ReviewsPage() {
                 Recent Reviews
               </h2>
               <p className="text-small text-grey mb-6">
-                {replaceVars(SITE_CONFIG.reviews.subtitle, { city: SITE_CONFIG.city, name: SITE_CONFIG.name })}
+                {replaceVars('What {city} drivers are saying about {name}.', { city: config.city, name: config.name })}
               </p>
               <div className="flex flex-col gap-4">
                 {reviews && reviews.length > 0 ? (
-                  reviews.map((review: any) => (
+                  reviews.map((review: ReviewRow) => (
                     <ReviewCard
                       key={review.id}
                       id={review.id}
-                      customerName={review.customer_name}
+                      customerName={review.customer_name!}
                       rating={review.rating}
-                      reviewText={review.comment}
-                      date={new Date(review.created_at).toLocaleDateString()}
+                      reviewText={review.comment!}
+                      date={new Date(review.created_at!).toLocaleDateString()}
                       vehicleServiced={undefined}
                     />
                   ))

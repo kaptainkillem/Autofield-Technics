@@ -1,12 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { getMergedSiteConfig } from '@/lib/get-site-config'
 
-export const metadata: Metadata = {
-  title: `Terms of Service | ${SITE_CONFIG.name}`,
+export async function generateMetadata() {
+  const config = await getMergedSiteConfig()
+  return {
+    title: `Terms of Service | ${config.name}`,
+  }
 }
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const config = await getMergedSiteConfig()
   return (
     <>
       <section className="bg-grey-light px-4 pt-16 md:px-20 md:pt-20">
@@ -28,12 +32,12 @@ export default function TermsPage() {
         <div className="mx-auto max-w-4xl flex flex-col gap-8">
           <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">1. Acceptance of Terms</h2>
-            <p className="text-grey-dark leading-relaxed">By accessing or using the services provided by {SITE_CONFIG.name}, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.</p>
+            <p className="text-grey-dark leading-relaxed">By accessing or using the services provided by {config.name}, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.</p>
           </div>
 
           <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">2. Services</h2>
-            <p className="text-grey-dark leading-relaxed">{SITE_CONFIG.name} provides mobile and workshop-based automotive mechanical repair, maintenance, and diagnostic services in {SITE_CONFIG.city}, {SITE_CONFIG.region}. All services are subject to availability and scheduling confirmation.</p>
+            <p className="text-grey-dark leading-relaxed">{config.name} provides mobile and workshop-based automotive mechanical repair, maintenance, and diagnostic services. All services are subject to availability and scheduling confirmation.</p>
           </div>
 
           <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
@@ -43,7 +47,7 @@ export default function TermsPage() {
 
           <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">4. Warranties and Liability</h2>
-            <p className="text-grey-dark leading-relaxed">{SITE_CONFIG.name} warrants that all workmanship will be performed to industry standards. Our liability is limited to the cost of the service performed. We are not liable for pre-existing conditions or damage caused by factors outside our control.</p>
+            <p className="text-grey-dark leading-relaxed">{config.name} warrants that all workmanship will be performed to industry standards. Our liability is limited to the cost of the service performed. We are not liable for pre-existing conditions or damage caused by factors outside our control.</p>
           </div>
 
           <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
@@ -53,7 +57,7 @@ export default function TermsPage() {
 
           <div className="bg-grey-lightest border border-primary/20 p-6 rounded-base flex flex-col gap-4">
             <h2 className="text-2xl font-bold text-primary">6. Contact</h2>
-            <p className="text-grey-dark leading-relaxed">For questions about these terms, contact us at <Link href="/quote" className="text-primary no-underline hover:underline">our quote page</Link> or call <a href={`tel:${SITE_CONFIG.phone}`} className="text-primary no-underline hover:underline">{SITE_CONFIG.phone}</a>.</p>
+            <p className="text-grey-dark leading-relaxed">For questions about these terms, contact us at <Link href="/quote" className="text-primary no-underline hover:underline">our quote page</Link> or call <a href={`tel:${config.phone}`} className="text-primary no-underline hover:underline">{config.phone}</a>.</p>
           </div>
 
           <p className="text-sm text-grey mt-4">Last updated: June 2026</p>

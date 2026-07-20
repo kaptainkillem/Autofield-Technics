@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { checkRateLimit } from '@/lib/rate-limiter'
 import { z } from 'zod'
 import { parseISO, getDay, format } from 'date-fns'
 import { toZonedTime, fromZonedTime } from 'date-fns-tz'
 
-const TIMEZONE = 'Africa/Johannesburg'
+const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE || 'Africa/Johannesburg'
 
 const QuerySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  workshop_id: z.string().uuid('Workshop ID is required'),
 })
 
 /**
@@ -88,19 +89,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid date format. Use YYYY-MM-DD.' }, { status: 400 })
     }
 
-    const { date } = parsed.data
+    const { date, workshop_id } = parsed.data
 
     // 2. Parse the SAST date and get day of week
     const sastDate = parseISO(date)
     const dayOfWeek = getDay(sastDate) // 0 = Sunday, 1 = Monday, ...
 
-    const supabase = createSupabaseAdminClient()
+    const supabase = await createSupabaseServerClient()
 
     // 3. Query working_hours for this day
     const { data: workingHour } = await supabase
       .from('working_hours')
       .select('start_time, end_time, is_active')
       .eq('day_of_week', dayOfWeek)
+      .eq('workshop_id', workshop_id)
       .single()
 
     // If no working hours defined or closed, return empty
@@ -116,6 +118,7 @@ export async function GET(request: NextRequest) {
       .from('appointments')
       .select('scheduled_time, duration_minutes, status')
       .eq('scheduled_date', date)
+      .eq('workshop_id', workshop_id)
       .neq('status', 'cancelled')
 
     // 6. Remove slots occupied by appointments
@@ -139,6 +142,7 @@ export async function GET(request: NextRequest) {
     const { data: blockedSlots } = await supabase
       .from('blocked_slots')
       .select('start_datetime, end_datetime')
+      .eq('workshop_id', workshop_id)
       .lt('start_datetime', sastEnd.toISOString())
       .gt('end_datetime', sastStart.toISOString())
 

@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import Link from 'next/link'
 import { Wrench, ArrowRight, Calendar, Clock, User } from 'lucide-react'
 import { format, isToday, isTomorrow, parseISO } from 'date-fns'
@@ -36,13 +36,22 @@ function formatDateTime(dateStr: string, timeStr: string | null): string {
 }
 
 export async function UpcomingJobsWidget() {
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
+
+  const { data: { session } } = await supabase.auth.getSession()
+  const workshopId = session ? (() => {
+    try {
+      const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+      return payload?.app_metadata?.workshop_id as string | null
+    } catch { return null }
+  })() : null
 
   const todayStr = format(new Date(), 'yyyy-MM-dd')
 
   const { data: jobs } = await supabase
     .from('appointments')
     .select('id, scheduled_date, scheduled_time, status, service_type, notes')
+    .eq('workshop_id', workshopId as string)
     .gte('scheduled_date', todayStr)
     .neq('status', 'cancelled')
     .order('scheduled_date', { ascending: true })

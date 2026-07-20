@@ -21,4 +21,7 @@ export interface PDFDocumentData {
   subtotal: number
   total: number
   paymentMethod: string | null
+  depositPercent: number
+  depositAmount: number | null
+  expiryDate: string | null
 }

@@ -1,17 +1,21 @@
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { getMergedSiteConfig } from '@/lib/get-site-config'
 import { FAQAccordion } from '@/components/FAQAccordion'
 import { HelpCircle } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata = {
-  title: `Frequently Asked Questions | ${SITE_CONFIG.name}`,
-  description: `Find answers to common questions about ${SITE_CONFIG.name} mobile mechanic services in ${SITE_CONFIG.city}.`,
+export async function generateMetadata() {
+  const config = await getMergedSiteConfig()
+  return {
+    title: `Frequently Asked Questions | ${config.name}`,
+    description: `Find answers to common questions about ${config.name} mobile mechanic services.`,
+  }
 }
 
 export default async function FAQPage() {
-  const supabase = createSupabaseAdminClient()
+  const config = await getMergedSiteConfig()
+  const supabase = await createSupabaseServerClient()
   const { data: faqs } = await supabase
     .from('faqs')
     .select('*')
@@ -37,7 +41,7 @@ export default async function FAQPage() {
           </div>
           <h1 className="text-3xl md:text-4xl font-black text-white mb-4 tracking-tight">Frequently Asked Questions</h1>
           <p className="text-white/80 max-w-xl text-sm md:text-base">
-            Everything you need to know about our mobile mechanic and workshop services in {SITE_CONFIG.city}.
+            Everything you need to know about our mobile mechanic and workshop services.
           </p>
         </div>
       </section>

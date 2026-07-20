@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { z } from 'zod'
 import { randomUUID } from 'crypto'
 
@@ -51,11 +51,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid body. Expected: { action: "accept" | "decline" }' }, { status: 400 })
     }
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     const { data: workOrder, error: fetchError } = await adminClient
       .from('work_orders')
-      .select('id, status, quote_id, additional_work_items, additional_work_total')
+      .select('id, status, quote_id, additional_work_items, additional_work_total, workshop_id')
       .eq('id', id)
       .single()
 
@@ -136,6 +136,7 @@ export async function PATCH(
     // Record audit event
     await adminClient.from('work_order_events').insert({
       work_order_id: id,
+      workshop_id: workOrder.workshop_id!,
       event_type: body.action === 'accept' ? 'revision_accepted' : 'revision_declined',
       old_status: 'revision_pending',
       new_status: 'in_progress',

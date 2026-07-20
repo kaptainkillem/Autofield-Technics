@@ -7,12 +7,13 @@ import { supabase } from '@/lib/supabase';
 import { supabaseHelpers } from '@/lib/supabase';
 import { Database } from '@/types/database';
 import { SiteLogo } from '@/components/common/SiteLogo';
-import { SITE_CONFIG } from '@/lib/site-config';
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
 import { sanitizeFormError } from '@/lib/auth-utils';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
 export default function OnboardingVehiclePage() {
+  const config = useSiteConfig()
   const router = useRouter();
 
   const [make, setMake] = useState('');
@@ -93,7 +94,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   setLoading(false);
 
   const { data: { user: currentUser } } = await supabase.auth.getUser();
-  const role = currentUser?.user_metadata?.role ?? 'client';
+  const role = currentUser?.app_metadata?.role ?? 'client';
   router.push(role === 'admin' ? '/dashboard/admin' : '/dashboard');
 };
 
@@ -107,11 +108,11 @@ const handleSubmit = async (e: React.FormEvent) => {
           Almost<br />There
         </h1>
         <p className="mt-4 text-white/80 text-base leading-relaxed">
-          Add your vehicle details so {SITE_CONFIG.name} can provide you with accurate service and quotes.
+          Add your vehicle details so {config.name} can provide you with accurate service and quotes.
         </p>
         <div className="mt-8 hidden md:block">
           <p className="text-white/60 text-sm">
-            &ldquo;{SITE_CONFIG.tagline}&rdquo;
+            &ldquo;{config.tagline}&rdquo;
           </p>
         </div>
       </div>

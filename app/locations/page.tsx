@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { ServicesHero } from '@/components/features/ServicesHero'
 import { Search, ChevronRight, ArrowLeft, MapPin, Wrench, Building2, Compass, Globe, ChevronLeft } from 'lucide-react'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider'
 
 type SEORecord = {
   id: string

@@ -134,4 +134,11 @@ body {
   h4 {
     color: var(--color-grey);
   }
+
+  input::placeholder,
+  textarea::placeholder,
+  select::placeholder {
+    color: var(--color-grey-medium);
+    opacity: 0.6;
+  }
 }

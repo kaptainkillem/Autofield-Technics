@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient, getRoleFromJWT } from '@/lib/supabaseServer'
 import { Database } from '@/types/database'
 import { AdminStats } from '@/components/AdminStats'
 import { QuotesInbox } from '@/components/admin/QuotesInbox'
@@ -18,27 +18,32 @@ type Receipt = Database['public']['Tables']['receipts']['Row']
 export const dynamic = 'force-dynamic'
 
 async function getSummaryData() {
-  // Server-side auth guard: verify user is authenticated and has admin role
   const serverClient = await createSupabaseServerClient()
-  const { data: { user } } = await serverClient.auth.getUser()
+  const { data: { session } } = await serverClient.auth.getSession()
 
-  if (!user) {
+  if (!session) {
     redirect('/signin')
   }
 
-  const role = user.user_metadata?.role ?? 'client'
+  const role = getRoleFromJWT(session)
   if (role !== 'admin') {
     redirect('/dashboard')
   }
 
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
 
-  // Fetch only high-level snapshot data boundaries for the overview index execution
+  const workshopId = (() => {
+    try {
+      const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+      return payload?.app_metadata?.workshop_id as string | null
+    } catch { return null }
+  })()
+
   const [quotesRes, receiptsRes, reviewsRes, profilesRes] = await Promise.all([
-    supabase.from('quotes').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
-    supabase.from('receipts').select('*').is('deleted_at', null),
-    supabase.from('reviews').select('id').eq('status', 'pending').is('deleted_at', null),
-    supabase.from('profiles').select('id').eq('role', 'client')
+    supabase.from('quotes').select('*').eq('workshop_id', workshopId as string).is('deleted_at', null).order('created_at', { ascending: false }),
+    supabase.from('receipts').select('*').eq('workshop_id', workshopId as string).is('deleted_at', null),
+    supabase.from('reviews').select('id').eq('workshop_id', workshopId as string).eq('status', 'pending').is('deleted_at', null),
+    supabase.from('profiles').select('id').eq('workshop_id', workshopId as string).eq('role', 'client')
   ])
 
   return {

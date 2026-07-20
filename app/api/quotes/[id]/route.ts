@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient, getRoleFromJWT } from '@/lib/supabaseServer'
 import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/rate-limiter'
 import { z } from 'zod'
@@ -11,23 +11,23 @@ const PatchBodySchema = z.object({
 
 async function verifyAdmin() {
   const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
 
-  if (!user) {
+  if (!session) {
     return { authorized: false as const, error: 'Unauthorized', status: 401 }
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single() as { data: { role: string } | null }
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
+    return { authorized: false as const, error: 'Session expired or invalid', status: 401 }
+  }
 
-  if (profile?.role !== 'admin') {
+  const role = getRoleFromJWT(session)
+  if (role !== 'admin') {
     return { authorized: false as const, error: 'Forbidden', status: 403 }
   }
 
-  return { authorized: true as const }
+  return { authorized: true as const, userId: user.id, workshopId: '' }
 }
 
 export async function PATCH(
@@ -64,7 +64,7 @@ export async function PATCH(
     )
   }
 
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
 
   const { data, error } = await supabase
     .from('quotes')

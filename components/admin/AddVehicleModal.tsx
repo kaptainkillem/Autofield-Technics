@@ -7,11 +7,12 @@ import { toast } from 'sonner'
 
 interface AddVehicleModalProps {
   userId: string
+  workshopId: string
   onClose: () => void
   onSaved: () => void
 }
 
-export function AddVehicleModal({ userId, onClose, onSaved }: AddVehicleModalProps) {
+export function AddVehicleModal({ userId, workshopId, onClose, onSaved }: AddVehicleModalProps) {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     make: '',
@@ -37,6 +38,7 @@ export function AddVehicleModal({ userId, onClose, onSaved }: AddVehicleModalPro
       .from('vehicles')
       .insert({
         user_id: userId,
+        workshop_id: workshopId,
         make: form.make.trim(),
         model: form.model.trim(),
         year: parseInt(form.year),

@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { User, Phone, Loader2, AlertCircle } from 'lucide-react';
 import { supabaseHelpers } from '@/lib/supabase';
 import { SiteLogo } from '@/components/common/SiteLogo';
-import { SITE_CONFIG } from '@/lib/site-config';
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider';
 import { sanitizeFormError } from '@/lib/auth-utils';
 
 export default function OnboardingProfilePage() {
+  const config = useSiteConfig()
   const router = useRouter();
 
   const [fullName, setFullName] = useState('');
@@ -57,11 +58,11 @@ export default function OnboardingProfilePage() {
           Welcome<br />Aboard
         </h1>
         <p className="mt-4 text-white/80 text-base leading-relaxed">
-          Let&apos;s set up your {SITE_CONFIG.name} account. This will only take a moment.
+          Let&apos;s set up your {config.name} account. This will only take a moment.
         </p>
         <div className="mt-8 hidden md:block">
           <p className="text-white/60 text-sm">
-            &ldquo;{SITE_CONFIG.tagline}&rdquo;
+            &ldquo;{config.tagline}&rdquo;
           </p>
         </div>
       </div>

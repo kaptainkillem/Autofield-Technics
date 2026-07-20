@@ -41,23 +41,78 @@ Copy `.env.example` to `.env.local` and fill in:
 NEXT_PUBLIC_SUPABASE_URL=your_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-NEXT_PUBLIC_WHATSAPP_NUMBER=27XXXXXXXXX        # No + or spaces
-NEXT_PUBLIC_MECHANIC_USER_ID=your_admin_uid    # Supabase auth uid of admin account
+NEXT_PUBLIC_DEFAULT_WORKSHOP_SLUG=your-workshop-slug   # For multi-deployment
+NEXT_PUBLIC_SITE_URL=https://yourdomain.com             # For emails + sitemap
+NEXT_PUBLIC_TIMEZONE=Africa/Johannesburg                # For availability
+NEXT_PUBLIC_WHATSAPP_NUMBER=27XXXXXXXXX                 # No + or spaces
+NEXT_PUBLIC_MECHANIC_USER_ID=your_admin_uid             # Supabase auth uid of admin account
+RESEND_API_KEY=re_your_secret_token                     # For email sending
+ADMIN_NOTIFICATION_EMAIL=admin@yourdomain.com            # Fallback admin email
+AUTH_HOOK_SECRET=add_secret_token_here                  # Edge Function auth
 ```
 
-### 2. Launch the Engine
+### 2. Multi-Deployment (Vercel)
+
+Each workshop gets its own Vercel deployment from the same codebase + Supabase project:
+
+```
+Vercel Project 1              Vercel Project 2
+  toplifemechanics.co.za        autobahnauto.co.za
+  DEFAULT_WORKSHOP_SLUG=        DEFAULT_WORKSHOP_SLUG=
+    top-life-mechanics            auto-bahn-auto
+```
+
+All deployments share the same Supabase keys. Only `NEXT_PUBLIC_DEFAULT_WORKSHOP_SLUG`, `NEXT_PUBLIC_SITE_URL`, and `ADMIN_NOTIFICATION_EMAIL` are per-deployment. Branding automatically loads from that workshop's `business_settings` row.
+
+### 3. Launch the Engine
 ```powershell
 .\start-project.ps1
 ```
 Choose **Option 1** to start the dev server at [http://localhost:3000](http://localhost:3000).
 
-### 3. Prepare Supabase
+### 4. Prepare Supabase
 1. Create a Supabase project.
 2. Run `schema.sql` in the Supabase SQL Editor to create tables, policies, and triggers.
-3. For existing projects, apply any new migrations in `migrations/` in chronological order.
+3. Apply migrations in `migrations/` in chronological order for existing projects.
 4. Enable email/password Auth and the Resend provider if using email notifications.
+5. Deploy the `custom-access-token` Edge Function from `supabase/functions/`.
 
-### 4. Deploy to Vercel
+### 🔐 Quote Token Auth Flow
+
+The platform supports a "zero-friction" guest quote submission with a secure claim-on-sign-in flow:
+
+1. **Guest submits quote** (unauthenticated) → DB auto-generates `quote_token` (UUID)
+2. **Admin reviews** → sends quote PDF via email with `/quote/[id]?token={quoteToken}` link
+3. **Guest clicks link** → sees `QuoteClaimPrompt` upsell (feature list + "Create Account" / "Sign In" buttons)
+4. **User signs in** → redirected back to quote page → token validates in `customer-action/route.ts` → quote is **claimed** (`user_id` set)
+5. **Authenticated user** → can now accept/decline quotes and book appointments
+
+- Accepting/declining quotes **requires authentication** (401 for unauthenticated users)
+- Booking an appointment **implies acceptance** (auto-sets status to `accepted`)
+- All sensitive API routes use `supabase.auth.getUser()` for cryptographic token validation
+- `quote_token` is for **claiming** only — never bypasses auth checks
+
+### 📧 Email Template System
+
+Workshop admins can customize all email templates:
+
+1. Go to **Settings → Templates** in the admin dashboard
+2. Select a template from the sidebar (quote_ready, appointment_confirmation, etc.)
+3. Edit the subject, HTML body, and plain text version
+4. Use `{{variableName}}` placeholders — click helper buttons to insert
+5. Enter sample data and click **Preview** to see the rendered email
+6. **Save** to override the default for your workshop, or **Reset** to revert
+
+Templates are stored in `email_templates` per workshop. All emails track delivery status in `email_logs`.
+
+### 🛡️ Security Features
+
+- **Session timeout** — 30 minutes of inactivity triggers a warning modal with 1-minute countdown; "Keep me logged in" or "Log out now" buttons
+- **Rate limiting** — Sign-up (3/min), sign-in (5/min), forgot-password (3/5min), reset-password (3/5min)
+- **Server-side auth** — All admin API routes verify sessions with `getUser()` (crypto-validated, not just JWT)
+- **Cookie hardening** — `Secure`, `HttpOnly`, `SameSite: Lax` on all auth cookies in production
+
+### 5. Deploy to Vercel
 We use GitHub Actions for CI/CD. Do not deploy manually through the Vercel dashboard.
 
 1. Install the Vercel CLI and link the project once:

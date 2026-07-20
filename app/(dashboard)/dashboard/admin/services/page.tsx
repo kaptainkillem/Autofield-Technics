@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { Database } from '@/types/database'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { ServicesTable } from '@/components/admin/ServicesTable'
@@ -10,7 +10,7 @@ type CategoryRow = Database['public']['Tables']['categories']['Row']
 export const dynamic = 'force-dynamic'
 
 export default async function AdminServicesPage() {
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
 
   const [{ data: services }, { data: categories }] = await Promise.all([
     supabase.from('services').select('*').order('name', { ascending: true }),

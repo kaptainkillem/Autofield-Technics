@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 import { z } from 'zod'
@@ -39,12 +39,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid appointment data' }, { status: 400 })
     }
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     const { data: existing, error: fetchError } = await adminClient
       .from('appointments')
       .select('id')
       .eq('id', id)
+      .eq('workshop_id', auth.workshopId!)
       .single()
 
     if (fetchError || !existing) {
@@ -62,6 +63,7 @@ export async function PATCH(
       .from('appointments')
       .update(updates as never)
       .eq('id', id)
+      .eq('workshop_id', auth.workshopId!)
       .select()
       .single()
 
@@ -99,19 +101,24 @@ export async function DELETE(
       )
     }
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     const { data: existing, error: fetchError } = await adminClient
       .from('appointments')
       .select('id')
       .eq('id', id)
+      .eq('workshop_id', auth.workshopId!)
       .single()
 
     if (fetchError || !existing) {
       return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
     }
 
-    const { error } = await adminClient.from('appointments').delete().eq('id', id)
+    const { error } = await adminClient
+      .from('appointments')
+      .delete()
+      .eq('id', id)
+      .eq('workshop_id', auth.workshopId!)
 
     if (error) {
       console.error('Delete appointment error:', error)

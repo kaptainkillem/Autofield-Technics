@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
+import { sendTemplateEmail } from '@/lib/email'
 import { z } from 'zod'
 
 const CreateAppointmentSchema = z.object({
@@ -37,18 +38,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid appointment data' }, { status: 400 })
     }
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     // If a specific user_id is provided, verify it exists; otherwise assign to admin
     let targetUserId = body.user_id ?? auth.userId
     if (body.user_id) {
       const { data: profile } = await adminClient
         .from('profiles')
-        .select('id')
+        .select('id, workshop_id')
         .eq('id', body.user_id)
         .single()
       if (!profile) {
         return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+      }
+      if (profile.workshop_id !== auth.workshopId) {
+        return NextResponse.json({ error: 'Customer does not belong to your workshop' }, { status: 403 })
       }
       targetUserId = body.user_id
     }
@@ -57,6 +61,7 @@ export async function POST(request: NextRequest) {
       .from('appointments')
       .insert({
         user_id: targetUserId,
+        workshop_id: auth.workshopId!,
         scheduled_date: body.scheduled_date,
         scheduled_time: body.scheduled_time,
         service_type: body.service_type,
@@ -72,6 +77,31 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Create appointment error:', error)
       return NextResponse.json({ error: 'Failed to create appointment' }, { status: 500 })
+    }
+
+    // Send confirmation email to customer
+    if (targetUserId) {
+      try {
+        const { data: { user: authUser } } = await adminClient.auth.admin.getUserById(targetUserId)
+        if (authUser?.email) {
+          const vehicleInfo = data?.service_type || ''
+          sendTemplateEmail({
+            templateKey: 'appointment_confirmation',
+            to: authUser.email,
+            variables: {
+              customerName: body.customer_name || authUser.user_metadata?.full_name || 'Customer',
+              appointmentDate: body.scheduled_date,
+              appointmentTime: body.scheduled_time,
+              serviceType: body.service_type,
+              vehicleInfo,
+              businessName: '',
+              businessAddress: '',
+              businessPhone: '',
+            },
+            workshopId: auth.workshopId!,
+          }).catch(() => {})
+        }
+      } catch {}
     }
 
     return NextResponse.json({ success: true, appointment: data })

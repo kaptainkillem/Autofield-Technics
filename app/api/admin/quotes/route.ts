@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
+import crypto from 'node:crypto'
 
 const LineItemSchema = z.object({
   id: z.string(),
@@ -23,6 +24,9 @@ const CreateQuoteSchema = z.object({
   notes: z.string().trim().optional(),
   status: z.enum(['draft', 'pending', 'sent', 'accepted', 'declined', 'completed', 'cancelled']).default('draft'),
   discountPercent: z.number().min(0).max(100).default(0),
+  depositPercent: z.number().min(0).max(100).optional(),
+  depositAmount: z.number().min(0).optional().nullable(),
+  expiryDate: z.string().optional().nullable(),
   lineItems: z.array(LineItemSchema).min(1),
 })
 
@@ -61,11 +65,13 @@ export async function POST(request: Request) {
   const quoteNumber = makeDocumentNumber('AF-Q')
   const description = body.description || body.lineItems.map((item) => item.name).join(', ')
 
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('quotes')
     .insert({
+      workshop_id: auth.workshopId,
       user_id: auth.userId,
+      quote_token: crypto.randomUUID(),
       customer_name: body.customerName,
       customer_email: body.customerEmail || null,
       customer_phone: body.customerPhone,
@@ -80,6 +86,9 @@ export async function POST(request: Request) {
       quote_number: quoteNumber,
       line_items: body.lineItems,
       discount_percent: body.discountPercent,
+      deposit_percent: body.depositPercent ?? null,
+      deposit_amount: body.depositAmount ?? null,
+      expiry_date: body.expiryDate ?? null,
       subtotal,
       total,
       source: 'mechanic',

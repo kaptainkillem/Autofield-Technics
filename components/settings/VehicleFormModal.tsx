@@ -16,12 +16,13 @@ interface Vehicle {
 
 interface VehicleFormModalProps {
   userId: string
+  workshopId: string
   vehicle?: Vehicle | null
   onClose: () => void
   onSaved: () => void
 }
 
-export function VehicleFormModal({ userId, vehicle, onClose, onSaved }: VehicleFormModalProps) {
+export function VehicleFormModal({ userId, workshopId, vehicle, onClose, onSaved }: VehicleFormModalProps) {
   const isEditing = !!vehicle?.id
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
@@ -66,6 +67,7 @@ export function VehicleFormModal({ userId, vehicle, onClose, onSaved }: VehicleF
 
     const payload = {
       user_id: userId,
+      workshop_id: workshopId,
       make: form.make.trim(),
       model: form.model.trim(),
       year: yearNum,

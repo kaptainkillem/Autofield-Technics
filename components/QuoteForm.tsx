@@ -5,7 +5,8 @@ import { MessageCircle, Loader2, ArrowRight, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
-import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
+import { replaceVars } from '@/lib/site-config'
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider'
 import { Database } from '@/types/database'
 import { sanitizePhone, sanitizeText, sanitizeEmail } from '@/lib/input-sanitizer'
 import Link from 'next/link'
@@ -25,7 +26,8 @@ const SERVICE_OPTIONS = [
 const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '27000000000'
 const MECHANIC_USER_ID = process.env.NEXT_PUBLIC_MECHANIC_USER_ID || null
 
-export function QuoteForm() {
+export function QuoteForm({ workshopId }: { workshopId?: string }) {
+  const config = useSiteConfig()
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -68,7 +70,7 @@ export function QuoteForm() {
   function buildWhatsAppMessage() {
     return encodeURIComponent(
       [
-        `🔧 *${SITE_CONFIG.quotes.whatsAppPrefix} — ${SITE_CONFIG.name}*`,
+        `🔧 *${config.quotes.whatsAppPrefix} — ${config.name}*`,
         ``,
         `👤 *Name:* ${form.customerName}`,
         `📞 *Phone:* ${form.customerPhone}`,
@@ -90,8 +92,15 @@ export function QuoteForm() {
     // Append VIN metadata cleanly to your description or dedicated column if it exists
     const integratedDescriptionText = `[Service: ${form.service}]${form.vin ? ` [VIN: ${form.vin}]` : ''} — ${form.description || 'No description provided.'}`
 
+    if (!workshopId) {
+      setError('Could not determine your mechanic. Please use the workshop link.')
+      toast.error('Quote submission failed. Please try again.')
+      setLoading(false)
+      return
+    }
+
     const { data, error: supabaseError } = await (supabase as any).from('quotes').insert({
-      user_id: currentUserId || null,
+      workshop_id: workshopId,
       customer_name: sanitizeText(form.customerName, 200),
       customer_email: sanitizeEmail(form.customerEmail) || null,
       customer_phone: sanitizePhone(form.customerPhone),
@@ -100,22 +109,30 @@ export function QuoteForm() {
       vehicle_year: form.year ? parseInt(form.year) : null,
       description: sanitizeText(integratedDescriptionText, 2000),
       status: 'pending',
-    }).select('id').single()
+    }).select('id, quote_token').single()
 
     setLoading(false)
 
     if (supabaseError) {
-      setError('Could not save your request. Please try again.')
-      toast.error('Quote submission failed. Please try again.')
+      const msg = supabaseError.code === '42501'
+        ? 'You do not have permission to submit a quote. Please sign in.'
+        : supabaseError.code === '23502'
+          ? 'A required field is missing. Please check your details.'
+          : 'Could not save your request. Please try again.'
+      setError(msg)
+      toast.error(msg)
       console.error(supabaseError)
       return
     }
 
     toast.success('Quote submitted successfully!')
 
-    // 🌟 If user is unauthenticated, store the quote ID locally for later mapping
+    // 🌟 If user is unauthenticated, store the quote ID and token locally for later mapping
     if (isAnonymous && data?.id) {
       localStorage.setItem('pending_quote_id', data.id)
+      if (data.quote_token) {
+        localStorage.setItem('pending_quote_token', data.quote_token)
+      }
     }
 
     setSubmitted(true)

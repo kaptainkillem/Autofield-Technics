@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 
 interface QuoteActionButtonsProps {
   quoteId: string
+  quoteToken?: string | null
   status: string
   pdfUrl: string | null
   existingAppointment: {
@@ -20,7 +21,7 @@ interface QuoteActionButtonsProps {
   } | null
 }
 
-export function QuoteActionButtons({ quoteId, status, pdfUrl, existingAppointment }: QuoteActionButtonsProps) {
+export function QuoteActionButtons({ quoteId, quoteToken, status, pdfUrl, existingAppointment }: QuoteActionButtonsProps) {
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState('')
   const [localStatus, setLocalStatus] = useState(status)
@@ -31,11 +32,18 @@ export function QuoteActionButtons({ quoteId, status, pdfUrl, existingAppointmen
     setActionLoading(true)
     setActionError('')
     try {
+      const body: Record<string, unknown> = { action }
+      if (quoteToken) body.quote_token = quoteToken
       const res = await fetch(`/api/quotes/${quoteId}/customer-action`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify(body),
       })
+      if (res.status === 401) {
+        const returnUrl = `/quote/${quoteId}${quoteToken ? `?token=${quoteToken}` : ''}`
+        window.location.href = `/signin?redirect=${encodeURIComponent(returnUrl)}`
+        return
+      }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Action failed')
       setLocalStatus(data.quote.status)
@@ -191,7 +199,7 @@ export function QuoteActionButtons({ quoteId, status, pdfUrl, existingAppointmen
             <p className="text-xs text-grey mb-6">
               Your quote has been accepted. Select a date and time to schedule your service.
             </p>
-            <CustomerBookingForm quoteId={quoteId} />
+            <CustomerBookingForm quoteId={quoteId} quoteToken={quoteToken ?? undefined} />
           </div>
         </div>
       )
@@ -283,7 +291,7 @@ export function QuoteActionButtons({ quoteId, status, pdfUrl, existingAppointmen
 
           {pdfUrl && (
             <a
-              href={pdfUrl}
+              href={`/api/quotes/${quoteId}/pdf/download${quoteToken ? `?token=${quoteToken}` : ''}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-grey-medium/20 text-grey-dark hover:bg-grey-lightest text-sm font-semibold rounded-base shadow-sm transition-all"

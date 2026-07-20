@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 
 export async function GET(_request: NextRequest) {
@@ -9,17 +9,19 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     const [receiptsRes, expensesRes] = await Promise.all([
       adminClient
         .from('receipts')
         .select('*')
+        .eq('workshop_id', auth.workshopId!)
         .is('deleted_at', null)
         .order('job_date', { ascending: false }),
       adminClient
         .from('expenses')
         .select('*')
+        .eq('workshop_id', auth.workshopId!)
         .is('deleted_at', null)
         .order('expense_date', { ascending: false }),
     ])

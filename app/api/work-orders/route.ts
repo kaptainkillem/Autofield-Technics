@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient, getRoleFromJWT } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 import { z } from 'zod'
@@ -35,12 +35,12 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await serverClient.auth.getUser()
     const adminId = user?.id ?? null
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     // Fetch the appointment with its quote
     const { data: appointment, error: appointmentError } = await adminClient
       .from('appointments')
-      .select('id, quote_id, status, user_id')
+      .select('id, quote_id, status, user_id, workshop_id')
       .eq('id', body.appointment_id)
       .single()
 
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
       .insert({
         quote_id: appointment.quote_id,
         appointment_id: appointment.id,
+        workshop_id: appointment.workshop_id!,
         status: 'checked_in',
         started_at: now,
         updated_at: now,
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
     // Record audit event
     await adminClient.from('work_order_events').insert({
       work_order_id: workOrder.id,
+      workshop_id: workOrder.workshop_id!,
       event_type: 'status_change',
       new_status: 'checked_in',
       notes: 'Work order created from confirmed appointment',
@@ -115,29 +117,29 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const serverClient = await createSupabaseServerClient()
-    const { data: { user } } = await serverClient.auth.getUser()
+    const { data: { session } } = await serverClient.auth.getSession()
 
-    if (!user) {
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const role = getRoleFromJWT(session)
+    const isAdmin = role === 'admin' || role === 'super_admin'
+    const workshopId = (() => {
+      try {
+        const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+        return payload?.app_metadata?.workshop_id as string | null
+      } catch { return null }
+    })()
 
     const { searchParams } = new URL(request.url)
     const quoteId = searchParams.get('quote_id')
     const appointmentId = searchParams.get('appointment_id')
 
-    const { data: profile } = await serverClient
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    const isAdmin = profile?.role === 'admin' || profile?.role === 'mechanic'
-
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
     let query = adminClient.from('work_orders').select('*, work_order_events(*)')
 
     if (!isAdmin) {
-      // Client: only see work orders for their quotes
       query = query.eq('quote_id', quoteId ?? '')
       const { data: quote, error: quoteError } = await adminClient
         .from('quotes')
@@ -145,9 +147,11 @@ export async function GET(request: NextRequest) {
         .eq('id', quoteId ?? '')
         .single()
 
-      if (quoteError || !quote || quote.user_id !== user.id) {
+      if (quoteError || !quote || quote.user_id !== session.user?.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
+    } else if (workshopId) {
+      query = query.eq('workshop_id', workshopId)
     }
 
     if (quoteId) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient, getRoleFromJWT } from '@/lib/supabaseServer'
 
 export async function GET(
   request: NextRequest,
@@ -9,21 +9,16 @@ export async function GET(
     const { id } = await params
 
     const serverClient = await createSupabaseServerClient()
-    const { data: { user } } = await serverClient.auth.getUser()
+    const { data: { session } } = await serverClient.auth.getSession()
 
-    if (!user) {
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile } = await serverClient
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    const role = getRoleFromJWT(session)
+    const isAdmin = role === 'admin' || role === 'super_admin'
 
-    const isAdmin = profile?.role === 'admin' || profile?.role === 'mechanic'
-
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
     const { data: workOrder, error } = await adminClient
       .from('work_orders')
       .select('*, work_order_events(*), appointments(*), quotes(*)')
@@ -36,7 +31,7 @@ export async function GET(
 
     if (!isAdmin) {
       const quoteUserId = (workOrder as unknown as { quotes?: { user_id: string } }).quotes?.user_id
-      if (quoteUserId !== user.id) {
+      if (quoteUserId !== session.user?.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
     }

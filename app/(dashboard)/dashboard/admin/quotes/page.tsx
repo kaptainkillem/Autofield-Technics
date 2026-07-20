@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { QuotesInbox } from '@/components/admin/QuotesInbox'
 import { Database } from '@/types/database'
 import { PageWrapper } from '@/components/layout/PageWrapper'
@@ -13,7 +13,7 @@ interface PageProps {
 
 export default async function AdminQuotesPage({ searchParams }: PageProps) {
   const { filter: initialFilter } = await searchParams
-  const supabase = createSupabaseAdminClient()
+  const supabase = await createSupabaseServerClient()
   const { data } = await supabase
     .from('quotes')
     .select('*')

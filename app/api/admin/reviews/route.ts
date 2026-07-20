@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 
 export async function GET(_request: NextRequest) {
@@ -9,7 +9,7 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const adminClient = createSupabaseAdminClient()
+    const adminClient = await createSupabaseServerClient()
 
     const { data, error } = await adminClient
       .from('reviews')
@@ -24,6 +24,7 @@ export async function GET(_request: NextRequest) {
           phone
         )
       `)
+      .eq('workshop_id', auth.workshopId!)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
 

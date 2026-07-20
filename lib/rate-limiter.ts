@@ -7,6 +7,9 @@ import { NextRequest } from 'next/server'
  */
 
 export function getClientIp(req: NextRequest): string {
+  // On Vercel, x-forwarded-for is set by the edge network and is trustworthy.
+  // On other platforms (e.g., raw Node.js), this header can be spoofed by clients.
+  // Consider adding a trusted proxy check for non-Vercel deployments.
   const forwarded = req.headers.get('x-forwarded-for')
   if (forwarded) return forwarded.split(',')[0].trim()
   return (req as any).ip ?? 'unknown'

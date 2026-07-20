@@ -24,9 +24,10 @@ import {
   ReceiptText,
   BarChart3,
   HelpCircle,
+  ShieldCheck,
 } from 'lucide-react'
 import { SiteLogo } from '@/components/common/SiteLogo'
-import { supabase } from '@/lib/supabase'
+import { supabase, getWorkshopIdFromSession } from '@/lib/supabase'
 
 type SupabaseUser = Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user']
 
@@ -74,6 +75,10 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Account Settings', href: '/dashboard/admin/settings', icon: Settings },
 ]
 
+const SUPER_ADMIN_NAV: NavItem[] = [
+  { label: 'Workshops', href: '/dashboard/super-admin/workshops', icon: ShieldCheck },
+]
+
 export function DashboardSidebar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -102,11 +107,14 @@ export function DashboardSidebar() {
     const isAdminPath = pathname.startsWith('/dashboard/admin')
 
     async function fetchBadgeCounts() {
+      const { data: { session } } = await supabase.auth.getSession()
+      const workshopId = getWorkshopIdFromSession(session)
+
       if (isAdminPath) {
         const [quotesRes, reviewsRes, jobsRes] = await Promise.all([
-          (supabase as any).from('quotes').select('id', { count: 'exact', head: true }).eq('status', 'pending').is('deleted_at', null),
-          (supabase as any).from('reviews').select('id', { count: 'exact', head: true }).eq('status', 'pending').is('deleted_at', null),
-          (supabase as any).from('appointments').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+          (supabase as any).from('quotes').select('id', { count: 'exact', head: true }).eq('status', 'pending').eq('workshop_id', workshopId).is('deleted_at', null),
+          (supabase as any).from('reviews').select('id', { count: 'exact', head: true }).eq('status', 'pending').eq('workshop_id', workshopId).is('deleted_at', null),
+          (supabase as any).from('appointments').select('id', { count: 'exact', head: true }).eq('status', 'pending').eq('workshop_id', workshopId),
         ])
 
         setBadges({
@@ -194,11 +202,13 @@ export function DashboardSidebar() {
     }
   }, [user, pathname])
 
-  const isAdmin = pathname.startsWith('/dashboard/admin')
-  const isClient = !isAdmin
-  const navItems = isAdmin ? ADMIN_NAV : CLIENT_NAV
-  const shortcuts = isAdmin ? [] : CLIENT_SHORTCUTS
+  const isSuperAdmin = pathname.startsWith('/dashboard/super-admin')
+  const isAdmin = pathname.startsWith('/dashboard/admin') && !isSuperAdmin
+  const isClient = !isAdmin && !isSuperAdmin
+  const navItems = isSuperAdmin ? SUPER_ADMIN_NAV : isAdmin ? ADMIN_NAV : CLIENT_NAV
+  const shortcuts = isAdmin || isSuperAdmin ? [] : CLIENT_SHORTCUTS
   const initial = getUserInitial(user)
+  const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : 'Client'
 
   const handleLogout = async () => {
     if (loggingOut) return
@@ -279,7 +289,7 @@ export function DashboardSidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex fixed top-14 left-0 bottom-0 w-64 bg-white border-r border-grey-medium/20 flex-col z-30">
+      <aside className="hidden lg:flex fixed top-14 left-0 bottom-0 w-64 bg-white border-r border-grey-medium/20 flex-col z-30 overflow-y-auto">
         {sidebarContent}
       </aside>
 
@@ -293,7 +303,7 @@ export function DashboardSidebar() {
 
       {/* Mobile drawer */}
       <aside
-        className={`lg:hidden fixed top-0 left-0 bottom-0 z-50 w-72 bg-white shadow-lg transform transition-transform duration-300 ease-in-out flex flex-col ${
+        className={`lg:hidden fixed top-0 left-0 bottom-0 z-50 w-72 bg-white shadow-lg transform transition-transform duration-300 ease-in-out flex flex-col overflow-y-auto ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -303,16 +313,21 @@ export function DashboardSidebar() {
             <SiteLogo />
           </Link>
           <div className="flex items-center gap-2">
-            {isAdmin && (
-              <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
-                Admin
-              </span>
-            )}
-            {isClient && (
-              <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
-                Client
-              </span>
-            )}
+            {roleLabel === 'Admin' && (
+                <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
+                  Admin
+                </span>
+              )}
+              {roleLabel === 'Super Admin' && (
+                <span className="text-xs font-semibold bg-yellow-600 text-white px-2 py-0.5 rounded-full">
+                  Super Admin
+                </span>
+              )}
+              {roleLabel === 'Client' && (
+                <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
+                  Client
+                </span>
+              )}
             <button
               type="button"
               className="text-grey hover:text-grey-dark transition-colors"
@@ -357,16 +372,21 @@ export function DashboardSidebar() {
             <SiteLogo />
           </Link>
           <div className="flex items-center gap-2">
-            {isAdmin && (
-              <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
-                Admin
-              </span>
-            )}
-            {isClient && (
-              <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
-                Client
-              </span>
-            )}
+            {roleLabel === 'Admin' && (
+                <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
+                  Admin
+                </span>
+              )}
+              {roleLabel === 'Super Admin' && (
+                <span className="text-xs font-semibold bg-yellow-600 text-white px-2 py-0.5 rounded-full">
+                  Super Admin
+                </span>
+              )}
+              {roleLabel === 'Client' && (
+                <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
+                  Client
+                </span>
+              )}
             <div className="w-10 h-10 rounded-full bg-primary text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
               {user && initial ? initial : '?'}
             </div>
