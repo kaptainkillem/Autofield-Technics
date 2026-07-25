@@ -9,17 +9,22 @@ import { useSiteConfig } from '@/components/providers/SiteConfigProvider'
 
 interface TestimonialsCarouselProps {
   reviews: ReviewRow[]
+  title?: string
+  subtitle?: string
 }
 
-export function TestimonialsCarousel({ reviews }: TestimonialsCarouselProps) {
+export function TestimonialsCarousel({ reviews, title, subtitle }: TestimonialsCarouselProps) {
   const config = useSiteConfig()
+  const sectionTitle = title || 'What Our Customers Say'
+  const sectionSubtitle = subtitle || `Trusted by drivers across ${config.city}. Here's what they have to say about our mobile mechanical services.`
+
   if (reviews.length === 0) {
     return (
       <section className="bg-white py-16 px-4">
         <div className="max-w-6xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-grey-dark mb-4">What Our Customers Say</h2>
+          <h2 className="text-3xl font-bold text-grey-dark mb-4">{sectionTitle}</h2>
           <p className="text-body max-w-2xl mx-auto mb-8">
-            No reviews yet. Be the first to share your experience with us.
+            {sectionSubtitle}
           </p>
           <Link href="/reviews" className="btn-primary inline-block">
             Leave a Review
@@ -33,9 +38,9 @@ export function TestimonialsCarousel({ reviews }: TestimonialsCarouselProps) {
     <section className="bg-white py-16 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-grey-dark mb-4">What Our Customers Say</h2>
+          <h2 className="text-3xl font-bold text-grey-dark mb-4">{sectionTitle}</h2>
           <p className="text-body max-w-2xl mx-auto">
-            Trusted by drivers across {config.city}. Here&apos;s what they have to say about our mobile mechanical services.
+            {sectionSubtitle}
           </p>
         </div>
 

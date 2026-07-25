@@ -8,7 +8,8 @@ import { ServicesHero } from '@/components/features/ServicesHero'
 import { MobileStickyCTA } from '@/components/ui/MobileStickyCTA'
 import { ShieldCheck, Clock, Award, CheckCircle2 } from 'lucide-react'
 import type { Database } from '@/types/database'
-import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
+import { getMergedSiteConfig } from '@/lib/get-site-config'
+import { replaceVars } from '@/lib/site-config'
 
 type ServicesRow = Database['public']['Tables']['services']['Row']
 type CategoryRow = Database['public']['Tables']['categories']['Row']
@@ -26,13 +27,19 @@ function formatPrice(price: number): string {
 
 export default async function ServiceDetailPage({ params }: PageProps) {
   const { category, serviceId } = await params
+  const config = await getMergedSiteConfig()
 
-  const { data, error } = await supabase
+  let serviceQuery = supabase
     .from('services')
     .select('*')
     .eq('id', serviceId)
     .eq('is_active', true)
-    .single()
+
+  if (config.workshopId) {
+    serviceQuery = serviceQuery.eq('workshop_id', config.workshopId)
+  }
+
+  const { data, error } = await serviceQuery.single()
 
   const service = data as ServicesRow | null
 
@@ -40,11 +47,16 @@ export default async function ServiceDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  const { data: categoryInfo } = await supabase
+  let catQuery = supabase
     .from('categories')
     .select('*')
     .eq('slug', category.toLowerCase())
-    .single()
+
+  if (config.workshopId) {
+    catQuery = catQuery.eq('workshop_id', config.workshopId)
+  }
+
+  const { data: categoryInfo } = await catQuery.single()
 
   const categoryTitle = (categoryInfo as CategoryRow | null)?.name ?? 'Services'
 
@@ -55,19 +67,19 @@ export default async function ServiceDetailPage({ params }: PageProps) {
     'description': service.description,
     'provider': {
       '@type': 'LocalBusiness',
-      'name': SITE_CONFIG.name,
-'telephone': SITE_CONFIG.phone,
+      'name': config.name,
+      'telephone': config.phone,
       'address': {
         '@type': 'PostalAddress',
-        'addressLocality': SITE_CONFIG.city,
-        'addressRegion': SITE_CONFIG.region,
-        'addressCountry': SITE_CONFIG.country
+        'addressLocality': config.city,
+        'addressRegion': config.region,
+        'addressCountry': config.country
       }
     },
     'offers': {
       '@type': 'Offer',
       'price': service.base_price ?? '0',
-      'priceCurrency': 'ZAR',
+      'priceCurrency': config.currency,
       'availability': 'https://schema.org/InStock'
     }
   }
@@ -82,7 +94,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
       <ServicesHero
         title={service.name}
         description={service.description ?? undefined}
-        ctaText="Book Now"
+        ctaText={config.cta.primary}
         ctaHref={`/quote?serviceId=${service.id}`}
       />
 
@@ -157,7 +169,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
               </div>
               <div className="flex items-center gap-3">
                 <Clock className="text-primary" size={20} />
-                <span className="text-grey-dark">{replaceVars(SITE_CONFIG.services.featureTagline, { city: SITE_CONFIG.city })}</span>
+                <span className="text-grey-dark">{replaceVars('Rapid {city} Roadside Dispatch Response', { city: config.city })}</span>
               </div>
             </div>
 
@@ -165,7 +177,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
               href={`/quote?serviceId=${service.id}`}
               className="btn-primary w-full text-center py-3 text-base font-semibold shadow-md hover:shadow-lg transition-all"
             >
-              Request Booking Link
+              {config.cta.primary}
             </Link>
           </div>
 
@@ -175,7 +187,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
       <MobileStickyCTA
         title={categoryTitle}
         subtitle={service.name}
-        buttonText="Book Now"
+        buttonText={config.homePageContent.stickyCta.buttonLabel}
         href={`/quote?serviceId=${service.id}`}
       />
     </>

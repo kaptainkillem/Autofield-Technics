@@ -7,7 +7,7 @@ import { FeatureShowcase } from '@/components/features/FeatureShowcase';
 import { HowItWorks } from '@/components/features/HowItWorks';
 import { ServicesGrid } from '@/components/features/ServicesGrid';
 import { BottomCTA } from '@/components/features/BottomCTA';
-import { supabase } from '@/lib/supabase';
+import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import { getMergedSiteConfig } from '@/lib/get-site-config';
 import { TrustStrip } from '@/components/features/TrustStrip';
 
@@ -26,8 +26,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Home() {
   const config = await getMergedSiteConfig()
+  const supabase = await createSupabaseServerClient()
 
-  const { data: reviews } = await (supabase as any)
+  const { data: reviews } = await supabase
     .from('reviews')
     .select('*')
     .eq('status', 'approved')
@@ -35,22 +36,63 @@ export default async function Home() {
     .order('created_at', { ascending: false })
     .limit(5)
 
+  const { homePageContent } = config
+
   return (
     <>
       <Hero
-        title={config.hero.title}
-        description={config.hero.description}
-        primaryCTA={{ label: "Get a Free Quote", href: "/quote" }}
-        secondaryCTA={{ label: "View Our Services", href: "/services" }}
-        showImage
-        imageSrc="/images/hero-image.webp"
+        title={homePageContent.hero.title}
+        description={homePageContent.hero.description}
+        primaryCTA={{ label: homePageContent.hero.primaryCtaLabel, href: homePageContent.hero.primaryCtaHref }}
+        secondaryCTA={
+          homePageContent.hero.secondaryCtaLabel
+            ? { label: homePageContent.hero.secondaryCtaLabel, href: homePageContent.hero.secondaryCtaHref || '/services' }
+            : undefined
+        }
+        showImage={homePageContent.hero.showImage}
+        imageSrc={homePageContent.hero.imageUrl || config.heroImageUrl || '/images/hero-image.webp'}
       />
-      <TrustStrip />
-        <ServicesGrid />
-      <FeatureShowcase />
-      <HowItWorks city={config.city} />
-      <TestimonialsCarousel reviews={reviews ?? []} />
-      <BottomCTA />
+
+      {homePageContent.testimonials.enabled && (
+        <TestimonialsCarousel
+          reviews={reviews ?? []}
+          title={homePageContent.testimonials.title}
+          subtitle={homePageContent.testimonials.subtitle}
+        />
+      )}
+
+      {homePageContent.features.enabled && (
+        <FeatureShowcase
+          title={homePageContent.features.title}
+          subtitle={homePageContent.features.subtitle}
+          features={homePageContent.features.items}
+        />
+      )}
+
+      {homePageContent.howItWorks.enabled && (
+        <HowItWorks
+          title={homePageContent.howItWorks.title}
+          subtitle={homePageContent.howItWorks.subtitle}
+          steps={homePageContent.howItWorks.steps}
+        />
+      )}
+
+      {homePageContent.servicesGrid.enabled && (
+        <ServicesGrid
+          title={homePageContent.servicesGrid.title}
+          subtitle={homePageContent.servicesGrid.subtitle}
+          ctaLabel={homePageContent.servicesGrid.ctaLabel}
+        />
+      )}
+
+      {homePageContent.bottomCta.enabled && (
+        <BottomCTA
+          heading={homePageContent.bottomCta.heading}
+          description={homePageContent.bottomCta.description}
+          buttonLabel={homePageContent.bottomCta.buttonLabel}
+          buttonHref={homePageContent.bottomCta.buttonHref}
+        />
+      )}
     </>
   );
 }

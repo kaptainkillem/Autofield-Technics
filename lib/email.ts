@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { createTransport } from 'nodemailer'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { buildQuoteReadyCustomerEmail, getDefaultTemplate, DEFAULT_TEMPLATES, renderTemplate } from '@/lib/email-templates'
 
@@ -13,6 +14,19 @@ interface SendEmailParams {
   variables?: Record<string, string>
 }
 
+interface EmailProviderConfig {
+  email_provider: string | null
+  email_from: string | null
+  email_display_name: string | null
+  email_reply_to: string | null
+  admin_notification_email: string | null
+  smtp_host: string | null
+  smtp_port: number | null
+  smtp_username: string | null
+  smtp_password: string | null
+  smtp_secure: boolean | null
+}
+
 function getResend() {
   if (!process.env.RESEND_API_KEY) {
     console.error('[email] RESEND_API_KEY is missing')
@@ -20,43 +34,60 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY)
 }
 
-async function resolveSender(workshopId?: string | null): Promise<{ from: string; replyTo?: string }> {
-  const defaultName = 'Autofield Technics'
-  const defaultFrom = `Autofield Technics <onboarding@resend.dev>`
-
-  if (!workshopId) {
-    return { from: process.env.EMAIL_FROM || defaultFrom }
-  }
+async function fetchEmailConfig(workshopId?: string | null): Promise<EmailProviderConfig | null> {
+  if (!workshopId) return null
 
   try {
-    const supabase = await createSupabaseServerClient()
-    const { data } = await supabase
+    const { createSuperAdminClient } = await import('@/lib/super-admin')
+    const adminClient = createSuperAdminClient()
+    const { data } = await adminClient
       .from('business_settings')
-      .select('email_display_name, email_reply_to')
+      .select('email_provider, email_from, email_display_name, email_reply_to, admin_notification_email, smtp_host, smtp_port, smtp_username, smtp_password, smtp_secure')
       .eq('workshop_id', workshopId)
       .maybeSingle()
 
-    const name = data?.email_display_name || defaultName
-    const from = process.env.EMAIL_FROM || `${name} <onboarding@resend.dev>`
-
-    return {
-      from,
-      replyTo: data?.email_reply_to ?? undefined,
-    }
+    return (data as EmailProviderConfig) ?? null
   } catch {
-    return { from: process.env.EMAIL_FROM || defaultFrom }
+    return null
+  }
+}
+
+async function resolveSender(workshopId?: string | null): Promise<{
+  from: string
+  replyTo?: string
+  config: EmailProviderConfig | null
+}> {
+  const defaultName = 'Autofield Technics'
+  const defaultFrom = `Autofield Technics <onboarding@resend.dev>`
+  const config = await fetchEmailConfig(workshopId)
+
+  if (!config) {
+    return { from: process.env.EMAIL_FROM || defaultFrom, config: null }
+  }
+
+  const name = config.email_display_name || defaultName
+  const from = config.email_from || process.env.EMAIL_FROM || `${name} <onboarding@resend.dev>`
+
+  return {
+    from,
+    replyTo: config.email_reply_to ?? undefined,
+    config,
   }
 }
 
 export async function getWorkshopAdminEmail(workshopId: string): Promise<string> {
   try {
-    const supabase = await createSupabaseServerClient()
-    const { data } = await supabase
+    const { createSuperAdminClient } = await import('@/lib/super-admin')
+    const adminClient = createSuperAdminClient()
+    const { data } = await adminClient
       .from('business_settings')
-      .select('contact_email')
+      .select('contact_email, admin_notification_email')
       .eq('workshop_id', workshopId)
       .maybeSingle()
-    return data?.contact_email || process.env.ADMIN_NOTIFICATION_EMAIL || ''
+    return data?.admin_notification_email
+      || data?.contact_email
+      || process.env.ADMIN_NOTIFICATION_EMAIL
+      || ''
   } catch {
     return process.env.ADMIN_NOTIFICATION_EMAIL || ''
   }
@@ -162,21 +193,47 @@ export async function sendEmail(params: SendEmailParams) {
   } catch {}
 
   try {
-    const emailConfig: any = {
-      from: sender.from,
-      to: params.to,
-      subject,
-      html,
-    }
-    if (text) emailConfig.text = text
-    if (params.replyTo || sender.replyTo) {
-      emailConfig.replyTo = params.replyTo || sender.replyTo
+    const provider = sender.config?.email_provider || 'resend'
+    let result: { success: boolean; error?: string; messageId?: string }
+
+    if (provider === 'smtp' && sender.config?.smtp_host) {
+      result = await sendViaSMTP({
+        host: sender.config.smtp_host,
+        port: sender.config.smtp_port || 587,
+        secure: sender.config.smtp_secure ?? false,
+        user: sender.config.smtp_username || '',
+        pass: sender.config.smtp_password || '',
+        from: sender.from,
+        to: params.to,
+        subject,
+        html,
+        text,
+        replyTo: params.replyTo || sender.replyTo,
+      })
+    } else {
+      const emailConfig: any = {
+        from: sender.from,
+        to: params.to,
+        subject,
+        html,
+      }
+      if (text) emailConfig.text = text
+      if (params.replyTo || sender.replyTo) {
+        emailConfig.replyTo = params.replyTo || sender.replyTo
+      }
+
+      const resend = getResend()
+      const { data, error } = await resend.emails.send(emailConfig)
+
+      if (error) {
+        result = { success: false, error: error.message }
+      } else {
+        result = { success: true, messageId: data?.id }
+      }
     }
 
-    const { data, error } = await resend.emails.send(emailConfig)
-
-    if (error) {
-      console.error('[email] Resend send failed:', error.message)
+    if (!result.success) {
+      console.error('[email] Send failed:', result.error)
       await logEmail({
         workshopId: params.workshopId ?? null,
         templateKey: params.templateKey,
@@ -184,9 +241,9 @@ export async function sendEmail(params: SendEmailParams) {
         fromDisplay: sender.from,
         subject,
         status: 'failed',
-        errorMessage: error.message,
+        errorMessage: result.error,
       })
-      return { success: false, error: error.message }
+      return { success: false, error: result.error }
     }
 
     await logEmail({
@@ -196,11 +253,11 @@ export async function sendEmail(params: SendEmailParams) {
       fromDisplay: sender.from,
       subject,
       status: 'sent',
-      metadata: { messageId: data?.id },
+      metadata: { messageId: result.messageId },
     })
 
     console.log('[email] Sent successfully to', params.to)
-    return { success: true, messageId: data?.id }
+    return { success: true, messageId: result.messageId }
   } catch (err: any) {
     console.error('[email] Send exception:', err.message)
     await logEmail({
@@ -212,6 +269,49 @@ export async function sendEmail(params: SendEmailParams) {
       status: 'failed',
       errorMessage: err.message,
     })
+    return { success: false, error: err.message }
+  }
+}
+
+// ── SMTP transport ──────────────────────────────────────────────
+
+interface SMTPParams {
+  host: string
+  port: number
+  secure: boolean
+  user: string
+  pass: string
+  from: string
+  to: string
+  subject: string
+  html: string
+  text?: string
+  replyTo?: string
+}
+
+async function sendViaSMTP(params: SMTPParams): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  try {
+    const transport = createTransport({
+      host: params.host,
+      port: params.port,
+      secure: params.secure,
+      auth: {
+        user: params.user,
+        pass: params.pass,
+      },
+    })
+
+    const info = await transport.sendMail({
+      from: params.from,
+      to: params.to,
+      subject: params.subject,
+      html: params.html,
+      text: params.text,
+      replyTo: params.replyTo,
+    })
+
+    return { success: true, messageId: info.messageId }
+  } catch (err: any) {
     return { success: false, error: err.message }
   }
 }

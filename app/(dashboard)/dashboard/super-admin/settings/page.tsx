@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Loader2, Building2, Bell, MessageCircle, Mail, Palette, Type, Scale, ArrowLeft, ChevronDown } from 'lucide-react'
+import { Loader2, Building2, Bell, MessageCircle, Mail, Palette, Type, Scale, ArrowLeft, ChevronDown, Layout } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { PageWrapper } from '@/components/layout/PageWrapper'
@@ -11,6 +11,8 @@ import { WhatsAppForm } from '@/components/settings/WhatsAppForm'
 import { EmailForm } from '@/components/settings/EmailForm'
 import { BrandingForm } from '@/components/settings/BrandingForm'
 import { WebsiteCopyForm } from '@/components/settings/WebsiteCopyForm'
+import { HomepageContentForm } from '@/components/settings/HomepageContentForm'
+import { HomePageContent } from '@/lib/homepage-content'
 import { LegalSettingsForm } from '@/components/settings/LegalSettingsForm'
 import { EmailTemplatesForm } from '@/components/settings/EmailTemplatesForm'
 
@@ -20,7 +22,7 @@ interface Workshop {
   slug: string
 }
 
-type Tab = 'notifications' | 'whatsapp' | 'email' | 'branding' | 'website_copy' | 'legal' | 'email_templates'
+type Tab = 'notifications' | 'whatsapp' | 'email' | 'branding' | 'website_copy' | 'homepage_content' | 'legal' | 'email_templates'
 
 interface BusinessSettings {
   notification_email: boolean
@@ -31,9 +33,20 @@ interface BusinessSettings {
   email_display_name: string | null
   email_reply_to: string | null
   smtp_note: string | null
+  email_provider: string | null
+  email_from: string | null
+  admin_notification_email: string | null
+  smtp_host: string | null
+  smtp_port: number | null
+  smtp_username: string | null
+  smtp_password: string | null
+  smtp_secure: boolean | null
   primary_color: string
   accent_color: string
+  primary_text_color: string | null
+  secondary_text_color: string | null
   favicon_url: string | null
+  font_family: string | null
   document_footer: string | null
 }
 
@@ -46,9 +59,20 @@ const defaultBusinessSettings: BusinessSettings = {
   email_display_name: 'Autofield Technics',
   email_reply_to: 'info@autofieldstechnics.co.za',
   smtp_note: null,
+  email_provider: 'resend',
+  email_from: null,
+  admin_notification_email: null,
+  smtp_host: null,
+  smtp_port: 587,
+  smtp_username: null,
+  smtp_password: null,
+  smtp_secure: true,
   primary_color: '#3B82F6',
   accent_color: '#10B981',
+  primary_text_color: '#111827',
+  secondary_text_color: '#595959',
   favicon_url: null,
+  font_family: 'Inter',
   document_footer: null,
 }
 
@@ -58,6 +82,7 @@ const tabs = [
   { id: 'email' as Tab, label: 'Email', icon: Mail },
   { id: 'branding' as Tab, label: 'Branding', icon: Palette },
   { id: 'website_copy' as Tab, label: 'Content', icon: Type },
+  { id: 'homepage_content' as Tab, label: 'Homepage', icon: Layout },
   { id: 'legal' as Tab, label: 'Legal & PDFs', icon: Scale },
   { id: 'email_templates' as Tab, label: 'Templates', icon: Mail },
 ]
@@ -93,6 +118,8 @@ function SettingsContent() {
     hero_description: '',
     contact_email: '',
   })
+  const [homePageContent, setHomePageContent] = useState<HomePageContent | null>(null)
+  const [heroImageUrl, setHeroImageUrl] = useState<string | null>(null)
   const [documentFooter, setDocumentFooter] = useState('')
   const [activeTab, setActiveTab] = useState<Tab>('notifications')
 
@@ -130,9 +157,20 @@ function SettingsContent() {
           email_display_name: s.email_display_name ?? 'Autofield Technics',
           email_reply_to: s.email_reply_to ?? 'info@autofieldstechnics.co.za',
           smtp_note: s.smtp_note ?? null,
+          email_provider: s.email_provider ?? 'resend',
+          email_from: s.email_from ?? null,
+          admin_notification_email: s.admin_notification_email ?? null,
+          smtp_host: s.smtp_host ?? null,
+          smtp_port: s.smtp_port ?? 587,
+          smtp_username: s.smtp_username ?? null,
+          smtp_password: s.smtp_password ?? null,
+          smtp_secure: s.smtp_secure ?? true,
           primary_color: s.primary_color ?? '#3B82F6',
           accent_color: s.accent_color ?? '#10B981',
+          primary_text_color: s.primary_text_color ?? '#111827',
+          secondary_text_color: s.secondary_text_color ?? '#595959',
           favicon_url: s.favicon_url ?? null,
+          font_family: s.font_family ?? 'Inter',
           document_footer: s.document_footer ?? null,
         })
         setWebsiteCopy({
@@ -143,10 +181,14 @@ function SettingsContent() {
           hero_description: s.hero_description ?? '',
           contact_email: s.contact_email ?? '',
         })
+        setHomePageContent(s.home_page_content ?? null)
+        setHeroImageUrl(s.hero_image_url ?? null)
         setDocumentFooter(s.document_footer ?? '')
       } else {
         setBizSettings(defaultBusinessSettings)
         setWebsiteCopy({ site_name: '', phone: '', city: '', hero_title: '', hero_description: '', contact_email: '' })
+        setHomePageContent(null)
+        setHeroImageUrl(null)
         setDocumentFooter('')
       }
     } catch {
@@ -282,6 +324,14 @@ function SettingsContent() {
                       <WebsiteCopyForm
                         initialData={websiteCopy}
                         workshopId={selectedWorkshopId}
+                        onSaved={() => loadWorkshopSettings(selectedWorkshopId)}
+                      />
+                    )}
+                    {activeTab === 'homepage_content' && (
+                      <HomepageContentForm
+                        initialData={homePageContent}
+                        workshopId={selectedWorkshopId}
+                        heroImageUrl={heroImageUrl}
                         onSaved={() => loadWorkshopSettings(selectedWorkshopId)}
                       />
                     )}

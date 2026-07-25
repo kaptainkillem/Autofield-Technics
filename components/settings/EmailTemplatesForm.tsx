@@ -70,9 +70,10 @@ export function EmailTemplatesForm({ workshopId }: EmailTemplatesFormProps) {
   }, [workshopId])
 
   async function fetchTemplates() {
+    if (!workshopId) { setLoading(false); return }
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/email-templates')
+      const res = await fetch(`/api/admin/email-templates?workshopId=${encodeURIComponent(workshopId)}`)
       if (!res.ok) throw new Error('Failed')
       const { templates: data } = await res.json()
       setTemplates(data ?? [])
@@ -125,9 +126,10 @@ export function EmailTemplatesForm({ workshopId }: EmailTemplatesFormProps) {
   }
 
   async function handleSave() {
+    if (!workshopId) return
     setSaving(true)
     try {
-      const res = await fetch('/api/admin/email-templates', {
+      const res = await fetch(`/api/admin/email-templates?workshopId=${encodeURIComponent(workshopId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -148,9 +150,10 @@ export function EmailTemplatesForm({ workshopId }: EmailTemplatesFormProps) {
   }
 
   async function handleReset() {
+    if (!workshopId) return
     if (!confirm('Reset this template to default? Your changes will be lost.')) return
     try {
-      const res = await fetch(`/api/admin/email-templates?key=${selectedKey}`, { method: 'DELETE' })
+      const res = await fetch(`/api/admin/email-templates?workshopId=${encodeURIComponent(workshopId)}&key=${encodeURIComponent(selectedKey)}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed')
       toast.success('Template reset to default')
       await fetchTemplates()

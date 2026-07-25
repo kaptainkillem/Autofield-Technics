@@ -1,28 +1,21 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { supabase, getWorkshopIdFromSession } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { saveAdminSettings } from '@/lib/settings-api'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { 
-  Settings, ArrowLeft, Loader2, Building2, Banknote, FileText, Clock, CalendarX,
-  Bell, MessageCircle, Mail, Palette, Type, Scale, 
+  Settings, ArrowLeft, Loader2, Building2, Banknote, FileText, Clock, CalendarX, Scale,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { SITE_CONFIG } from '@/lib/site-config'
 import { BusinessForm } from '@/components/settings/BusinessForm'
 import { FinancialForm } from '@/components/settings/FinancialForm'
 import { QuoteSettingsForm } from '@/components/settings/QuoteSettingsForm'
 import { WorkingHoursForm } from '@/components/settings/WorkingHoursForm'
 import { BlockedSlotsForm } from '@/components/settings/BlockedSlotsForm'
-import { NotificationsForm } from '@/components/settings/NotificationsForm'
-import { WhatsAppForm } from '@/components/settings/WhatsAppForm'
-import { EmailForm } from '@/components/settings/EmailForm'
-import { BrandingForm } from '@/components/settings/BrandingForm'
-import { WebsiteCopyForm } from '@/components/settings/WebsiteCopyForm'
 import { LegalSettingsForm } from '@/components/settings/LegalSettingsForm'
-import { EmailTemplatesForm } from '@/components/settings/EmailTemplatesForm'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 
 type Tab =
@@ -32,12 +25,6 @@ type Tab =
   | 'legal'
   | 'working_hours'
   | 'blocked_slots'
-  | 'notifications'
-  | 'whatsapp'
-  | 'email'
-  | 'branding'
-  | 'website_copy'
-  | 'email_templates'
 
 interface FormData {
   full_name: string
@@ -66,73 +53,37 @@ const defaultFormData: FormData = {
   callout_fee: '', diagnostic_fee: '', default_deposit_percent: '', terms_conditions: '',
 }
 
-interface BusinessSettings {
-  notification_email: boolean
-  notification_push: boolean
-  notification_whatsapp: boolean
-  whatsapp_auto_reply: string | null
-  whatsapp_business_only: boolean
-  email_display_name: string | null
-  email_reply_to: string | null
-  smtp_note: string | null
-  primary_color: string
-  accent_color: string
-  favicon_url: string | null
-  document_footer: string | null
-}
-
-const defaultBusinessSettings: BusinessSettings = {
-  notification_email: true,
-  notification_push: true,
-  notification_whatsapp: false,
-  whatsapp_auto_reply: null,
-  whatsapp_business_only: false,
-  email_display_name: 'Autofield Technics',
-  email_reply_to: 'info@autofieldstechnics.co.za',
-  smtp_note: 'SMTP configuration is managed via Environment Variables.',
-  primary_color: '#3B82F6',
-  accent_color: '#10B981',
-  favicon_url: null,
-  document_footer: null,
-}
-
 const tabs = [
   { id: 'business' as Tab, label: 'Business', icon: Building2 },
   { id: 'financials' as Tab, label: 'Financials', icon: Banknote },
   { id: 'quotes' as Tab, label: 'Quotes', icon: FileText },
   { id: 'legal' as Tab, label: 'Legal & PDFs', icon: Scale },
-  { id: 'website_copy' as Tab, label: 'Content', icon: Type },
-  { id: 'notifications' as Tab, label: 'Alerts', icon: Bell },
-  { id: 'whatsapp' as Tab, label: 'WhatsApp', icon: MessageCircle },
-  { id: 'email' as Tab, label: 'Email', icon: Mail },
-  { id: 'branding' as Tab, label: 'Branding', icon: Palette },
   { id: 'working_hours' as Tab, label: 'Hours', icon: Clock },
   { id: 'blocked_slots' as Tab, label: 'Blocked', icon: CalendarX },
-  { id: 'email_templates' as Tab, label: 'Templates', icon: Mail },
 ]
 
-const profileTabs: Tab[] = ['business', 'financials', 'quotes', 'legal']
-const contentTabs: Tab[] = ['website_copy']
-const settingsTabs: Tab[] = ['notifications', 'whatsapp', 'email', 'branding', 'email_templates']
-const calendarTabs: Tab[] = ['working_hours', 'blocked_slots']
-
 export default function AdminSettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-[400px] w-full items-center justify-center">
+        <Settings className="h-8 w-8 text-primary animate-spin" />
+      </div>
+    }>
+      <SettingsContent />
+    </Suspense>
+  )
+}
+
+function SettingsContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab') as Tab | null
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState<Tab>('business')
+  const [activeTab, setActiveTab] = useState<Tab>(tabParam && tabs.some(t => t.id === tabParam) ? tabParam : 'business')
   const [userId, setUserId] = useState<string>('')
   const [workshopId, setWorkshopId] = useState<string | null>(null)
   const [formData, setFormData] = useState<FormData>(defaultFormData)
-  const [bizSettings, setBizSettings] = useState<BusinessSettings>(defaultBusinessSettings)
-  const [websiteCopy, setWebsiteCopy] = useState({
-    site_name: '',
-    phone: '',
-    city: '',
-    hero_title: '',
-    hero_description: '',
-    contact_email: '',
-  })
   const [documentFooter, setDocumentFooter] = useState('')
 
   useEffect(() => {
@@ -150,7 +101,7 @@ export default function AdminSettingsPage() {
 
       const [profileRes, settingsRes] = await Promise.all([
         (supabase as any).from('profiles').select('*').eq('id', user.id).single(),
-        (supabase as any).from('business_settings').select('*').eq('workshop_id', workshopsId).single(),
+        (supabase as any).from('public_business_settings').select('*').eq('workshop_id', workshopsId).single(),
       ])
 
       if (profileRes.data) {
@@ -173,39 +124,13 @@ export default function AdminSettingsPage() {
           default_deposit_percent: s?.default_deposit_percent?.toString() ?? '',
           terms_conditions: s?.terms_conditions ?? '',
         })
+        setDocumentFooter(s?.document_footer ?? '')
       } else {
         setFormData((prev) => ({
           ...prev,
           full_name: user.user_metadata?.full_name ?? '',
           phone: user.phone ?? '',
         }))
-      }
-
-      if (settingsRes.data) {
-        const s = settingsRes.data
-        setBizSettings({
-          notification_email: s.notification_email ?? true,
-          notification_push: s.notification_push ?? true,
-          notification_whatsapp: s.notification_whatsapp ?? false,
-          whatsapp_auto_reply: s.whatsapp_auto_reply ?? null,
-          whatsapp_business_only: s.whatsapp_business_only ?? false,
-          email_display_name: s.email_display_name ?? 'Autofield Technics',
-          email_reply_to: s.email_reply_to ?? 'info@autofieldstechnics.co.za',
-          smtp_note: s.smtp_note ?? 'SMTP configuration is managed via Environment Variables.',
-          primary_color: s.primary_color ?? '#3B82F6',
-          accent_color: s.accent_color ?? '#10B981',
-          favicon_url: s.favicon_url ?? null,
-          document_footer: s.document_footer ?? null,
-        })
-        setWebsiteCopy({
-          site_name: s.site_name ?? 'Autofields Technics',
-          phone: s.phone ?? '+27784802796',
-          city: s.city ?? 'Johannesburg',
-          hero_title: s.hero_title ?? 'Professional Mechanical Care, Wherever You Are',
-          hero_description: s.hero_description ?? 'From emergency roadside assistance to expert workshop repairs in {city}.',
-          contact_email: s.contact_email ?? 'info@autofieldstechnics.co.za',
-        })
-        setDocumentFooter(s.document_footer ?? '')
       }
 
       setLoading(false)
@@ -231,8 +156,7 @@ export default function AdminSettingsPage() {
       whatsapp_number: formData.whatsapp_number.trim() || null,
     }
 
-    const bizPayload = {
-      workshop_id: workshopId,
+    const bizPayload: Record<string, unknown> = {
       company_name: formData.company_name.trim() || null,
       logo_url: formData.logo_url.trim() || null,
       address: formData.address.trim() || null,
@@ -249,20 +173,18 @@ export default function AdminSettingsPage() {
       terms_conditions: formData.terms_conditions.trim() || null,
     }
 
-    const [profileRes, bizRes] = await Promise.all([
-      (supabase as any).from('profiles').upsert(profilePayload),
-      (supabase as any).from('business_settings').upsert(bizPayload),
-    ])
-
-    setSaving(false)
-
-    if (profileRes.error || bizRes.error) {
-      console.error('Save error:', profileRes.error || bizRes.error)
-      toast.error('Failed to save settings')
-      return
+    try {
+      await Promise.all([
+        (supabase as any).from('profiles').upsert(profilePayload),
+        saveAdminSettings(bizPayload),
+      ])
+      toast.success('Settings updated successfully!')
+    } catch (err: any) {
+      console.error('Save error:', err)
+      toast.error(err.message || 'Failed to save settings')
+    } finally {
+      setSaving(false)
     }
-
-    toast.success('Settings updated successfully!')
   }
 
   if (loading) {
@@ -280,12 +202,11 @@ export default function AdminSettingsPage() {
           <ArrowLeft size={16} />
         </Link>
         <div>
-          <h1 className="text-2xl font-black text-grey-dark tracking-tight">{SITE_CONFIG.dashboard.pageTitles.settings}</h1>
-          <p className="text-xs text-grey">Manage your business identity, financials, communications, and availability.</p>
+          <h1 className="text-2xl font-black text-grey-dark tracking-tight">Workspace Settings</h1>
+          <p className="text-xs text-grey">Manage your business details, financials, schedule, and availability.</p>
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-1 bg-white border border-grey-medium/10 rounded-base p-1 shadow-sm overflow-x-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -308,8 +229,12 @@ export default function AdminSettingsPage() {
         })}
       </div>
 
-      {/* Profile-based tabs with shared save */}
-      {profileTabs.includes(activeTab) ? (
+      {activeTab === 'working_hours' || activeTab === 'blocked_slots' ? (
+        <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5 min-h-[400px]">
+          {activeTab === 'working_hours' && <WorkingHoursForm />}
+          {activeTab === 'blocked_slots' && <BlockedSlotsForm />}
+        </div>
+      ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-0">
           <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5 min-h-[400px]">
             {activeTab === 'business' && (
@@ -326,6 +251,7 @@ export default function AdminSettingsPage() {
                 termsConditions={formData.terms_conditions}
                 documentFooter={documentFooter}
                 workshopId={workshopId}
+                useAdminApi
                 onTermsChange={(v) => handleChange('terms_conditions', v)}
                 onDocumentFooterChange={setDocumentFooter}
               />
@@ -349,58 +275,6 @@ export default function AdminSettingsPage() {
             </Button>
           </div>
         </form>
-      ) : contentTabs.includes(activeTab) ? (
-        <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5 min-h-[400px]">
-          {activeTab === 'website_copy' && (
-            <WebsiteCopyForm
-              initialData={websiteCopy}
-              workshopId={workshopId}
-              onSaved={() => {
-                // Refresh data after save
-                window.location.reload()
-              }}
-            />
-          )}
-        </div>
-      ) : settingsTabs.includes(activeTab) ? (
-        <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5 min-h-[400px]">
-          {activeTab === 'notifications' && (
-            <NotificationsForm
-              settings={bizSettings}
-              workshopId={workshopId}
-              onUpdate={(s) => setBizSettings((prev) => ({ ...prev, ...s }))}
-            />
-          )}
-          {activeTab === 'whatsapp' && (
-            <WhatsAppForm
-              settings={bizSettings}
-              workshopId={workshopId}
-              onUpdate={(s) => setBizSettings((prev) => ({ ...prev, ...s }))}
-            />
-          )}
-          {activeTab === 'email' && (
-            <EmailForm
-              settings={bizSettings}
-              workshopId={workshopId}
-              onUpdate={(s) => setBizSettings((prev) => ({ ...prev, ...s }))}
-            />
-          )}
-          {activeTab === 'branding' && (
-            <BrandingForm
-              settings={bizSettings}
-              workshopId={workshopId}
-              onUpdate={(s) => setBizSettings((prev) => ({ ...prev, ...s }))}
-            />
-          )}
-          {activeTab === 'email_templates' && (
-            <EmailTemplatesForm workshopId={workshopId} />
-          )}
-        </div>
-      ) : (
-        <div className="bg-white border border-grey-medium/10 rounded-base p-6 shadow-sm flex flex-col gap-5 min-h-[400px]">
-          {activeTab === 'working_hours' && <WorkingHoursForm />}
-          {activeTab === 'blocked_slots' && <BlockedSlotsForm />}
-        </div>
       )}
     </PageWrapper>
   )

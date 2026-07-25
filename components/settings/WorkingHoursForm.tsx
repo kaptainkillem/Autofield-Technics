@@ -23,6 +23,15 @@ const DAYS = [
   { id: 0, label: 'Sunday' },
 ]
 
+function normalizeTime(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return '00:00'
+  const parts = trimmed.split(':')
+  const hour = String(parseInt(parts[0] || '0', 10)).padStart(2, '0')
+  const minute = String(parseInt(parts[1] || '0', 10)).padStart(2, '0')
+  return `${hour}:${minute}`
+}
+
 const DEFAULT_HOURS: WorkingHour[] = [
   { day_of_week: 1, start_time: '08:00', end_time: '17:00', is_active: true },
   { day_of_week: 2, start_time: '08:00', end_time: '17:00', is_active: true },
@@ -91,8 +100,8 @@ export function WorkingHoursForm() {
           type: 'working_hours',
           hours: hours.map((h) => ({
             day_of_week: h.day_of_week,
-            start_time: h.start_time,
-            end_time: h.end_time,
+            start_time: normalizeTime(h.start_time),
+            end_time: normalizeTime(h.end_time),
             is_active: h.is_active,
           })),
         }),

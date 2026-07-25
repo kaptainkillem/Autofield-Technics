@@ -200,35 +200,66 @@ export type Database = {
           address: string | null
           bank_name: string | null
           branch_code: string | null
+          business_hours: string | null
+          business_type: string | null
           callout_fee: number | null
           city: string | null
           company_name: string | null
           contact_email: string | null
+          country: string | null
           created_at: string | null
+          currency: string | null
           default_deposit_percent: number | null
           diagnostic_fee: number | null
           document_footer: string | null
           email_display_name: string | null
+          email_from: string | null
+          email_provider: string | null
           email_reply_to: string | null
+          experience_tagline: string | null
           favicon_url: string | null
+          footer_show_company_reg: boolean | null
+          footer_show_email: boolean | null
+          footer_show_social: boolean | null
+          font_family: string | null
           hero_description: string | null
+          hero_image_url: string | null
           hero_title: string | null
+          home_page_content: Json | null
           hourly_rate: number | null
           logo_url: string | null
+          nav_links: Json | null
           notification_email: boolean
           notification_push: boolean
           notification_whatsapp: boolean
+          og_image_url: string | null
           phone: string | null
           primary_color: string
+          primary_text_color: string | null
           registration_number: string | null
+          region: string | null
+          response_time: string | null
+          secondary_text_color: string | null
+          service_radius: string | null
+          service_tagline: string | null
           site_name: string | null
           smtp_note: string | null
+          smtp_host: string | null
+          smtp_password: string | null
+          smtp_port: number | null
+          smtp_secure: boolean | null
+          smtp_username: string | null
+          admin_notification_email: string | null
+          social_links: Json | null
+          specializations: string[] | null
           terms_conditions: string | null
           updated_at: string | null
           vat_number: string | null
           whatsapp_auto_reply: string | null
           whatsapp_business_only: boolean
+          whatsapp_number: string | null
           workshop_id: string
+          years_experience: string | null
         }
         Insert: {
           accent_color?: string
@@ -237,35 +268,66 @@ export type Database = {
           address?: string | null
           bank_name?: string | null
           branch_code?: string | null
+          business_hours?: string | null
+          business_type?: string | null
           callout_fee?: number | null
           city?: string | null
           company_name?: string | null
           contact_email?: string | null
+          country?: string | null
           created_at?: string | null
+          currency?: string | null
           default_deposit_percent?: number | null
           diagnostic_fee?: number | null
           document_footer?: string | null
           email_display_name?: string | null
+          email_from?: string | null
+          email_provider?: string | null
           email_reply_to?: string | null
+          experience_tagline?: string | null
           favicon_url?: string | null
+          footer_show_company_reg?: boolean | null
+          footer_show_email?: boolean | null
+          footer_show_social?: boolean | null
+          font_family?: string | null
           hero_description?: string | null
+          hero_image_url?: string | null
           hero_title?: string | null
+          home_page_content?: Json | null
           hourly_rate?: number | null
           logo_url?: string | null
+          nav_links?: Json | null
           notification_email?: boolean
           notification_push?: boolean
           notification_whatsapp?: boolean
+          og_image_url?: string | null
           phone?: string | null
           primary_color?: string
+          primary_text_color?: string | null
           registration_number?: string | null
+          region?: string | null
+          response_time?: string | null
+          secondary_text_color?: string | null
+          service_radius?: string | null
+          service_tagline?: string | null
           site_name?: string | null
           smtp_note?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_secure?: boolean | null
+          smtp_username?: string | null
+          admin_notification_email?: string | null
+          social_links?: Json | null
+          specializations?: string[] | null
           terms_conditions?: string | null
           updated_at?: string | null
           vat_number?: string | null
           whatsapp_auto_reply?: string | null
           whatsapp_business_only?: boolean
-          workshop_id: string
+          whatsapp_number?: string | null
+          workshop_id?: string
+          years_experience?: string | null
         }
         Update: {
           accent_color?: string
@@ -274,35 +336,64 @@ export type Database = {
           address?: string | null
           bank_name?: string | null
           branch_code?: string | null
+          business_hours?: string | null
+          business_type?: string | null
           callout_fee?: number | null
           city?: string | null
           company_name?: string | null
           contact_email?: string | null
+          country?: string | null
           created_at?: string | null
+          currency?: string | null
           default_deposit_percent?: number | null
           diagnostic_fee?: number | null
           document_footer?: string | null
           email_display_name?: string | null
           email_reply_to?: string | null
+          experience_tagline?: string | null
           favicon_url?: string | null
+          footer_show_company_reg?: boolean | null
+          footer_show_email?: boolean | null
+          footer_show_social?: boolean | null
+          font_family?: string | null
           hero_description?: string | null
+          hero_image_url?: string | null
           hero_title?: string | null
+          home_page_content?: Json | null
           hourly_rate?: number | null
           logo_url?: string | null
+          nav_links?: Json | null
           notification_email?: boolean
           notification_push?: boolean
           notification_whatsapp?: boolean
+          og_image_url?: string | null
           phone?: string | null
           primary_color?: string
+          primary_text_color?: string | null
           registration_number?: string | null
+          region?: string | null
+          response_time?: string | null
+          secondary_text_color?: string | null
+          service_radius?: string | null
+          service_tagline?: string | null
           site_name?: string | null
           smtp_note?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_secure?: boolean | null
+          smtp_username?: string | null
+          admin_notification_email?: string | null
+          social_links?: Json | null
+          specializations?: string[] | null
           terms_conditions?: string | null
           updated_at?: string | null
           vat_number?: string | null
           whatsapp_auto_reply?: string | null
           whatsapp_business_only?: boolean
+          whatsapp_number?: string | null
           workshop_id?: string
+          years_experience?: string | null
         }
         Relationships: [
           {
@@ -322,6 +413,7 @@ export type Database = {
           id: string
           name: string
           slug: string
+          workshop_id: string
         }
         Insert: {
           created_at?: string | null
@@ -330,6 +422,7 @@ export type Database = {
           id?: string
           name: string
           slug: string
+          workshop_id: string
         }
         Update: {
           created_at?: string | null
@@ -338,8 +431,17 @@ export type Database = {
           id?: string
           name?: string
           slug?: string
+          workshop_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_logs: {
         Row: {
@@ -496,6 +598,7 @@ export type Database = {
           is_active: boolean
           question: string
           updated_at: string | null
+          workshop_id: string | null
         }
         Insert: {
           answer: string
@@ -506,6 +609,7 @@ export type Database = {
           is_active?: boolean
           question: string
           updated_at?: string | null
+          workshop_id?: string | null
         }
         Update: {
           answer?: string
@@ -516,8 +620,17 @@ export type Database = {
           is_active?: boolean
           question?: string
           updated_at?: string | null
+          workshop_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "faqs_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoices: {
         Row: {
@@ -632,6 +745,7 @@ export type Database = {
           phone: string | null
           status: string | null
           vehicle_details: string | null
+          workshop_id: string
         }
         Insert: {
           created_at?: string | null
@@ -642,6 +756,7 @@ export type Database = {
           phone?: string | null
           status?: string | null
           vehicle_details?: string | null
+          workshop_id: string
         }
         Update: {
           created_at?: string | null
@@ -652,8 +767,17 @@ export type Database = {
           phone?: string | null
           status?: string | null
           vehicle_details?: string | null
+          workshop_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "leads_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -1043,6 +1167,7 @@ export type Database = {
           province: string
           suburb: string
           updated_at: string
+          workshop_id: string
         }
         Insert: {
           city: string
@@ -1056,6 +1181,7 @@ export type Database = {
           province: string
           suburb: string
           updated_at?: string
+          workshop_id: string
         }
         Update: {
           city?: string
@@ -1069,8 +1195,17 @@ export type Database = {
           province?: string
           suburb?: string
           updated_at?: string
+          workshop_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "seo_locations_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       seo_registry: {
         Row: {
@@ -1087,6 +1222,7 @@ export type Database = {
           province: string | null
           suburb: string | null
           updated_at: string
+          workshop_id: string | null
         }
         Insert: {
           city?: string | null
@@ -1102,6 +1238,7 @@ export type Database = {
           province?: string | null
           suburb?: string | null
           updated_at?: string
+          workshop_id?: string | null
         }
         Update: {
           city?: string | null
@@ -1117,8 +1254,17 @@ export type Database = {
           province?: string | null
           suburb?: string | null
           updated_at?: string
+          workshop_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "seo_registry_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       services: {
         Row: {
@@ -1418,33 +1564,48 @@ export type Database = {
       }
       workshops: {
         Row: {
+          billing_status: string
           contact_email: string | null
           contact_phone: string | null
           created_at: string | null
+          domain: string | null
           id: string
           name: string
           owner_id: string
           slug: string
+          status: string
+          suspended_at: string | null
+          suspension_reason: string | null
           updated_at: string | null
         }
         Insert: {
+          billing_status?: string
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string | null
+          domain?: string | null
           id?: string
           name: string
           owner_id: string
           slug: string
+          status?: string
+          suspended_at?: string | null
+          suspension_reason?: string | null
           updated_at?: string | null
         }
         Update: {
+          billing_status?: string
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string | null
+          domain?: string | null
           id?: string
           name?: string
           owner_id?: string
           slug?: string
+          status?: string
+          suspended_at?: string | null
+          suspension_reason?: string | null
           updated_at?: string | null
         }
         Relationships: []

@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { PageWrapper } from '@/components/layout/PageWrapper'
-import { SITE_CONFIG } from '@/lib/site-config'
 
 type Review = {
   id: string
@@ -120,7 +119,7 @@ export default function AdminReviewsPage() {
           <ArrowLeft size={16} />
         </Link>
         <div>
-          <h1 className="text-2xl font-black text-grey-dark tracking-tight">{SITE_CONFIG.dashboard.pageTitles.reviews}</h1>
+          <h1 className="text-2xl font-black text-grey-dark tracking-tight">Reviews & Approvals</h1>
           <p className="text-xs text-grey">Review and moderate customer testimonials before they go live.</p>
         </div>
       </div>

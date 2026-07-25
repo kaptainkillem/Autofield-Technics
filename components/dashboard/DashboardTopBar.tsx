@@ -31,24 +31,37 @@ export function DashboardTopBar() {
   }, [])
 
   const isAdmin = pathname.startsWith('/dashboard/admin')
-  const isClient = pathname.startsWith('/dashboard') && !isAdmin
+  const isSuperAdmin = pathname.startsWith('/dashboard/super-admin')
+  const isClient = pathname.startsWith('/dashboard') && !isAdmin && !isSuperAdmin
   const initial = getUserInitial(user)
 
   return (
     <header className="hidden lg:flex bg-white border-b border-grey-medium/30 sticky top-0 z-30">
       <div className="w-64 flex-shrink-0 border-r border-grey-medium/20 px-5 h-14 flex items-center">
-        <Link href="/" className="no-underline">
-          <SiteLogo />
-        </Link>
-        {isAdmin && (
-          <span className="ml-2 text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
-            Admin
-          </span>
-        )}
-        {isClient && (
-          <span className="ml-2 text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
-            Client
-          </span>
+        {isSuperAdmin ? (
+          <Link href="/dashboard/super-admin" className="no-underline flex items-center gap-2">
+            <img
+              src="/motiongrid-assets/logos/logo-horizontal.svg"
+              alt="Motion Grid"
+              className="h-7 w-auto"
+            />
+          </Link>
+        ) : (
+          <>
+            <Link href="/" className="no-underline">
+              <SiteLogo />
+            </Link>
+            {isAdmin && (
+              <span className="ml-2 text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
+                Admin
+              </span>
+            )}
+            {isClient && (
+              <span className="ml-2 text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
+                Client
+              </span>
+            )}
+          </>
         )}
       </div>
       <div className="flex-1 h-14 flex items-center justify-end px-6">

@@ -1,25 +1,35 @@
 @import "tailwindcss";
-@import "../styles/variables.css"; /* This pulls in your #5B9BD5 etc. */
+@import "../styles/variables.css"; /* Provides default CSS variables on :root */
 @import "react-datepicker/dist/react-datepicker.css";
 
-@theme {
-  /* Brand Colors */
-  --color-primary: #5B9BD5;
-  --color-primary-dark: #2E75B6;
-  --color-primary-light: #D5E8F0;
-  
-  --color-grey: #595959;
-  --color-grey-dark: #333333;
-  --color-grey-light: #E8E8E8;
-  --color-grey-lightest: #F5F5F5;
-  --color-grey-medium: #767676;
+@theme inline {
+  /* Brand Colors — dynamic via CSS variables set by app/layout.tsx.
+     Fallbacks match variables.css defaults so utilities work offline. */
+  --color-primary: var(--brand-primary, #3B82F6);
+  --color-primary-dark: var(--brand-primary-dark, #2563EB);
+  --color-primary-light: var(--brand-primary-light, #BFDBFE);
+  --color-accent: var(--brand-accent, #10B981);
+  --color-accent-dark: var(--brand-accent-dark, #059669);
+  --color-accent-light: var(--brand-accent-light, #D1FAE5);
 
-  /* Semantic Colors */
-  --color-success: #4CAF50;
-  --color-error: #F44336;
+  /* Neutrals — fallbacks keep site legible if no DB value has loaded */
+  --color-white: var(--color-white, #FFFFFF);
+  --color-black: var(--color-black, #000000);
 
-  /* Typography */
-  --font-sans: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --color-grey: var(--color-grey, #595959);
+  --color-grey-dark: var(--color-grey-dark, #333333);
+  --color-grey-light: var(--color-grey-light, #E8E8E8);
+  --color-grey-lightest: var(--color-grey-lightest, #F5F5F5);
+  --color-grey-medium: var(--color-grey-medium, #767676);
+
+  /* Semantic colors */
+  --color-success: var(--color-success, #4CAF50);
+  --color-error: var(--color-error, #F44336);
+  --color-warning: var(--color-warning, #FF9800);
+  --color-info: var(--color-info, #2196F3);
+
+  /* Typography — dynamic via --brand-font-sans set by app/layout.tsx */
+  --font-sans: var(--brand-font-sans, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
   --font-mono: "Courier New", monospace;
 
   /* Spacing & Radius */

@@ -42,7 +42,7 @@ export const Hero: React.FC<HeroProps> = ({
       >
         <div className="flex flex-col items-center md:items-start gap-6 w-full">
           <h1 className="heading-1">{title}</h1>
-          <p className="text-base font-normal text-white leading-normal">{description}</p>
+          <p className="text-base font-normal heading-1">{description}</p>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             {primaryCTA.href ? (
               <Link href={primaryCTA.href} className="w-full sm:w-auto">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { saveSuperAdminSettings } from '@/lib/settings-api'
 import { sanitizeText } from '@/lib/input-sanitizer'
 import { toast } from 'sonner'
 import { MessageCircle, Clock, Save, Loader2, Eye } from 'lucide-react'
@@ -29,26 +29,21 @@ export function WhatsAppForm({ settings, workshopId, onUpdate }: WhatsAppFormPro
   const [showPreview, setShowPreview] = useState(false)
 
   async function handleSave() {
+    if (!workshopId) return
     setSaving(true)
-    const { error } = await (supabase as any)
-      .from('business_settings')
-      .upsert({
-        workshop_id: workshopId,
+    try {
+      await saveSuperAdminSettings(workshopId, {
         whatsapp_auto_reply: form.whatsapp_auto_reply ? sanitizeText(form.whatsapp_auto_reply) : null,
         whatsapp_business_only: form.whatsapp_business_only,
-        updated_at: new Date().toISOString(),
       })
-
-    setSaving(false)
-
-    if (error) {
-      console.error('Save WhatsApp error:', error)
-      toast.error('Failed to save WhatsApp settings')
-      return
+      onUpdate(form)
+      toast.success('WhatsApp settings saved!')
+    } catch (err: any) {
+      console.error('Save WhatsApp error:', err)
+      toast.error(err.message || 'Failed to save WhatsApp settings')
+    } finally {
+      setSaving(false)
     }
-
-    onUpdate(form)
-    toast.success('WhatsApp settings saved!')
   }
 
   return (

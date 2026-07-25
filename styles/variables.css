@@ -2,16 +2,31 @@
 /* Global CSS variables for the mechanic website */
 
 :root {
-  /* Colors - Primary */
-  --color-primary: #5B9BD5;
-  --color-primary-dark: #2E75B6;
-  --color-primary-light: #D5E8F0;
+  /* Brand Colors — overridden at runtime by app/layout.tsx via --brand-* vars */
+  --brand-primary: #3B82F6;
+  --brand-primary-dark: #2563EB;
+  --brand-primary-light: #BFDBFE;
+  --brand-accent: #10B981;
+  --brand-accent-dark: #059669;
+  --brand-accent-light: #D1FAE5;
+
+  /* Legacy color aliases — still used by inline styles and non-Tailwind CSS */
+  --color-primary: var(--brand-primary);
+  --color-primary-dark: var(--brand-primary-dark);
+  --color-primary-light: var(--brand-primary-light);
+  --color-accent: var(--brand-accent);
+  --color-accent-dark: var(--brand-accent-dark);
+  --color-accent-light: var(--brand-accent-light);
+
+  /* Text Colors — overridden at runtime via --brand-text-* vars */
+  --brand-text-primary: #111827;
+  --brand-text-secondary: #595959;
 
   /* Colors - Neutral */
   --color-white: #FFFFFF;
-  --color-black: #000000;
+  --color-black: var(--brand-text-primary, #111827);
   --color-grey-dark: #333333;
-  --color-grey-deep: #595959;
+  --color-grey-deep: var(--brand-text-secondary, #595959);
   --color-grey-light: #E8E8E8;
   --color-grey-lightest: #F5F5F5;
   --color-grey-medium: #767676;
@@ -23,7 +38,8 @@
   --color-info: #2196F3;
 
   /* Typography */
-  --font-primary: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --brand-font-sans: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-primary: var(--brand-font-sans);
   --font-mono: "Courier New", monospace;
 
   /* Font Sizes */
@@ -119,13 +135,6 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-}
-
-html {
-  font-family: var(--font-primary);
-  font-size: 16px;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -396,7 +405,13 @@ li {
 
 /* Responsive utilities */
 @media (max-width: 768px) {
-  body {
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
     font-size: 14px;
   }
 

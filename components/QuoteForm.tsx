@@ -5,9 +5,7 @@ import { MessageCircle, Loader2, ArrowRight, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
-import { replaceVars } from '@/lib/site-config'
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider'
-import { Database } from '@/types/database'
 import { sanitizePhone, sanitizeText, sanitizeEmail } from '@/lib/input-sanitizer'
 import Link from 'next/link'
 
@@ -23,21 +21,16 @@ const SERVICE_OPTIONS = [
   'Other',
 ]
 
-const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '27000000000'
-const MECHANIC_USER_ID = process.env.NEXT_PUBLIC_MECHANIC_USER_ID || null
-
 export function QuoteForm({ workshopId }: { workshopId?: string }) {
   const config = useSiteConfig()
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isAnonymous, setIsAnonymous] = useState(true)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        setCurrentUserId(user.id)
         setIsAnonymous(false)
       }
     })
@@ -136,7 +129,7 @@ export function QuoteForm({ workshopId }: { workshopId?: string }) {
     }
 
     setSubmitted(true)
-    window.open(`https://wa.me/${WA_NUMBER}?text=${buildWhatsAppMessage()}`, '_blank')
+    window.open(`https://wa.me/${config.whatsappNumber}?text=${buildWhatsAppMessage()}`, '_blank')
   }
 
   if (submitted) {

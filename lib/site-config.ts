@@ -122,6 +122,12 @@ export const SITE_CONFIG = {
     whatsAppMessageTemplate: 'Hi {customerName}, this is {name} regarding your quote request',
   },
 
+  // ── Contact Form ────────────────────────────────────────────────
+  contactForm: {
+    title: 'Contact Us',
+    description: '',
+  },
+
   // ── Navigation ──────────────────────────────────────────────────
   navigation: {
     header: [

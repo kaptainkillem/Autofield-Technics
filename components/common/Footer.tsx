@@ -3,7 +3,6 @@
 import React, { ComponentPropsWithoutRef } from 'react'
 import Link from 'next/link'
 import { SiteLogo } from './SiteLogo'
-import { SITE_CONFIG, buildFooterTagline } from '@/lib/site-config'
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider'
 
 interface FooterProps extends ComponentPropsWithoutRef<'footer'> {}
@@ -13,11 +12,25 @@ export const Footer: React.FC<FooterProps> = ({
   ...props
 }) => {
   const config = useSiteConfig()
-  const { footer, navigation } = SITE_CONFIG
 
   const socialEntries = Object.entries(config.socialMedia).filter(
     ([, url]) => !!url
   ) as [string, string][]
+
+  const footerQuick = config.nav.length > 0
+    ? config.nav.map((link) => ({ label: link.label, href: link.href }))
+    : [
+        { label: 'Request a Quote', href: '/quote' },
+        { label: 'Services', href: '/services' },
+        { label: 'FAQ', href: '/faq' },
+        { label: 'Contact', href: '/contact' },
+        { label: 'Reviews', href: '/reviews' },
+      ]
+
+  const footerLegal = [
+    { label: 'Terms of Service', href: '/terms' },
+    { label: 'Privacy Policy', href: '/privacy' },
+  ]
 
   return (
     <footer
@@ -30,7 +43,7 @@ export const Footer: React.FC<FooterProps> = ({
             <SiteLogo />
           </span>
           <p className="text-small text-white/80 m-0">
-            {buildFooterTagline()}
+            {config.experience}
           </p>
         </div>
 
@@ -38,7 +51,7 @@ export const Footer: React.FC<FooterProps> = ({
           <div className="flex flex-col gap-4">
             <h3 className="text-base font-semibold tracking-wide">Quick Links</h3>
             <nav className="flex flex-col gap-2">
-              {navigation.footerQuick.map((link) => (
+              {footerQuick.map((link) => (
                 <Link
                   key={link.label}
                   href={link.href}
@@ -57,20 +70,17 @@ export const Footer: React.FC<FooterProps> = ({
                 {config.phone}
               </a>
 
-              {footer.showEmail && config.contact.email && (
+              {config.footer.showEmail && config.contact.email && (
                 <a href={`mailto:${config.contact.email}`} className="no-underline font-bold text-white/80 hover:text-white transition-colors duration-200">
                   {config.contact.email}
                 </a>
               )}
 
-              <a
-                href={SITE_CONFIG.address.mapUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="no-underline font-bold text-white/80 hover:text-white transition-colors duration-200"
-              >
-                {SITE_CONFIG.address.street}, {SITE_CONFIG.address.area},<br />{config.city}, {SITE_CONFIG.address.countryFull}
-              </a>
+              {config.address && (
+                <span className="font-bold text-white/80">
+                  {config.address}
+                </span>
+              )}
 
               <Link
                 href="/quote"
@@ -79,7 +89,7 @@ export const Footer: React.FC<FooterProps> = ({
                 {config.serviceTagline}
               </Link>
 
-              {footer.showSocial && socialEntries.length > 0 && (
+              {config.footer.showSocial && socialEntries.length > 0 && (
                 <div className="flex items-center gap-3 mt-2">
                   {socialEntries.map(([platform, url]) => (
                     <a
@@ -115,7 +125,7 @@ export const Footer: React.FC<FooterProps> = ({
           <div className="flex flex-col gap-4">
             <h3 className="text-base font-semibold tracking-wide">Legal</h3>
             <nav className="flex flex-col gap-2">
-              {navigation.footerLegal.map((link) => (
+              {footerLegal.map((link) => (
                 <Link
                   key={link.label}
                   href={link.href}
@@ -132,11 +142,11 @@ export const Footer: React.FC<FooterProps> = ({
       <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <p className="text-small text-white/60 text-center m-0">
-            &copy; 2026 {config.name}. All Rights Reserved.
-            {footer.showCompanyReg && SITE_CONFIG.business.companyRegistration && (
+            &copy; {new Date().getFullYear()} {config.name}. All Rights Reserved.
+            {config.footer.showCompanyReg && config.business.companyRegistration && (
               <span className="block mt-1 text-xs">
-                Reg: {SITE_CONFIG.business.companyRegistration}
-                {SITE_CONFIG.business.vatNumber && ` | VAT: ${SITE_CONFIG.business.vatNumber}`}
+                Reg: {config.business.companyRegistration}
+                {config.business.vatNumber && ` | VAT: ${config.business.vatNumber}`}
               </span>
             )}
           </p>

@@ -35,15 +35,23 @@ $$ LANGUAGE plpgsql STABLE;
 -- ═══════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS public.workshops (
-    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name           TEXT NOT NULL,
-    slug           TEXT NOT NULL UNIQUE,
-    owner_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    contact_email  TEXT,
-    contact_phone  TEXT,
-    created_at     TIMESTAMPTZ DEFAULT NOW(),
-    updated_at     TIMESTAMPTZ DEFAULT NOW()
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name              TEXT NOT NULL,
+    slug              TEXT NOT NULL UNIQUE,
+    domain            TEXT,
+    owner_id          UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    contact_email     TEXT,
+    contact_phone     TEXT,
+    status            TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
+    billing_status    TEXT NOT NULL DEFAULT 'paid' CHECK (billing_status IN ('paid', 'past_due', 'cancelled')),
+    suspended_at      TIMESTAMPTZ,
+    suspension_reason TEXT,
+    created_at        TIMESTAMPTZ DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_workshops_domain ON public.workshops(domain)
+  WHERE domain IS NOT NULL;
 
 ALTER TABLE public.workshops ENABLE ROW LEVEL SECURITY;
 
@@ -68,13 +76,14 @@ CREATE INDEX IF NOT EXISTS idx_workshops_slug     ON public.workshops(slug);
 -- ─── Categories ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.categories (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workshop_id   UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
+    workshop_id   UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
     name          TEXT NOT NULL,
-    slug          TEXT NOT NULL UNIQUE,
+    slug          TEXT NOT NULL,
     icon_name     TEXT NOT NULL DEFAULT 'Wrench',
     display_order INT DEFAULT 0,
     created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(workshop_id, slug)
 );
 
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
@@ -85,9 +94,15 @@ DROP POLICY IF EXISTS "Admin Manage Categories" ON public.categories;
 DROP POLICY IF EXISTS "Allow public read access on categories" ON public.categories;
 DROP POLICY IF EXISTS "Public Read Categories" ON public.categories;
 DROP POLICY IF EXISTS "Categories manage super admin" ON public.categories;
+DROP POLICY IF EXISTS "Categories read global" ON public.categories;
+DROP POLICY IF EXISTS "Categories read scoped" ON public.categories;
 
-CREATE POLICY "Categories read global" ON public.categories
-FOR SELECT USING (true);
+CREATE POLICY "Categories read scoped" ON public.categories
+FOR SELECT USING (
+  auth.uid() IS NULL
+  OR workshop_id = public.current_workshop_id()
+  OR public.is_super_admin()
+);
 
 CREATE POLICY "Categories manage staff" ON public.categories FOR ALL USING (
   public.current_user_role() IN ('admin', 'super_admin')
@@ -417,9 +432,19 @@ ALTER TABLE public.faqs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Anyone can read active FAQs" ON public.faqs;
 DROP POLICY IF EXISTS "Admins can manage FAQs" ON public.faqs;
 DROP POLICY IF EXISTS "FAQs manage super admin" ON public.faqs;
+DROP POLICY IF EXISTS "FAQs read global" ON public.faqs;
+DROP POLICY IF EXISTS "FAQs read scoped" ON public.faqs;
 
-CREATE POLICY "FAQs read global" ON public.faqs
-FOR SELECT USING (is_active = true);
+CREATE POLICY "FAQs read scoped" ON public.faqs
+FOR SELECT USING (
+  is_active = true
+  AND (
+    auth.uid() IS NULL
+    OR workshop_id = public.current_workshop_id()
+    OR workshop_id IS NULL
+    OR public.is_super_admin()
+  )
+);
 
 CREATE POLICY "FAQs manage staff" ON public.faqs FOR ALL USING (
   public.current_user_role() IN ('admin', 'super_admin')
@@ -719,7 +744,7 @@ CREATE TRIGGER on_review_insert_notification
 -- ─── Receipts ────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.receipts (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workshop_id    UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
+    workshop_id    UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
     user_id        UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     quote_id       UUID REFERENCES public.quotes(id) ON DELETE SET NULL,
     invoice_number TEXT,
@@ -742,10 +767,23 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DROP POLICY IF EXISTS "Users can view own receipts" ON public.receipts;
-CREATE POLICY "Users can view own receipts" ON public.receipts FOR SELECT USING (auth.uid() = user_id AND deleted_at IS NULL);
-
 DROP POLICY IF EXISTS "Service role can manage receipts" ON public.receipts;
-CREATE POLICY "Service role can manage receipts" ON public.receipts FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Receipts tenant isolated" ON public.receipts
+FOR SELECT USING (
+  workshop_id = public.current_workshop_id()
+  AND (auth.uid() = user_id OR public.current_user_role() IN ('admin', 'super_admin'))
+);
+
+CREATE POLICY "Receipts manage tenant scoped" ON public.receipts
+FOR ALL USING (
+  workshop_id = public.current_workshop_id()
+  AND public.current_user_role() IN ('admin', 'super_admin')
+)
+WITH CHECK (
+  workshop_id = public.current_workshop_id()
+  AND public.current_user_role() IN ('admin', 'super_admin')
+);
 
 ALTER TABLE public.receipts
   ADD COLUMN IF NOT EXISTS amount_paid NUMERIC NOT NULL DEFAULT 0,
@@ -758,7 +796,7 @@ ALTER TABLE public.receipts
 -- ─── Expenses ────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.expenses (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workshop_id  UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
+    workshop_id  UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
     user_id      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     amount       NUMERIC NOT NULL CHECK (amount >= 0),
     category     TEXT NOT NULL CHECK (category IN ('Parts', 'Fuel', 'Tools', 'Rent', 'Data', 'Misc')),
@@ -772,14 +810,28 @@ CREATE TABLE IF NOT EXISTS public.expenses (
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role can manage expenses" ON public.expenses;
-CREATE POLICY "Service role can manage expenses" ON public.expenses FOR ALL USING (auth.role() = 'service_role');
-
 DROP POLICY IF EXISTS "Users can view own expenses" ON public.expenses;
-CREATE POLICY "Users can view own expenses" ON public.expenses FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Expenses tenant isolated" ON public.expenses
+FOR SELECT USING (
+  workshop_id = public.current_workshop_id()
+  AND (auth.uid() = user_id OR public.current_user_role() IN ('admin', 'super_admin'))
+);
+
+CREATE POLICY "Expenses manage tenant scoped" ON public.expenses
+FOR ALL USING (
+  workshop_id = public.current_workshop_id()
+  AND public.current_user_role() IN ('admin', 'super_admin')
+)
+WITH CHECK (
+  workshop_id = public.current_workshop_id()
+  AND public.current_user_role() IN ('admin', 'super_admin')
+);
 
 -- ─── Leads ───────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.leads (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workshop_id     UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
     name            TEXT,
     phone           TEXT,
     email           TEXT,
@@ -793,7 +845,16 @@ CREATE TABLE IF NOT EXISTS public.leads (
 ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role can manage leads" ON public.leads;
-CREATE POLICY "Service role can manage leads" ON public.leads FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Leads tenant isolated" ON public.leads
+FOR ALL USING (
+  workshop_id = public.current_workshop_id()
+  AND public.current_user_role() IN ('admin', 'super_admin')
+)
+WITH CHECK (
+  workshop_id = public.current_workshop_id()
+  AND public.current_user_role() IN ('admin', 'super_admin')
+);
 
 ALTER TABLE public.leads
   ADD COLUMN IF NOT EXISTS email TEXT,
@@ -803,7 +864,8 @@ ALTER TABLE public.leads
 -- ─── SEO Registry ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.seo_registry (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    path_url         TEXT NOT NULL UNIQUE,
+    workshop_id      UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
+    path_url         TEXT NOT NULL,
     page_type        TEXT NOT NULL,
     meta_title       TEXT NOT NULL,
     meta_description TEXT NOT NULL,
@@ -814,20 +876,28 @@ CREATE TABLE IF NOT EXISTS public.seo_registry (
     suburb           TEXT,
     is_active        BOOLEAN DEFAULT true,
     created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE NULLS NOT DISTINCT (workshop_id, path_url)
 );
 
 ALTER TABLE public.seo_registry ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Anyone can read active SEO entries" ON public.seo_registry;
-CREATE POLICY "Anyone can read active SEO entries" ON public.seo_registry FOR SELECT USING (is_active = true);
-
 DROP POLICY IF EXISTS "Service role can manage SEO entries" ON public.seo_registry;
-CREATE POLICY "Service role can manage SEO entries" ON public.seo_registry FOR ALL USING (auth.role() = 'service_role');
+DROP POLICY IF EXISTS "SEO read public" ON public.seo_registry;
+DROP POLICY IF EXISTS "SEO manage super admin" ON public.seo_registry;
+
+CREATE POLICY "SEO read public" ON public.seo_registry
+FOR SELECT USING (is_active = true);
+
+CREATE POLICY "SEO manage super admin" ON public.seo_registry
+FOR ALL USING (public.is_super_admin())
+WITH CHECK (public.is_super_admin());
 
 -- ─── SEO Locations ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.seo_locations (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workshop_id      UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
     city             TEXT NOT NULL,
     suburb           TEXT NOT NULL,
     province         TEXT NOT NULL,
@@ -837,21 +907,27 @@ CREATE TABLE IF NOT EXISTS public.seo_locations (
     content_body     TEXT NOT NULL,
     is_active        BOOLEAN DEFAULT true,
     created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT timezone('utc'::text, now()),
-    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT timezone('utc'::text, now())
+    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT timezone('utc'::text, now()),
+    UNIQUE(workshop_id, province, city, suburb)
 );
 
 ALTER TABLE public.seo_locations ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Anyone can read active SEO locations" ON public.seo_locations;
-CREATE POLICY "Anyone can read active SEO locations" ON public.seo_locations FOR SELECT USING (is_active = true);
-
 DROP POLICY IF EXISTS "Service role can manage SEO locations" ON public.seo_locations;
-CREATE POLICY "Service role can manage SEO locations" ON public.seo_locations FOR ALL USING (auth.role() = 'service_role');
+DROP POLICY IF EXISTS "SEO locations manage super admin" ON public.seo_locations;
+
+CREATE POLICY "SEO locations read public" ON public.seo_locations
+FOR SELECT USING (is_active = true);
+
+CREATE POLICY "SEO locations manage super admin" ON public.seo_locations
+FOR ALL USING (public.is_super_admin())
+WITH CHECK (public.is_super_admin());
 
 -- ─── Analytics ───────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.analytics (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workshop_id   UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
+    workshop_id   UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
     user_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     month         INT NOT NULL CHECK (month >= 1 AND month <= 12),
     year          INT NOT NULL,
@@ -859,7 +935,7 @@ CREATE TABLE IF NOT EXISTS public.analytics (
     total_jobs    INT,
     created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id, month, year)
+    UNIQUE(workshop_id, user_id, month, year)
 );
 
 ALTER TABLE public.analytics ENABLE ROW LEVEL SECURITY;
@@ -1078,23 +1154,31 @@ CREATE TRIGGER on_work_order_revision_response_notification
 -- ─── Working Hours ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.working_hours (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workshop_id UUID REFERENCES public.workshops(id) ON DELETE CASCADE,
+    workshop_id UUID NOT NULL REFERENCES public.workshops(id) ON DELETE CASCADE,
     day_of_week INT NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
     start_time  TIME NOT NULL,
     end_time    TIME NOT NULL,
     is_active   BOOLEAN NOT NULL DEFAULT true,
     created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(day_of_week)
+    UNIQUE(workshop_id, day_of_week)
 );
 
 ALTER TABLE public.working_hours ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Anyone can read working hours" ON public.working_hours;
-CREATE POLICY "Anyone can read working hours" ON public.working_hours FOR SELECT USING (true);
+CREATE POLICY "Working hours read public" ON public.working_hours FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Service role can manage working hours" ON public.working_hours;
-CREATE POLICY "Service role can manage working hours" ON public.working_hours FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Working hours manage tenant scoped" ON public.working_hours
+FOR ALL USING (
+  workshop_id = public.current_workshop_id()
+  AND public.current_user_role() IN ('admin', 'super_admin')
+)
+WITH CHECK (
+  workshop_id = public.current_workshop_id()
+  AND public.current_user_role() IN ('admin', 'super_admin')
+);
 
 -- ─── Blocked Slots ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.blocked_slots (
@@ -1208,14 +1292,43 @@ CREATE TABLE IF NOT EXISTS public.business_settings (
     email_display_name  TEXT,
     email_reply_to      TEXT,
     smtp_note           TEXT,
+    email_provider      TEXT DEFAULT 'resend',
+    email_from          TEXT,
+    admin_notification_email TEXT,
+    smtp_host           TEXT,
+    smtp_port           INT,
+    smtp_username       TEXT,
+    smtp_password       TEXT,
+    smtp_secure         BOOLEAN DEFAULT true,
     -- Website Copy (editable via admin dashboard)
     site_name           TEXT DEFAULT 'Autofields Technics',
     phone               TEXT DEFAULT '+27784802796',
+    whatsapp_number     TEXT,
     city                TEXT DEFAULT 'Johannesburg',
+    region              TEXT,
+    country             TEXT DEFAULT 'ZA',
+    currency            TEXT DEFAULT 'ZAR',
     hero_title          TEXT DEFAULT 'Professional Mechanical Care, Wherever You Are',
     hero_description    TEXT DEFAULT 'From emergency roadside assistance to expert workshop repairs in {city}.',
+    hero_image_url      TEXT,
     contact_email       TEXT DEFAULT 'info@autofieldstechnics.co.za',
     document_footer     TEXT,
+    business_hours      TEXT,
+    social_links        JSONB DEFAULT '[]'::jsonb,
+    years_experience    TEXT,
+    specializations     TEXT[] DEFAULT '{}',
+    service_radius      TEXT DEFAULT '50km',
+    business_type       TEXT DEFAULT 'mobile and workshop-based',
+    experience_tagline  TEXT,
+    service_tagline     TEXT DEFAULT 'Mobile + Workshop Service',
+    response_time       TEXT DEFAULT '30 minutes',
+    nav_links           JSONB DEFAULT '[]'::jsonb,
+    footer_show_social  BOOLEAN DEFAULT true,
+    footer_show_email   BOOLEAN DEFAULT true,
+    footer_show_company_reg BOOLEAN DEFAULT true,
+    og_image_url        TEXT,
+    font_family         TEXT DEFAULT 'Inter',
+    home_page_content   JSONB DEFAULT NULL,
     created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -1224,9 +1337,9 @@ ALTER TABLE public.business_settings ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Anyone can read business settings" ON public.business_settings;
 DROP POLICY IF EXISTS "Admins can manage business settings" ON public.business_settings;
+DROP POLICY IF EXISTS "Business settings read public" ON public.business_settings;
 
-CREATE POLICY "Business settings read public" ON public.business_settings
-FOR SELECT USING (EXISTS (SELECT 1 FROM public.workshops WHERE id = workshop_id));
+-- Read is now via the public_business_settings view below
 
 CREATE POLICY "Business settings modify tenant isolated" ON public.business_settings
 FOR ALL USING (
@@ -1258,6 +1371,42 @@ ALTER TABLE public.business_settings
   ADD COLUMN IF NOT EXISTS callout_fee NUMERIC(10,2),
   ADD COLUMN IF NOT EXISTS diagnostic_fee NUMERIC(10,2),
   ADD COLUMN IF NOT EXISTS default_deposit_percent NUMERIC(5,2);
+
+-- ─── Text Colors ────────────────────────────────────────────────────────────
+ALTER TABLE public.business_settings
+  ADD COLUMN IF NOT EXISTS primary_text_color TEXT DEFAULT '#111827',
+  ADD COLUMN IF NOT EXISTS secondary_text_color TEXT DEFAULT '#595959';
+
+-- ─── Public Business Settings View ────────────────────────────────────────────
+-- Exposes only tenant-safe columns; SMTP credentials are physically excluded.
+-- Public and standard admins query this view. Super-admins use the base table.
+-- View is security_definer to bypass base table RLS (same access level as before).
+
+CREATE OR REPLACE VIEW public.public_business_settings
+WITH (security_invoker = false)
+AS
+SELECT
+  workshop_id, primary_color, accent_color, favicon_url,
+  notification_email, notification_push, notification_whatsapp,
+  whatsapp_auto_reply, whatsapp_business_only,
+  email_display_name, email_reply_to, smtp_note,
+  site_name, phone, whatsapp_number, city, region, country, currency,
+  hero_title, hero_description, hero_image_url, contact_email,
+  document_footer, business_hours, social_links,
+  years_experience, specializations, service_radius, business_type,
+  experience_tagline, service_tagline, response_time,
+  nav_links, footer_show_social, footer_show_email, footer_show_company_reg,
+  og_image_url, font_family, home_page_content,
+  company_name, logo_url, address,
+  vat_number, registration_number, bank_name, account_holder, account_number, branch_code,
+  terms_conditions, hourly_rate, callout_fee, diagnostic_fee, default_deposit_percent,
+  primary_text_color, secondary_text_color,
+  created_at, updated_at
+FROM public.business_settings;
+
+GRANT SELECT ON public.public_business_settings TO anon, authenticated;
+
+REVOKE SELECT ON public.business_settings FROM anon, authenticated;
 
 -- ─── Quote Deposit & Expiry Fields ──────────────────────────────────────────────
 ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS deposit_percent NUMERIC(5,2);
@@ -1337,4 +1486,35 @@ CREATE POLICY "Logos insert by admin" ON storage.objects FOR INSERT WITH CHECK (
   bucket_id = 'logos'
   AND auth.role() = 'authenticated'
   AND public.current_user_role() IN ('admin', 'super_admin')
+);
+
+-- Bucket: assets (website images — public read, workshop-scoped write)
+CREATE POLICY "Assets read public" ON storage.objects FOR SELECT USING (
+  bucket_id = 'assets'
+);
+
+CREATE POLICY "Assets insert by admin" ON storage.objects FOR INSERT WITH CHECK (
+  bucket_id = 'assets'
+  AND auth.role() = 'authenticated'
+  AND public.current_user_role() IN ('admin', 'super_admin')
+  AND (storage.foldername(name))[1] = public.current_workshop_id()::text
+);
+
+CREATE POLICY "Assets update by admin" ON storage.objects FOR UPDATE USING (
+  bucket_id = 'assets'
+  AND auth.role() = 'authenticated'
+  AND public.current_user_role() IN ('admin', 'super_admin')
+  AND (storage.foldername(name))[1] = public.current_workshop_id()::text
+);
+
+CREATE POLICY "Assets delete by admin" ON storage.objects FOR DELETE USING (
+  bucket_id = 'assets'
+  AND auth.role() = 'authenticated'
+  AND public.current_user_role() IN ('admin', 'super_admin')
+  AND (storage.foldername(name))[1] = public.current_workshop_id()::text
+);
+
+CREATE POLICY "Assets manage by super admin" ON storage.objects FOR ALL USING (
+  bucket_id = 'assets'
+  AND public.is_super_admin()
 );

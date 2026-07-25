@@ -90,7 +90,7 @@ export async function POST(
 
   const [{ data: profile }, { data: settings }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', auth.userId).single() as any,
-    supabase.from('business_settings').select('*').eq('workshop_id', auth.workshopId!).single() as any,
+    supabase.from('public_business_settings' as any).select('*').eq('workshop_id', auth.workshopId!).single() as any,
   ])
 
   const logoBase64 = null

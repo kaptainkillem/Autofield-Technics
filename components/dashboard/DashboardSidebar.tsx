@@ -69,14 +69,49 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Services', href: '/dashboard/admin/services', icon: Settings2 },
   { label: 'Finances', href: '/dashboard/admin/finance', icon: Landmark },
   { label: 'Customers', href: '/dashboard/admin/customers', icon: Users },
-  { label: 'SEO Engine', href: '/dashboard/admin/seo', icon: Globe },
   { label: 'Analytics', href: '/dashboard/admin/analytics', icon: BarChart3 },
   { label: 'FAQs', href: '/dashboard/admin/faqs', icon: HelpCircle },
   { label: 'Account Settings', href: '/dashboard/admin/settings', icon: Settings },
 ]
 
-const SUPER_ADMIN_NAV: NavItem[] = [
-  { label: 'Workshops', href: '/dashboard/super-admin/workshops', icon: ShieldCheck },
+interface NavSection {
+  label: string
+  items: NavItem[]
+}
+
+const SUPER_ADMIN_SECTIONS: NavSection[] = [
+  {
+    label: 'Dashboard',
+    items: [
+      { label: 'Overview', href: '/dashboard/super-admin', icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: 'Workshops',
+    items: [
+      { label: 'All Workshops', href: '/dashboard/super-admin/workshops', icon: ShieldCheck },
+      { label: 'New Workshop', href: '/dashboard/super-admin/workshops?new=true', icon: PlusCircle },
+    ],
+  },
+  {
+    label: 'Users',
+    items: [
+      { label: 'All Users', href: '/dashboard/super-admin/users', icon: Users },
+    ],
+  },
+  {
+    label: 'Tenant Settings',
+    items: [
+      { label: 'Workshop Settings', href: '/dashboard/super-admin/settings', icon: Settings2 },
+      { label: 'SEO Registry', href: '/dashboard/super-admin/seo', icon: Globe },
+    ],
+  },
+  {
+    label: 'System',
+    items: [
+      { label: 'Stats & Reports', href: '/dashboard/super-admin', icon: BarChart3 },
+    ],
+  },
 ]
 
 export function DashboardSidebar() {
@@ -205,7 +240,7 @@ export function DashboardSidebar() {
   const isSuperAdmin = pathname.startsWith('/dashboard/super-admin')
   const isAdmin = pathname.startsWith('/dashboard/admin') && !isSuperAdmin
   const isClient = !isAdmin && !isSuperAdmin
-  const navItems = isSuperAdmin ? SUPER_ADMIN_NAV : isAdmin ? ADMIN_NAV : CLIENT_NAV
+  const navItems = isSuperAdmin ? [] : isAdmin ? ADMIN_NAV : CLIENT_NAV
   const shortcuts = isAdmin || isSuperAdmin ? [] : CLIENT_SHORTCUTS
   const initial = getUserInitial(user)
   const roleLabel = isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : 'Client'
@@ -258,7 +293,16 @@ export function DashboardSidebar() {
     <div className="flex flex-col h-full">
       {/* Nav links */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1" onClick={() => setMobileOpen(false)}>
-        {navItems.map((item) => renderNavLink(item))}
+        {isSuperAdmin
+          ? SUPER_ADMIN_SECTIONS.map((section) => (
+              <div key={section.label} className="mb-2">
+                <p className="px-3 text-[10px] font-bold text-grey-medium uppercase tracking-wider mb-1">
+                  {section.label}
+                </p>
+                {section.items.map((item) => renderNavLink(item))}
+              </div>
+            ))
+          : navItems.map((item) => renderNavLink(item))}
 
         {/* Shortcuts section for clients */}
         {shortcuts.length > 0 && (
@@ -309,9 +353,19 @@ export function DashboardSidebar() {
       >
         {/* Mobile drawer header */}
         <div className="flex items-center justify-between px-5 py-5 border-b border-grey-medium/20">
-          <Link href="/" className="no-underline">
-            <SiteLogo />
-          </Link>
+          {isSuperAdmin ? (
+            <Link href="/dashboard/super-admin" className="no-underline flex items-center gap-2">
+              <img
+                src="/motiongrid-assets/logos/logo-horizontal.svg"
+                alt="Motion Grid"
+                className="h-7 w-auto"
+              />
+            </Link>
+          ) : (
+            <Link href="/" className="no-underline">
+              <SiteLogo />
+            </Link>
+          )}
           <div className="flex items-center gap-2">
             {roleLabel === 'Admin' && (
                 <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">
@@ -368,9 +422,19 @@ export function DashboardSidebar() {
           >
             <Menu size={24} />
           </button>
-          <Link href="/" className="no-underline">
-            <SiteLogo />
-          </Link>
+          {isSuperAdmin ? (
+            <Link href="/dashboard/super-admin" className="no-underline flex items-center gap-2">
+              <img
+                src="/motiongrid-assets/logos/logo-horizontal.svg"
+                alt="Motion Grid"
+                className="h-7 w-auto"
+              />
+            </Link>
+          ) : (
+            <Link href="/" className="no-underline">
+              <SiteLogo />
+            </Link>
+          )}
           <div className="flex items-center gap-2">
             {roleLabel === 'Admin' && (
                 <span className="text-xs font-semibold bg-primary text-white px-2 py-0.5 rounded-full">

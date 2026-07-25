@@ -4,10 +4,18 @@ import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 
+const normalizeTime = (value: string): string => {
+  const trimmed = value.trim()
+  const parts = trimmed.split(':')
+  const hour = String(parseInt(parts[0] || '0', 10)).padStart(2, '0')
+  const minute = String(parseInt(parts[1] || '0', 10)).padStart(2, '0')
+  return `${hour}:${minute}`
+}
+
 const WorkingHourSchema = z.object({
   day_of_week: z.number().int().min(0).max(6),
-  start_time: z.string().regex(/^\d{2}:\d{2}$/),
-  end_time: z.string().regex(/^\d{2}:\d{2}$/),
+  start_time: z.string().transform(normalizeTime),
+  end_time: z.string().transform(normalizeTime),
   is_active: z.boolean(),
 })
 

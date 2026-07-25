@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
+import { saveSuperAdminSettings } from '@/lib/settings-api'
 import { sanitizeText, sanitizePhone, sanitizeEmail } from '@/lib/input-sanitizer'
 import { Loader2, Save, Type, Phone, MapPin, Mail, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -11,10 +11,12 @@ import { Button } from '@/components/ui/button'
 const WebsiteCopySchema = z.object({
   site_name: z.string().min(1, 'Business name is required').max(100),
   phone: z.string().min(1, 'Phone is required').max(20),
+  whatsapp_number: z.string().max(20).optional(),
   city: z.string().min(1, 'City is required').max(100),
   hero_title: z.string().min(1, 'Hero title is required').max(200),
   hero_description: z.string().min(1, 'Hero description is required').max(500),
   contact_email: z.string().email('Invalid email address'),
+  business_hours: z.string().max(200).optional(),
 })
 
 type WebsiteCopyFormData = z.infer<typeof WebsiteCopySchema>
@@ -54,35 +56,35 @@ export function WebsiteCopyForm({ initialData, workshopId, onSaved }: WebsiteCop
 
     setSaving(true)
 
-    const { error } = await (supabase as any)
-      .from('business_settings')
-      .upsert({
-        workshop_id: workshopId,
+    try {
+      await saveSuperAdminSettings(workshopId!, {
         site_name: sanitizeText(form.site_name),
         phone: sanitizePhone(form.phone),
+        whatsapp_number: sanitizePhone(form.whatsapp_number || ''),
         city: sanitizeText(form.city),
         hero_title: sanitizeText(form.hero_title),
         hero_description: sanitizeText(form.hero_description),
         contact_email: sanitizeEmail(form.contact_email),
+        business_hours: sanitizeText(form.business_hours || ''),
       })
 
-    setSaving(false)
-
-    if (error) {
-      console.error('Website copy save error:', error)
-      toast.error('Failed to save. Please try again.')
-      return
+      toast.success('Website copy updated! Refresh the homepage to see changes.')
+      onSaved?.()
+    } catch (err: any) {
+      console.error('Website copy save error:', err)
+      toast.error(err.message || 'Failed to save. Please try again.')
+    } finally {
+      setSaving(false)
     }
-
-    toast.success('Website copy updated! Refresh the homepage to see changes.')
-    onSaved?.()
   }
 
   const fields = [
     { key: 'site_name' as const, label: 'Business Name', icon: Type, placeholder: 'Autofields Technics' },
     { key: 'phone' as const, label: 'Phone Number', icon: Phone, placeholder: '+27784802796' },
+    { key: 'whatsapp_number' as const, label: 'WhatsApp Number', icon: Phone, placeholder: '+27784802796' },
     { key: 'city' as const, label: 'City / Service Area', icon: MapPin, placeholder: 'Johannesburg' },
     { key: 'contact_email' as const, label: 'Contact Email', icon: Mail, placeholder: 'info@autofieldstechnics.co.za' },
+    { key: 'business_hours' as const, label: 'Business Hours', icon: FileText, placeholder: 'Mon–Fri: 08:00–17:00, Sat: 08:00–12:00' },
     { key: 'hero_title' as const, label: 'Homepage Hero Title', icon: FileText, placeholder: 'Professional Mechanical Care, Wherever You Are' },
   ]
 

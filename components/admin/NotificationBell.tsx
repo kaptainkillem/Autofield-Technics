@@ -98,11 +98,14 @@ export function NotificationBell() {
   }
 
   useEffect(() => {
+    let cancelled = false
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     async function init() {
       const user = await fetchNotifications()
-      if (!user) return
+      if (!user || cancelled) return
+
+      if (cancelled) return
 
       channel = supabase
         .channel('notifications-realtime')
@@ -110,6 +113,7 @@ export function NotificationBell() {
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
           (payload) => {
+            if (cancelled) return
             const newNotif = payload.new as Notification
             setNotifications((prev) => {
               const exists = prev.some((n) => n.id === newNotif.id)
@@ -125,12 +129,15 @@ export function NotificationBell() {
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
           (payload) => {
+            if (cancelled) return
             const updated = payload.new as Notification
             setNotifications((prev) =>
               prev.map((n) => (n.id === updated.id ? updated : n))
             )
-            const readCount = notifications.filter((n) => !n.is_read).length
-            setUnreadCount(readCount)
+            setUnreadCount((prev) => {
+              if (updated.is_read) return Math.max(0, prev - 1)
+              return prev
+            })
           }
         )
         .subscribe()
@@ -139,6 +146,7 @@ export function NotificationBell() {
     init()
 
     return () => {
+      cancelled = true
       if (channel) {
         supabase.removeChannel(channel)
       }

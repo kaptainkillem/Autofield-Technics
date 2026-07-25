@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
-import { SITE_CONFIG } from '@/lib/site-config'
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://autofieldstechnics.co.za'
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -8,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/dashboard/', '/api/', '/auth/'],
     },
-    sitemap: `${SITE_CONFIG.seo.ogImage.replace('/images/og-image.webp', '')}/sitemap.xml`,
+    sitemap: `${SITE_URL}/sitemap.xml`,
   }
 }
