@@ -119,7 +119,7 @@ export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }
       const workshopId = getWorkshopIdFromSession(session)
       if (!workshopId) return
       const { data } = await (supabase as any)
-        .from('business_settings')
+        .from('public_business_settings')
         .select('default_deposit_percent, callout_fee, diagnostic_fee, whatsapp_auto_reply, site_name, company_name, phone, contact_email, address, logo_url, primary_color, bank_name, account_holder, account_number, branch_code, terms_conditions, document_footer')
         .eq('workshop_id', workshopId)
         .maybeSingle()

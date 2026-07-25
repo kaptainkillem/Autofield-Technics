@@ -12,31 +12,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // Colors mapped to Tailwind classes
-      colors: {
-        primary: {
-          DEFAULT: colors.primary.blue,        // #5B9BD5
-          dark: colors.primary.dark,          // #2E75B6
-          light: colors.primary.light,        // #D5E8F0
-        },
-        grey: {
-          DEFAULT: colors.neutral.deepGrey,   // #595959
-          dark: '#333333',                     // Dark text, high contrast
-          light: colors.neutral.lightGrey,    // #E8E8E8
-          lightest: '#F5F5F5',                // Subtle backgrounds
-          medium: colors.neutral.mediumGrey,  // #B3B3B3
-        },
-        success: colors.semantic.success,     // #4CAF50
-        error: colors.semantic.error,         // #F44336
-        warning: colors.semantic.warning,     // #FF9800
-        info: colors.semantic.info,           // #2196F3
-      },
-
-      // Typography settings
-      fontFamily: {
-        sans: typography.fonts.primary,
-        mono: typography.fonts.code,
-      },
+      // Colors and typography are now fully dynamic via CSS variables and @theme
+      // in globals.css, overridden at runtime by app/layout.tsx from
+      // business_settings. This ensures brand colors and fonts propagate to every
+      // utility class across the entire site.
       fontSize: {
         xs: typography.sizes.xs,
         sm: typography.sizes.sm,

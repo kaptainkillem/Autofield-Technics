@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { saveSuperAdminSettings } from '@/lib/settings-api'
 import { toast } from 'sonner'
 import { Bell, Mail, MessageCircle, Save, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -27,27 +27,22 @@ export function NotificationsForm({ settings, workshopId, onUpdate }: Notificati
   }
 
   async function handleSave() {
+    if (!workshopId) return
     setSaving(true)
-    const { error } = await (supabase as any)
-      .from('business_settings')
-      .upsert({
-        workshop_id: workshopId,
+    try {
+      await saveSuperAdminSettings(workshopId, {
         notification_email: form.notification_email,
         notification_push: form.notification_push,
         notification_whatsapp: form.notification_whatsapp,
-        updated_at: new Date().toISOString(),
       })
-
-    setSaving(false)
-
-    if (error) {
-      console.error('Save notifications error:', error)
-      toast.error('Failed to save notification settings')
-      return
+      onUpdate(form)
+      toast.success('Notification preferences saved!')
+    } catch (err: any) {
+      console.error('Save notifications error:', err)
+      toast.error(err.message || 'Failed to save notification settings')
+    } finally {
+      setSaving(false)
     }
-
-    onUpdate(form)
-    toast.success('Notification preferences saved!')
   }
 
   const channels = [

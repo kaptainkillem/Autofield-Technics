@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { supabase } from '@/lib/supabase'
+import { saveSuperAdminSettings, saveAdminSettings } from '@/lib/settings-api'
 import { sanitizeText } from '@/lib/input-sanitizer'
 
 interface LegalSettingsFormProps {
@@ -13,6 +13,7 @@ interface LegalSettingsFormProps {
   workshopId: string | null
   onTermsChange: (value: string) => void
   onDocumentFooterChange: (value: string) => void
+  useAdminApi?: boolean
 }
 
 export function LegalSettingsForm({
@@ -21,21 +22,27 @@ export function LegalSettingsForm({
   workshopId,
   onTermsChange,
   onDocumentFooterChange,
+  useAdminApi,
 }: LegalSettingsFormProps) {
   const [saving, setSaving] = useState(false)
 
   async function handleSaveDocumentFooter() {
+    if (!workshopId) return
     setSaving(true)
-    const { error } = await (supabase as any)
-      .from('business_settings')
-      .upsert({ workshop_id: workshopId, document_footer: sanitizeText(documentFooter) || null })
-    setSaving(false)
-
-    if (error) {
-      toast.error('Failed to save PDF footer')
-      return
+    try {
+      const payload = { document_footer: sanitizeText(documentFooter) || null }
+      if (useAdminApi) {
+        await saveAdminSettings(payload)
+      } else {
+        await saveSuperAdminSettings(workshopId, payload)
+      }
+      toast.success('PDF footer saved!')
+    } catch (err: any) {
+      console.error('Save document footer error:', err)
+      toast.error(err.message || 'Failed to save PDF footer')
+    } finally {
+      setSaving(false)
     }
-    toast.success('PDF footer saved!')
   }
 
   return (

@@ -1,6 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { Database } from '@/types/database'
-import { SITE_CONFIG } from '@/lib/site-config'
 import { notFound } from 'next/navigation'
 import AdminServiceForm from '@/app/(dashboard)/dashboard/admin/services/new/AdminServiceForm'
 import { PageWrapper } from '@/components/layout/PageWrapper'

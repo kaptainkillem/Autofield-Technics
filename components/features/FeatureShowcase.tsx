@@ -6,29 +6,25 @@ interface Feature {
   imageUrl: string
 }
 
-const FEATURES: Feature[] = [
-  {
-    heading: 'The Ultimate Driveway Workshop',
-    text: "You don't need to arrange a tow truck or waste your Saturday sitting in a repair shop. Our mobile units arrive at your home or office fully equipped.",
-    imageUrl: 'https://images.pexels.com/photos/4489758/pexels-photo-4489758.jpeg',
-  },
-  {
-    heading: 'Transparent, Upfront Pricing',
-    text: 'Once we diagnose the issue, you receive a detailed, digital quote sent straight to your phone. We break down the exact cost of parts and labor. No hidden fees.',
-    imageUrl: 'https://images.pexels.com/photos/4116221/pexels-photo-4116221.jpeg',
-  },
-  {
-    heading: 'Certified & Guaranteed Expertise',
-    text: 'Your vehicle is handled by qualified professionals with deep diagnostic experience. We back our workmanship with a comprehensive guarantee.',
-    imageUrl: 'https://images.pexels.com/photos/8478206/pexels-photo-8478206.jpeg',
-  },
-]
+interface FeatureShowcaseProps {
+  title?: string
+  subtitle?: string
+  features: Feature[]
+}
 
-export function FeatureShowcase() {
+export function FeatureShowcase({ title, subtitle, features }: FeatureShowcaseProps) {
+  if (!features || features.length === 0) return null
+
   return (
     <section className="bg-white py-16 px-4">
       <div className="max-w-6xl mx-auto flex flex-col gap-16">
-        {FEATURES.map((feature, index) => {
+        {(title || subtitle) && (
+          <div className="text-center mb-4">
+            {title && <h2 className="text-3xl font-bold text-grey-dark mb-4">{title}</h2>}
+            {subtitle && <p className="text-body max-w-2xl mx-auto">{subtitle}</p>}
+          </div>
+        )}
+        {features.map((feature, index) => {
           const isEven = index % 2 === 0
           return (
             <div

@@ -25,9 +25,16 @@ type CategoryRow = Database['public']['Tables']['categories']['Row']
 
 export default async function ServicesPage() {
   const config = await getMergedSiteConfig()
-  const { data: dbCategories, error } = await supabase
+
+  let categoriesQuery = supabase
     .from('categories')
     .select('*')
+
+  if (config.workshopId) {
+    categoriesQuery = categoriesQuery.eq('workshop_id', config.workshopId)
+  }
+
+  const { data: dbCategories, error } = await categoriesQuery
     .order('display_order', { ascending: true })
 
   // Production Error Handling: Log internally, show user a clean recovery UI
@@ -71,15 +78,15 @@ export default async function ServicesPage() {
       <section className="bg-white px-4 pt-6 pb-32 md:px-20">
         <div className="mx-auto max-w-6xl">
           {items.length === 0 ? (
-            <EmptyState
-              icon={Wrench}
-              title="Custom Mechanical Bookings"
-              description={replaceVars('Our dynamic response units handle everything from precision brake overhauls to deep computerized diagnostics directly at your location in {city}.', { city: config.city })}
-              actions={[
-                { label: 'Get a Custom Quote', href: '/quote', variant: 'primary' },
-                { label: 'Return Home', href: '/', variant: 'secondary' },
-              ]}
-            />
+          <EmptyState
+            icon={Wrench}
+            title="Custom Mechanical Bookings"
+            description={replaceVars('Our dynamic response units handle everything from precision brake overhauls to deep computerized diagnostics directly at your location in {city}.', { city: config.city })}
+            actions={[
+              { label: config.cta.primary, href: '/quote', variant: 'primary' },
+              { label: config.cta.secondary, href: '/', variant: 'secondary' },
+            ]}
+          />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {items.map((cat) => (
@@ -103,10 +110,10 @@ export default async function ServicesPage() {
       </section>
 
       <MobileStickyCTA
-        title="Our Services"
-        subtitle={`Professional mechanics in ${config.city}`}
-        buttonText="Get a Free Quote"
-        href="/quote"
+        title={config.homePageContent.stickyCta.title}
+        subtitle={config.homePageContent.stickyCta.subtitle}
+        buttonText={config.homePageContent.stickyCta.buttonLabel}
+        href={config.homePageContent.stickyCta.href}
       />
     </>
   )

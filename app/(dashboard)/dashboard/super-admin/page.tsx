@@ -87,7 +87,7 @@ export default function SuperAdminDashboardPage() {
   ]
 
   return (
-    <PageWrapper>
+    <PageWrapper className="flex flex-col gap-6 bg-white/5  rounded-base">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-1 border-b border-grey-medium/10 pb-4">
           <h1 className="text-3xl font-extrabold tracking-tight text-grey-dark">Super Admin Dashboard</h1>
@@ -99,7 +99,7 @@ export default function SuperAdminDashboardPage() {
             <Link
               key={card.label}
               href={card.href ?? '#'}
-              className={`${card.href ? '' : 'pointer-events-none'} bg-white border border-grey-medium/10 rounded-base p-4 shadow-sm hover:shadow-md hover:border-primary/20 transition-all no-underline`}
+              className={`${card.href ? '' : 'pointer-events-none'} bg-primary border border-grey-medium/10 rounded-base p-4 shadow-sm hover:shadow-md hover:border-primary/20 transition-all no-underline`}
             >
               <div className="flex items-center gap-2 mb-2">
                 <div className={`w-8 h-8 rounded-base flex items-center justify-center ${card.color} bg-opacity-20`}>

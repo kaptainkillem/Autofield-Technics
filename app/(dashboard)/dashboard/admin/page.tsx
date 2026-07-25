@@ -9,8 +9,8 @@ import { UpcomingJobsWidget } from '@/components/admin/UpcomingJobsWidget'
 import { RevenueChart } from '@/components/admin/RevenueChart'
 import { DashboardSkeleton } from '@/components/admin/DashboardSkeleton'
 import { ArrowRight, Users, FileText, Landmark, Wrench, Settings2 } from 'lucide-react'
-import { SITE_CONFIG } from '@/lib/site-config'
 import { PageWrapper } from '@/components/layout/PageWrapper'
+import { OnboardingChecklist } from '@/components/admin/OnboardingChecklist'
 
 type Quote   = Database['public']['Tables']['quotes']['Row']
 type Receipt = Database['public']['Tables']['receipts']['Row']
@@ -39,11 +39,13 @@ async function getSummaryData() {
     } catch { return null }
   })()
 
-  const [quotesRes, receiptsRes, reviewsRes, profilesRes] = await Promise.all([
+  const [quotesRes, receiptsRes, reviewsRes, profilesRes, settingsRes, servicesRes] = await Promise.all([
     supabase.from('quotes').select('*').eq('workshop_id', workshopId as string).is('deleted_at', null).order('created_at', { ascending: false }),
     supabase.from('receipts').select('*').eq('workshop_id', workshopId as string).is('deleted_at', null),
     supabase.from('reviews').select('id').eq('workshop_id', workshopId as string).eq('status', 'pending').is('deleted_at', null),
-    supabase.from('profiles').select('id').eq('workshop_id', workshopId as string).eq('role', 'client')
+    supabase.from('profiles').select('id').eq('workshop_id', workshopId as string).eq('role', 'client'),
+    supabase.from('public_business_settings' as any).select('*').eq('workshop_id', workshopId as string).maybeSingle() as any,
+    supabase.from('services').select('id').eq('workshop_id', workshopId as string).eq('is_active', true),
   ])
 
   return {
@@ -51,11 +53,13 @@ async function getSummaryData() {
     receiptsCount: (receiptsRes.data ?? []) as Receipt[],
     pendingReviewsCount: reviewsRes.data?.length ?? 0,
     customersCount: profilesRes.data?.length ?? 0,
+    settings: settingsRes.data ?? null,
+    servicesCount: (servicesRes.data ?? []).length,
   }
 }
 
 async function DashboardContent() {
-  const { quotes, receiptsCount, pendingReviewsCount, customersCount } = await getSummaryData()
+  const { quotes, receiptsCount, pendingReviewsCount, customersCount, settings, servicesCount } = await getSummaryData()
 
   const totalQuotes     = quotes.length
   const pendingQuotes   = quotes.filter((q) => q.status === 'pending').length
@@ -91,11 +95,32 @@ async function DashboardContent() {
     <PageWrapper>
       {/* Executive Archive Header Block */}
       <div className="flex flex-col gap-1 border-b border-grey-medium/10 pb-4">
-        <h1 className="text-3xl font-extrabold tracking-tight text-grey-dark">{SITE_CONFIG.dashboard.adminTitle}</h1>
-        <p className="text-sm text-grey">{SITE_CONFIG.dashboard.adminSubtitle}</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-grey-dark">Executive Command Center</h1>
+        <p className="text-sm text-grey">High-level snapshot workspace summary parameters.</p>
       </div>
 
-      {/* 🚀 Dynamic Metrics Counter Matrix (Clickable shortcuts configured within components) */}
+      {settings && (
+        <OnboardingChecklist
+          settings={{
+            site_name: settings.site_name,
+            phone: settings.phone,
+            whatsapp_number: settings.whatsapp_number,
+            city: settings.city,
+            logo_url: settings.logo_url,
+            hero_image_url: settings.hero_image_url,
+            primary_color: settings.primary_color,
+            accent_color: settings.accent_color,
+            font_family: settings.font_family,
+            home_page_content: settings.home_page_content,
+            business_hours: settings.business_hours,
+            terms_conditions: settings.terms_conditions,
+            document_footer: settings.document_footer,
+          }}
+          hasServices={servicesCount > 0}
+        />
+      )}
+
+      {/* Dynamic Metrics Counter Matrix (Clickable shortcuts configured within components) */}
       <section className="w-full">
         <AdminStats
           totalQuotes={totalQuotes}

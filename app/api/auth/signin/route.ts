@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
+import { createSuperAdminClient } from '@/lib/super-admin';
 import { z } from 'zod';
 
 const SignInSchema = z.object({
@@ -63,6 +64,37 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 401 });
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    const adminClient = createSuperAdminClient();
+
+    const { data: profile } = await adminClient
+      .from('profiles')
+      .select('workshop_id, role')
+      .eq('id', user.id)
+      .single();
+
+    const isStaff = profile && (profile.role === 'admin' || profile.role === 'super_admin');
+    const workshopId = (profile as any)?.workshop_id;
+
+    if (isStaff && workshopId) {
+      const { data: workshop } = await adminClient
+        .from('workshops')
+        .select('status')
+        .eq('id', workshopId)
+        .single();
+
+      if (workshop && workshop.status !== 'active') {
+        await supabase.auth.signOut();
+        return NextResponse.json(
+          { error: 'This workshop is currently unavailable. Please contact support.' },
+          { status: 401 }
+        );
+      }
+    }
   }
 
   return response;

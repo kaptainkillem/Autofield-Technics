@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Database } from '@/types/database'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { CustomerBookingForm } from '@/components/customer/CustomerBookingForm'
-import { SITE_CONFIG, replaceVars } from '@/lib/site-config'
+import { useSiteConfig } from '@/components/providers/SiteConfigProvider'
+import { replaceVars } from '@/lib/site-config'
 import { Loader2 } from 'lucide-react'
 
 type Quote = Database['public']['Tables']['quotes']['Row']
@@ -46,6 +47,7 @@ function formatCurrency(value: number) {
 }
 
 export function QuoteDetailModal({ quote: initialQuote, onClose, onStatusChange, admin = false }: QuoteDetailModalProps) {
+  const config = useSiteConfig()
   const [quote, setQuote] = useState(initialQuote)
   const [selectedStatus, setSelectedStatus] = useState(quote.status ?? 'pending')
   const [saving, setSaving] = useState(false)
@@ -290,19 +292,19 @@ export function QuoteDetailModal({ quote: initialQuote, onClose, onStatusChange,
           {!showBooking && (
             <div className="flex gap-3">
               {isCustomer && (
-                <button
-                  onClick={() => {
-                    const phone = quote.customer_phone || ''
-                    const msg = encodeURIComponent(
-                      `${replaceVars(SITE_CONFIG.serviceDetail.whatsAppMessageTemplate, { customerName: quote.customer_name, name: SITE_CONFIG.name })}` +
-                      `${quote.description ? ` regarding ${quote.description.slice(0, 30)}` : ''}.`
-                    )
-                    window.open(`https://wa.me/${phone.replace(/[^\d]/g, '')}?text=${msg}`, '_blank')
-                  }}
-                  className="flex-1 btn-secondary text-sm !py-2.5"
-                >
-                  WhatsApp Us
-                </button>
+                  <button
+                    onClick={() => {
+                      const phone = quote.customer_phone || ''
+                      const msg = encodeURIComponent(
+                        `${replaceVars(config.serviceDetail.whatsAppMessageTemplate, { customerName: quote.customer_name, name: config.name })}` +
+                        `${quote.description ? ` regarding ${quote.description.slice(0, 30)}` : ''}.`
+                      )
+                      window.open(`https://wa.me/${phone.replace(/[^\d]/g, '')}?text=${msg}`, '_blank')
+                    }}
+                    className="flex-1 btn-secondary text-sm !py-2.5"
+                  >
+                    WhatsApp Us
+                  </button>
               )}
               {admin && onStatusChange && selectedStatus !== quote.status && (
                 <button

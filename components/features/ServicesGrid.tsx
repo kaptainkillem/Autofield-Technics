@@ -2,14 +2,29 @@ import React from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { DynamicIcon } from '@/components/common/DynamicIcon'
+import { getMergedSiteConfig } from '@/lib/get-site-config'
 import type { Database } from '@/types/database'
 
 type CategoryRow = Database['public']['Tables']['categories']['Row']
 
-export async function ServicesGrid() {
-  const { data: categories } = await supabase
+interface ServicesGridProps {
+  title: string
+  subtitle: string
+  ctaLabel: string
+}
+
+export async function ServicesGrid({ title, subtitle, ctaLabel }: ServicesGridProps) {
+  const config = await getMergedSiteConfig()
+
+  let query = supabase
     .from('categories')
     .select('*')
+
+  if (config.workshopId) {
+    query = query.eq('workshop_id', config.workshopId)
+  }
+
+  const { data: categories } = await query
     .order('display_order', { ascending: true })
 
   const items = (categories ?? []) as CategoryRow[]
@@ -28,10 +43,8 @@ export async function ServicesGrid() {
     <section className="bg-white py-16 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-grey-dark mb-4">Our Services</h2>
-          <p className="text-body max-w-2xl mx-auto">
-            Professional mobile mechanics bringing expert repairs and servicing right to your doorstep.
-          </p>
+          <h2 className="text-3xl font-bold text-grey-dark mb-4">{title}</h2>
+          <p className="text-body max-w-2xl mx-auto">{subtitle}</p>
         </div>
         <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid lg:grid-cols-3 lg:gap-6">
           {items.map((cat) => (
@@ -52,7 +65,7 @@ export async function ServicesGrid() {
         </div>
         <div className="text-center mt-10">
           <Link href="/services" className="btn-secondary inline-block">
-            View All Services
+            {ctaLabel}
           </Link>
         </div>
       </div>

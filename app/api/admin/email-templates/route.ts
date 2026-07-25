@@ -19,12 +19,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
+    const workshopId = auth.role === 'super_admin'
+      ? request.nextUrl.searchParams.get('workshopId')
+      : auth.workshopId
+
+    if (!workshopId) {
+      return NextResponse.json({ error: 'workshopId is required' }, { status: 400 })
+    }
+
     const adminClient = await createSupabaseServerClient()
 
     const { data: overrides, error } = await adminClient
       .from('email_templates')
       .select('template_key, subject, html_body, text_body, updated_at')
-      .eq('workshop_id', auth.workshopId!)
+      .eq('workshop_id', workshopId)
       .order('template_key')
 
     if (error) {
@@ -73,12 +81,20 @@ export async function PUT(request: NextRequest) {
 
     const body = UpsertSchema.parse(await request.json())
 
+    const workshopId = auth.role === 'super_admin'
+      ? request.nextUrl.searchParams.get('workshopId')
+      : auth.workshopId
+
+    if (!workshopId) {
+      return NextResponse.json({ error: 'workshopId is required' }, { status: 400 })
+    }
+
     const adminClient = await createSupabaseServerClient()
 
     const { error } = await (adminClient as any)
       .from('email_templates')
       .upsert({
-        workshop_id: auth.workshopId!,
+        workshop_id: workshopId,
         template_key: body.template_key,
         subject: body.subject,
         html_body: body.html_body,
@@ -112,12 +128,20 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Missing template key' }, { status: 400 })
     }
 
+    const workshopId = auth.role === 'super_admin'
+      ? request.nextUrl.searchParams.get('workshopId')
+      : auth.workshopId
+
+    if (!workshopId) {
+      return NextResponse.json({ error: 'workshopId is required' }, { status: 400 })
+    }
+
     const adminClient = await createSupabaseServerClient()
 
     const { error } = await (adminClient as any)
       .from('email_templates')
       .delete()
-      .eq('workshop_id', auth.workshopId!)
+      .eq('workshop_id', workshopId)
       .eq('template_key', templateKey)
 
     if (error) {

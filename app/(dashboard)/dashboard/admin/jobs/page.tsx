@@ -8,7 +8,6 @@ import { JobsTable } from '@/components/admin/JobsTable'
 import { CreateAppointmentModal } from '@/components/admin/CreateAppointmentModal'
 import { EditAppointmentModal } from '@/components/admin/EditAppointmentModal'
 import { PageWrapper } from '@/components/layout/PageWrapper'
-import { SITE_CONFIG } from '@/lib/site-config'
 import type { WorkOrder } from '@/components/admin/WorkOrderPanel'
 
 type Appointment = {
@@ -99,7 +98,7 @@ export default function AdminJobsPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-grey-dark">{SITE_CONFIG.dashboard.pageTitles.jobs}</h1>
+          <h1 className="text-2xl font-bold text-grey-dark">Active Mechanical Jobs</h1>
           <p className="text-sm text-grey">
             {view === 'calendar'
               ? 'View and manage appointments on the calendar.'

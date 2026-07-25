@@ -1,15 +1,16 @@
 import type { MetadataRoute } from 'next'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { getMergedSiteConfig } from '@/lib/get-site-config'
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const config = await getMergedSiteConfig()
   return {
-    name: SITE_CONFIG.name,
-    short_name: SITE_CONFIG.nameBold,
-    description: SITE_CONFIG.tagline,
+    name: config.name,
+    short_name: config.nameBold,
+    description: config.tagline,
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',
-    theme_color: '#3B82F6',
+    theme_color: config.primaryColor,
     icons: [
       {
         src: '/icon.svg',

@@ -1,13 +1,62 @@
+import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
-import { getRoleFromJWT } from '@/lib/supabaseServer'
+import { Database } from '@/types/database'
+
+/**
+ * Route protection + tenant-context middleware.
+ *
+ * Tenant routing: Each client has their own Vercel project + domain, so the
+ * workshop is pinned via NEXT_PUBLIC_DEFAULT_WORKSHOP_SLUG at deploy time.
+ * We still inject x-workshop-slug / x-site-url headers for server components
+ * that may need them.
+ *
+ * Auth responsibilities:
+ * - Protect /dashboard/admin/* (admin/super_admin)
+ * - Protect /dashboard/super-admin/* (super_admin only)
+ * - Protect /dashboard/* (any authenticated user)
+ * - Protect /onboarding/* (any authenticated user)
+ * - Redirect authenticated users away from /signin, /signup, etc.
+ * - Enforce onboarding completion for client dashboard routes.
+ */
+
+export const config = {
+  matcher: [
+    '/dashboard/:path*',
+    '/onboarding/:path*',
+    '/signin',
+    '/signup',
+    '/forgot-password',
+    '/reset-password',
+    '/suspended',
+  ],
+}
+
+function getRoleFromJWT(accessToken?: string): string {
+  if (!accessToken) return 'client'
+  try {
+    const payload = JSON.parse(atob(accessToken.split('.')[1]))
+    return payload?.app_metadata?.role ?? 'client'
+  } catch {
+    return 'client'
+  }
+}
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({
+  const { pathname } = request.nextUrl
+
+  const authRoutes = ['/signin', '/signup', '/forgot-password', '/reset-password']
+  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
+  const isAdminRoute = pathname.startsWith('/dashboard/admin')
+  const isSuperAdminRoute = pathname.startsWith('/dashboard/super-admin')
+  const isDashboardRoute = pathname.startsWith('/dashboard') && !isAdminRoute && !isSuperAdminRoute
+  const isOnboardingRoute = pathname.startsWith('/onboarding')
+  const isSuspendedRoute = pathname.startsWith('/suspended')
+
+  const response = NextResponse.next({
     request: { headers: request.headers },
   })
 
-  // Inject workshop context from environment
+  // Inject static tenant context headers for downstream server components
   const defaultWorkshopSlug = process.env.NEXT_PUBLIC_DEFAULT_WORKSHOP_SLUG
   if (defaultWorkshopSlug) {
     response.headers.set('x-workshop-slug', defaultWorkshopSlug)
@@ -17,7 +66,7 @@ export async function proxy(request: NextRequest) {
     response.headers.set('x-site-url', siteUrl)
   }
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -28,14 +77,11 @@ export async function proxy(request: NextRequest) {
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set(name, value)
-            response = NextResponse.next({
-              request: { headers: request.headers },
-            })
             response.cookies.set(name, value, {
               ...options,
               secure: process.env.NODE_ENV === 'production',
               httpOnly: true,
-              sameSite: 'lax' as const,
+              sameSite: 'lax',
             })
           })
         },
@@ -44,48 +90,55 @@ export async function proxy(request: NextRequest) {
   )
 
   const { data: { session } } = await supabase.auth.getSession()
-  const { pathname } = request.nextUrl
 
-  // Route classification
-  const authRoutes = ['/signin', '/signup', '/forgot-password', '/reset-password']
-  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
-  const isAdminRoute = pathname.startsWith('/dashboard/admin')
-  const isSuperAdminRoute = pathname.startsWith('/dashboard/super-admin')
-  const isDashboardRoute = pathname.startsWith('/dashboard') && !isAdminRoute && !isSuperAdminRoute
-  const isOnboardingRoute = pathname.startsWith('/onboarding')
-
-  // 1. No session cookie: redirect to signin for protected routes
+  // No session cookie: redirect to signin for protected routes
   if (!session) {
     if (isAdminRoute || isSuperAdminRoute || isDashboardRoute || isOnboardingRoute) {
-      return NextResponse.redirect(new URL('/signin', request.url))
+      const signInUrl = new URL('/signin', request.url)
+      signInUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(signInUrl)
     }
     return response
   }
 
-  // 1b. Validate session is authentic via the Auth server
+  // Cryptographically validate the session
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     if (isAdminRoute || isSuperAdminRoute || isDashboardRoute || isOnboardingRoute) {
-      return NextResponse.redirect(new URL('/signin', request.url))
+      const signInUrl = new URL('/signin', request.url)
+      signInUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(signInUrl)
     }
     return response
   }
 
-  // 2. Authenticated: read role from JWT
-  const role = getRoleFromJWT(session)
+  const role = getRoleFromJWT(session?.access_token)
   const isStaff = role === 'admin' || role === 'super_admin'
-  const userId = user.id
 
-  // Query profile for onboarding status
+  // Query profile for onboarding status + workshop_id
   const { data: profile } = await supabase
     .from('profiles')
-    .select('onboarding_completed')
-    .eq('id', userId)
+    .select('onboarding_completed, workshop_id')
+    .eq('id', user.id)
     .single()
 
   const onboardingCompleted = profile?.onboarding_completed ?? false
+  const workshopId = (profile as any)?.workshop_id
 
-  // 3. Authenticated users should not see auth pages
+  // Check workshop status for staff — block suspended/inactive workshops
+  if (isStaff && workshopId) {
+    const { data: ws } = await supabase
+      .from('workshops')
+      .select('status')
+      .eq('id', workshopId)
+      .single()
+
+    if (ws && ws.status !== 'active') {
+      return NextResponse.redirect(new URL('/suspended', request.url))
+    }
+  }
+
+  // Authenticated users should not see auth pages
   if (isAuthRoute) {
     if (role === 'super_admin') {
       return NextResponse.redirect(new URL('/dashboard/super-admin', request.url))
@@ -99,7 +152,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/onboarding/profile', request.url))
   }
 
-  // 4. Admin zone shielding
+  // Admin zone shielding
   if (isAdminRoute) {
     if (isStaff) {
       return response
@@ -107,7 +160,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // 4b. Super admin zone shielding
+  // Super admin zone shielding
   if (isSuperAdminRoute) {
     if (role === 'super_admin') {
       return response
@@ -115,7 +168,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard/admin', request.url))
   }
 
-  // 5. Client dashboard: enforce onboarding and reroute staff
+  // Client dashboard: enforce onboarding and reroute staff
   if (isDashboardRoute) {
     if (role === 'super_admin') {
       return NextResponse.redirect(new URL('/dashboard/super-admin', request.url))
@@ -129,7 +182,7 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
-  // 6. Onboarding routes: prevent re-entry if already done
+  // Onboarding routes: prevent re-entry if already done
   if (isOnboardingRoute) {
     if (onboardingCompleted) {
       if (role === 'super_admin') {
@@ -143,15 +196,4 @@ export async function proxy(request: NextRequest) {
   }
 
   return response
-}
-
-export const config = {
-  matcher: [
-    '/dashboard/:path*',
-    '/onboarding/:path*',
-    '/signin',
-    '/signup',
-    '/forgot-password',
-    '/reset-password',
-  ],
 }

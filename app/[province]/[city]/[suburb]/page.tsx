@@ -9,7 +9,7 @@ import { ReviewCard } from '@/components/ReviewCard'
 import { ServicesHero } from '@/components/features/ServicesHero'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, MapPin, PhoneCall, ArrowRight } from 'lucide-react'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { getMergedSiteConfig } from '@/lib/get-site-config'
 
 interface LocationPageProps {
   params: Promise<{ province: string; city: string; suburb: string }>
@@ -18,13 +18,20 @@ interface LocationPageProps {
 export async function generateMetadata({ params }: LocationPageProps) {
   const { province, city, suburb } = await params
   const targetPath = `/${province}/${city}/${suburb}`.toLowerCase().trim()
+  const config = await getMergedSiteConfig()
 
-  const { data: seoRecord } = await (supabase as any)
+  let seoQuery = (supabase as any)
     .from('seo_registry')
     .select('meta_title, meta_description, meta_keywords')
     .eq('path_url', targetPath)
     .eq('is_active', true)
-    .maybeSingle()
+
+  if (config.workshopId) {
+    seoQuery = seoQuery.or(`workshop_id.eq.${config.workshopId},workshop_id.is.null`)
+    seoQuery = seoQuery.order('workshop_id', { ascending: true, nullsFirst: false })
+  }
+
+  const { data: seoRecord } = await seoQuery.limit(1).maybeSingle()
 
   return seoRecord ? {
     title: seoRecord.meta_title,
@@ -36,9 +43,17 @@ export async function generateMetadata({ params }: LocationPageProps) {
 export default async function DynamicLocationPage({ params }: LocationPageProps) {
   const { province, city, suburb } = await params
   const targetPath = `/${province}/${city}/${suburb}`.toLowerCase().trim()
+  const config = await getMergedSiteConfig()
 
   const [seoResult, reviewsResult] = await Promise.all([
-    (supabase as any).from('seo_registry').select('*').eq('path_url', targetPath).eq('is_active', true).maybeSingle(),
+    (async () => {
+      let query = (supabase as any).from('seo_registry').select('*').eq('path_url', targetPath).eq('is_active', true)
+      if (config.workshopId) {
+        query = query.or(`workshop_id.eq.${config.workshopId},workshop_id.is.null`)
+        query = query.order('workshop_id', { ascending: true, nullsFirst: false })
+      }
+      return query.limit(1).maybeSingle()
+    })(),
     (supabase as any).from('reviews').select('*').eq('status', 'approved').is('deleted_at', null).order('created_at', { ascending: false }).limit(5),
   ])
 
@@ -52,7 +67,7 @@ export default async function DynamicLocationPage({ params }: LocationPageProps)
   const displayCity = formatTextCase(city)
   const displaySuburb = formatTextCase(suburb)
 
-  const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(`Mobile Mechanic in ${displaySuburb}, ${displayCity}, South Africa`)}&t=&z=14&ie=UTF8&iwloc=&output=embed`
+  const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(`Mobile Mechanic in ${displaySuburb}, ${displayCity}, ${config.country}`)}&t=&z=14&ie=UTF8&iwloc=&output=embed`
 
   return (
     <main className="min-h-screen bg-white">
@@ -108,14 +123,14 @@ export default async function DynamicLocationPage({ params }: LocationPageProps)
             <div className="flex flex-col sm:flex-row gap-3">
               <Link href="/quote" className="no-underline flex-1 sm:flex-initial">
                 <Button size="lg" className="w-full sm:w-auto bg-primary text-white font-black text-sm px-8 py-4 rounded-base shadow-md hover:bg-primary-dark transition-all flex items-center justify-center gap-2 group h-12">
-                  <span>Calculate Repair Estimate</span>
+                  <span>{config.cta.primary}</span>
                   <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <a href={`tel:${SITE_CONFIG.phone}`} className="no-underline flex-1 sm:flex-initial">
+              <a href={`tel:${config.phone}`} className="no-underline flex-1 sm:flex-initial">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto border-grey-medium hover:border-primary text-grey-dark hover:text-primary font-bold text-sm px-6 h-12 rounded-base bg-white transition-all flex items-center justify-center gap-2">
                   <PhoneCall size={14} />
-                  <span>Call Booking Desk</span>
+                  <span>Call {config.name}</span>
                 </Button>
               </a>
             </div>
@@ -154,7 +169,7 @@ export default async function DynamicLocationPage({ params }: LocationPageProps)
                 style={{ border: 0 }}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                src={SITE_CONFIG.address.mapUrl}
+                src={mapEmbedUrl}
               /><div className="mt-3 text-[11px] text-grey font-medium p-3 bg-white rounded border border-grey-medium/5">
                 📍 Currently servicing {displaySuburb}, {displayCity} and {displayProvince}.
               </div>
@@ -162,7 +177,7 @@ export default async function DynamicLocationPage({ params }: LocationPageProps)
 
             <div>
               <h2 className="text-2xl font-bold text-grey-dark mb-1">Recent Customer Reviews</h2>
-              <p className="text-small text-grey mb-6">What {displayCity} drivers are saying about {SITE_CONFIG.name}.</p>
+              <p className="text-small text-grey mb-6">What {displayCity} drivers are saying about {config.name}.</p>
               <div className="flex flex-col gap-4">
                 {reviews?.length ? reviews.map((review: any) => (
                   <ReviewCard 

@@ -24,27 +24,32 @@ export default function LocationsArchivePage() {
   const [loading, setLoading] = useState(true)
   const [rawRecords, setRawRecords] = useState<SEORecord[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const config = useSiteConfig()
 
-  // Hierarchical state machine depths
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null)
   const [selectedCity, setSelectedCity] = useState<string | null>(null)
   
-  // Pagination State
   const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     async function fetchActiveRegistryNodes() {
-      const { data } = await (supabase as any)
+      let query = (supabase as any)
         .from('seo_registry')
         .select('id, path_url, page_type, province, city, suburb, is_active')
         .eq('page_type', 'geographic_node')
         .eq('is_active', true)
+
+      if (config.workshopId) {
+        query = query.or(`workshop_id.eq.${config.workshopId},workshop_id.is.null`)
+      }
+
+      const { data } = await query
       
       setRawRecords(data || [])
       setLoading(false)
     }
     fetchActiveRegistryNodes()
-  }, [])
+  }, [config.workshopId])
 
   // Reset pagination depth whenever layout steps alter
   const handleProvinceSelect = (province: string) => {

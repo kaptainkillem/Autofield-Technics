@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Plus, Mail, Phone, User, Building2, Users, FileText, Banknote, Calendar, Settings2 } from 'lucide-react'
+import { Loader2, Plus, Mail, Phone, User, Building2, Users, FileText, Banknote, Calendar, Settings2, Globe, ExternalLink, CheckCircle, AlertTriangle, BadgeCheck, ShieldOff, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { PageWrapper } from '@/components/layout/PageWrapper'
@@ -10,10 +10,51 @@ interface Workshop {
   id: string
   name: string
   slug: string
+  domain: string | null
   contact_email: string | null
   contact_phone: string | null
+  status: string
+  billing_status: string
+  suspended_at: string | null
+  suspension_reason: string | null
   created_at: string
   owner: { full_name: string } | null
+  settings: {
+    site_name: string | null
+    phone: string | null
+    whatsapp_number: string | null
+    city: string | null
+    logo_url: string | null
+    hero_image_url: string | null
+    primary_color: string
+    accent_color: string
+    font_family: string | null
+    home_page_content: unknown
+    business_hours: string | null
+    terms_conditions: string | null
+    document_footer: string | null
+  } | null
+  servicesCount: number
+}
+
+function computeProgress(settings: Workshop['settings'], servicesCount: number): number {
+  if (!settings) return 0
+  const items = [
+    !!settings.site_name && settings.site_name !== 'Autofields Technics',
+    !!settings.phone && settings.phone !== '+27784802796',
+    !!settings.whatsapp_number,
+    !!settings.city && settings.city !== 'Johannesburg',
+    !!settings.logo_url,
+    !!settings.hero_image_url,
+    settings.primary_color !== '#3B82F6' || settings.accent_color !== '#10B981',
+    !!settings.font_family && settings.font_family !== 'Inter',
+    (() => { if (!settings.home_page_content || typeof settings.home_page_content !== 'object') return false; const h = settings.home_page_content as Record<string, unknown>; const hero = h.hero as Record<string, unknown> | null; return hero ? hero.title !== 'Professional Mechanical Care, Wherever You Are' : false })(),
+    servicesCount > 0,
+    !!settings.business_hours,
+    !!(settings.terms_conditions || settings.document_footer),
+  ]
+  const done = items.filter(Boolean).length
+  return Math.round((done / items.length) * 100)
 }
 
 interface WorkshopStats {
@@ -39,6 +80,7 @@ export default function SuperAdminWorkshopsPage() {
     ownerName: '',
     workshopName: '',
     workshopSlug: '',
+    domain: '',
     contactEmail: '',
     contactPhone: '',
   })
@@ -89,12 +131,56 @@ export default function SuperAdminWorkshopsPage() {
       }
       toast.success('Workshop created')
       setShowForm(false)
-      setForm({ ownerEmail: '', ownerPassword: '', ownerName: '', workshopName: '', workshopSlug: '', contactEmail: '', contactPhone: '' })
+      setForm({ ownerEmail: '', ownerPassword: '', ownerName: '', workshopName: '', workshopSlug: '', domain: '', contactEmail: '', contactPhone: '' })
       fetchWorkshops()
     } catch (err: any) {
       toast.error(err.message || 'Failed to create workshop')
     } finally {
       setCreating(false)
+    }
+  }
+
+  async function handleStatusChange(workshopId: string, status: string, reason?: string) {
+    try {
+      const res = await fetch(`/api/admin/workshops?id=${workshopId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, suspension_reason: reason || null }),
+      })
+      if (!res.ok) {
+        const { error } = await res.json()
+        throw new Error(error)
+      }
+      toast.success(`Workshop ${status === 'active' ? 'reactivated' : status === 'suspended' ? 'suspended' : 'updated'}`)
+      fetchWorkshops()
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update workshop')
+    }
+  }
+
+  async function handleDeactivate(workshopId: string) {
+    if (!window.confirm('Deactivate this workshop? All data will be preserved, but the site and dashboard will become unavailable.')) {
+      return
+    }
+    try {
+      const res = await fetch(`/api/admin/workshops?id=${workshopId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const { error } = await res.json()
+        throw new Error(error)
+      }
+      toast.success('Workshop deactivated')
+      fetchWorkshops()
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to deactivate workshop')
+    }
+  }
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case 'active': return { icon: BadgeCheck, class: 'bg-green-100 text-green-700', label: 'Active' }
+      case 'suspended': return { icon: ShieldOff, class: 'bg-amber-100 text-amber-700', label: 'Suspended' }
+      case 'inactive': return { icon: Clock, class: 'bg-red-100 text-red-500', label: 'Inactive' }
+      default: return { icon: AlertTriangle, class: 'bg-grey-lightest text-grey', label: status }
     }
   }
 
@@ -142,6 +228,16 @@ export default function SuperAdminWorkshopsPage() {
                   required
                   value={form.workshopSlug}
                   onChange={(e) => setForm({ ...form, workshopSlug: e.target.value })}
+                  className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-grey mb-1">Domain (optional)</label>
+                <input
+                  type="text"
+                  value={form.domain}
+                  onChange={(e) => setForm({ ...form, domain: e.target.value })}
+                  placeholder="mechanic.co.za"
                   className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
@@ -216,8 +312,10 @@ export default function SuperAdminWorkshopsPage() {
               <thead className="bg-grey-lightest border-b border-grey-light">
                 <tr>
                   <th className="px-4 py-3 text-xs font-semibold text-grey uppercase">Workshop</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-grey uppercase hidden md:table-cell">Status</th>
                   <th className="px-4 py-3 text-xs font-semibold text-grey uppercase hidden md:table-cell">Owner</th>
                   <th className="px-4 py-3 text-xs font-semibold text-grey uppercase hidden md:table-cell">Contact</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-grey uppercase text-center">Setup</th>
                   <th className="px-4 py-3 text-xs font-semibold text-grey uppercase text-center hidden lg:table-cell">Customers</th>
                   <th className="px-4 py-3 text-xs font-semibold text-grey uppercase text-center hidden lg:table-cell">Quotes</th>
                   <th className="px-4 py-3 text-xs font-semibold text-grey uppercase text-center hidden lg:table-cell">Revenue</th>
@@ -229,13 +327,14 @@ export default function SuperAdminWorkshopsPage() {
               <tbody className="divide-y divide-grey-light">
                 {workshops.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-grey-medium text-sm">
+                    <td colSpan={10} className="px-4 py-8 text-center text-grey-medium text-sm">
                       No workshops yet. Create your first one above.
                     </td>
                   </tr>
                 ) : (
                   workshops.map((w) => {
                     const stats = workshopStats.get(w.id)
+                    const progress = computeProgress(w.settings, w.servicesCount)
                     return (
                     <tr key={w.id} className="hover:bg-grey-lightest/50 transition-colors">
                       <td className="px-4 py-3">
@@ -246,6 +345,18 @@ export default function SuperAdminWorkshopsPage() {
                             <code className="text-xs text-grey-medium">/{w.slug}</code>
                           </div>
                         </div>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        {(() => {
+                          const badge = statusBadge(w.status)
+                          const Icon = badge.icon
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${badge.class}`}>
+                              <Icon size={12} />
+                              {badge.label}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         <div className="flex items-center gap-2">
@@ -265,6 +376,18 @@ export default function SuperAdminWorkshopsPage() {
                               <Phone className="h-3 w-3" /> {w.contact_phone}
                             </span>
                           )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {progress >= 100 ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <div className="bg-grey-lightest rounded-full h-2 w-16 overflow-hidden">
+                              <div className={`h-full rounded-full transition-all ${progress >= 50 ? 'bg-green-500' : progress >= 25 ? 'bg-yellow-500' : 'bg-red-400'}`} style={{ width: `${progress}%` }} />
+                            </div>
+                          )}
+                          <span className="text-xs font-semibold text-grey">{progress}%</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center hidden lg:table-cell">
@@ -292,13 +415,62 @@ export default function SuperAdminWorkshopsPage() {
                         {new Date(w.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Link
-                          href={`/dashboard/super-admin/settings?workshopId=${w.id}`}
-                          className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline no-underline justify-end"
-                        >
-                          <Settings2 className="h-3.5 w-3.5" />
-                          Settings
-                        </Link>
+                        <div className="flex items-center gap-1.5 justify-end">
+                          {w.domain && (
+                            <a
+                              href={`https://${w.domain}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline no-underline"
+                              title="Go to site"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                          <Link
+                            href={`/dashboard/super-admin/settings?workshopId=${w.id}`}
+                            className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline no-underline"
+                          >
+                            <Settings2 className="h-3.5 w-3.5" />
+                            Settings
+                          </Link>
+                          {w.status === 'active' && (
+                            <button
+                              onClick={() => handleStatusChange(w.id, 'suspended', 'Suspended by super-admin')}
+                              className="flex items-center gap-1 text-xs text-amber-600 font-semibold hover:underline cursor-pointer"
+                              title="Suspend workshop"
+                            >
+                              <ShieldOff className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {w.status === 'suspended' && (
+                            <button
+                              onClick={() => handleStatusChange(w.id, 'active')}
+                              className="flex items-center gap-1 text-xs text-green-600 font-semibold hover:underline cursor-pointer"
+                              title="Reactivate workshop"
+                            >
+                              <BadgeCheck className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {w.status !== 'inactive' && (
+                            <button
+                              onClick={() => handleDeactivate(w.id)}
+                              className="flex items-center gap-1 text-xs text-red-500 font-semibold hover:underline cursor-pointer"
+                              title="Deactivate workshop"
+                            >
+                              Deactivate
+                            </button>
+                          )}
+                          {w.status === 'inactive' && (
+                            <button
+                              onClick={() => handleStatusChange(w.id, 'active')}
+                              className="flex items-center gap-1 text-xs text-green-600 font-semibold hover:underline cursor-pointer"
+                              title="Reactivate workshop"
+                            >
+                              Reactivate
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                     )

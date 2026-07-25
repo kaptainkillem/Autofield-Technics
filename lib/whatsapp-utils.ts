@@ -1,5 +1,3 @@
-import { SITE_CONFIG } from './site-config'
-
 type WhatsAppReplyArgs = {
   customerName: string
   customerPhone: string
@@ -8,8 +6,7 @@ type WhatsAppReplyArgs = {
   serviceType: string
 }
 
-export function generateWhatsAppReplyUrl({
-  customerName,
+export function generateWhatsAppReplyUrl({  customerName,
   customerPhone,
   vehicleMake,
   vehicleModel,

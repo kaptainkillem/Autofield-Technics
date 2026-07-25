@@ -20,11 +20,19 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ContactPage() {
   const config = await getMergedSiteConfig()
   const supabase = await createSupabaseServerClient()
-  const { data: faqs } = await supabase
+
+  let faqQuery = supabase
     .from('faqs')
     .select('question, answer')
     .eq('is_active', true)
     .eq('category', 'contact')
+
+  if (config.workshopId) {
+    faqQuery = faqQuery.or(`workshop_id.eq.${config.workshopId},workshop_id.is.null`)
+    faqQuery = faqQuery.order('workshop_id', { ascending: true, nullsFirst: true })
+  }
+
+  const { data: faqs } = await faqQuery
     .order('display_order', { ascending: true })
     .limit(3)
 

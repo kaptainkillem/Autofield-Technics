@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { buildQuoteNotificationEmail } from '@/lib/email-templates'
-import { sendEmail } from '@/lib/email'
+import { sendEmail, getWorkshopAdminEmail } from '@/lib/email'
 import { z } from 'zod'
-
-const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL ?? SITE_CONFIG.contact.email
 
 const WebhookPayloadSchema = z.object({
   record: z.object({
@@ -54,6 +52,12 @@ export async function POST(request: NextRequest) {
     const model = quote.vehicle_model || 'Unknown Model'
     const year = quote.vehicle_year || 'N/A'
     const rawDescription = quote.description || ''
+    const quoteWorkshopId = (quote as any).workshop_id as string | undefined
+
+    // Resolve admin notification email from workshop settings or env fallback
+    const adminEmail = quoteWorkshopId
+      ? await getWorkshopAdminEmail(quoteWorkshopId)
+      : (process.env.ADMIN_NOTIFICATION_EMAIL ?? SITE_CONFIG.contact.email)
 
     // Parse out service type parameters or raw VIN items cleanly if embedded in the description string
     const serviceTypeMatch = rawDescription.match(/\[Service:\s*([^\]]+)\]/)
@@ -80,11 +84,12 @@ export async function POST(request: NextRequest) {
     })
 
     const result = await sendEmail({
-      to: ADMIN_EMAIL,
+      to: adminEmail,
       subject,
       html,
       text,
       templateKey: 'quote_notification_admin',
+      workshopId: quoteWorkshopId ?? null,
     })
 
     if (!result.success) {

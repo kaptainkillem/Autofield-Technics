@@ -16,11 +16,19 @@ export async function generateMetadata() {
 export default async function FAQPage() {
   const config = await getMergedSiteConfig()
   const supabase = await createSupabaseServerClient()
-  const { data: faqs } = await supabase
+
+  let query = supabase
     .from('faqs')
     .select('*')
     .eq('is_active', true)
-    .order('display_order', { ascending: true })
+
+  if (config.workshopId) {
+    query = query.or(`workshop_id.eq.${config.workshopId},workshop_id.is.null`)
+    query = query.order('workshop_id', { ascending: true, nullsFirst: true })
+  }
+
+  query = query.order('display_order', { ascending: true })
+  const { data: faqs } = await query
 
   const items = faqs ?? []
 
