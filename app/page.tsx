@@ -9,6 +9,7 @@ import { ServicesGrid } from '@/components/features/ServicesGrid';
 import { BottomCTA } from '@/components/features/BottomCTA';
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import { getMergedSiteConfig } from '@/lib/get-site-config';
+import { TrustStrip } from '@/components/features/TrustStrip';
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await getMergedSiteConfig()

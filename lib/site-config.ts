@@ -55,7 +55,7 @@ export const SITE_CONFIG = {
   // ── Hero ────────────────────────────────────────────────────────
   hero: {
     title: 'Professional Mechanical Care, Wherever You Are',
-    description: 'From emergency roadside assistance to expert workshop repairs in {city}.',
+    description: 'Get diagnostics, repairs, and servicing in {city}.',
   },
 
   // ── Quotes Page ─────────────────────────────────────────────────
