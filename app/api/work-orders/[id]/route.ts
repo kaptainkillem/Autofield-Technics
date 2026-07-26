@@ -17,13 +17,24 @@ export async function GET(
 
     const role = getRoleFromJWT(session)
     const isAdmin = role === 'admin' || role === 'super_admin'
+    const workshopId = (() => {
+      try {
+        const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+        return payload?.app_metadata?.workshop_id as string | null
+      } catch { return null }
+    })()
 
     const adminClient = await createSupabaseServerClient()
-    const { data: workOrder, error } = await adminClient
+    let query = adminClient
       .from('work_orders')
       .select('*, work_order_events(*), appointments(*), quotes(*)')
       .eq('id', id)
-      .single()
+
+    if (isAdmin && workshopId) {
+      query = query.eq('workshop_id', workshopId)
+    }
+
+    const { data: workOrder, error } = await query.single()
 
     if (error || !workOrder) {
       return NextResponse.json({ error: 'Work order not found' }, { status: 404 })

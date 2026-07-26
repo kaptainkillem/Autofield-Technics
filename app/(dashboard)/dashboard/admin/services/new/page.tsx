@@ -9,7 +9,14 @@ export const dynamic = 'force-dynamic'
 
 export default async function NewServicePage() {
   const supabase = await createSupabaseServerClient()
-  const { data: categories } = await supabase.from('categories').select('*').order('display_order', { ascending: true })
+  const { data: { session } } = await supabase.auth.getSession()
+  const workshopId = (() => {
+    try {
+      const payload = JSON.parse(atob(session!.access_token.split('.')[1]))
+      return payload?.app_metadata?.workshop_id as string
+    } catch { return '' }
+  })()
+  const { data: categories } = await supabase.from('categories').select('*').eq('workshop_id', workshopId).order('display_order', { ascending: true })
   const cats = (categories ?? []) as CategoryRow[]
 
   return (

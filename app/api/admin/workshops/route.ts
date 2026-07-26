@@ -24,7 +24,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const body = CreateWorkshopSchema.parse(await request.json())
+    const raw = await request.json()
+
+    const normalized = {
+      ...raw,
+      ownerEmail: typeof raw.ownerEmail === 'string' ? raw.ownerEmail.trim().toLowerCase() : raw.ownerEmail,
+      ownerName: typeof raw.ownerName === 'string' ? raw.ownerName.trim() : raw.ownerName,
+      workshopName: typeof raw.workshopName === 'string' ? raw.workshopName.trim() : raw.workshopName,
+      workshopSlug: typeof raw.workshopSlug === 'string' ? raw.workshopSlug.trim() : raw.workshopSlug,
+      domain: typeof raw.domain === 'string' ? raw.domain.trim() : raw.domain,
+      contactEmail: typeof raw.contactEmail === 'string' ? raw.contactEmail.trim() || undefined : raw.contactEmail,
+      contactPhone: typeof raw.contactPhone === 'string' ? raw.contactPhone.trim() || undefined : raw.contactPhone,
+    }
+
+    if (typeof normalized.domain === 'string' && normalized.domain.length === 0) {
+      normalized.domain = undefined
+    }
+
+    const body = CreateWorkshopSchema.parse(normalized)
     const adminClient = createSuperAdminClient()
 
     const { data: newUser, error: userError } = await adminClient.auth.admin.createUser({
@@ -38,6 +55,10 @@ export async function POST(request: Request) {
     })
 
     if (userError) {
+      console.error('createUser failed:', userError)
+      if (userError.message?.toLowerCase().includes('already')) {
+        return NextResponse.json({ error: 'A user with this email address has already been registered.' }, { status: 400 })
+      }
       return NextResponse.json({ error: userError.message }, { status: 400 })
     }
 
@@ -55,6 +76,7 @@ export async function POST(request: Request) {
       .single()
 
     if (workshopError) {
+      console.error('workshop insert failed:', workshopError)
       return NextResponse.json({ error: workshopError.message }, { status: 400 })
     }
 
@@ -119,8 +141,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ workshop, ownerId: newUser.user.id }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues.map(i => i.message).join(', ') }, { status: 400 })
+      const fieldErrors = error.issues.map((i) => {
+        const field = i.path.join('.')
+        return field ? `${field}: ${i.message}` : i.message
+      })
+      console.error('Zod validation failed:', fieldErrors)
+      return NextResponse.json({ error: fieldErrors.join('. ') }, { status: 400 })
     }
+    console.error('Workshop creation error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

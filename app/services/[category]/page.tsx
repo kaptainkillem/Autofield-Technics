@@ -42,6 +42,7 @@ export default async function CategoryPage({ params }: PageProps) {
   const { data } = await supabase
     .from('services')
     .select('*')
+    .eq('workshop_id', config.workshopId as string)
     .eq('category_id', matchedCategory.id)
     .eq('is_active', true)
     .order('name')

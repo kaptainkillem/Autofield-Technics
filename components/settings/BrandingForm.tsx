@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { sanitizeText } from '@/lib/input-sanitizer'
 import { saveSuperAdminSettings } from '@/lib/settings-api'
 import { toast } from 'sonner'
-import { Palette, Upload, Save, Loader2, ImageIcon, RefreshCcw, Type } from 'lucide-react'
+import { Palette, Upload, Save, Loader2, ImageIcon, Type } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { allowedFontFamilies } from '@/lib/homepage-content'
 
@@ -15,6 +15,7 @@ interface BrandingSettings {
   primary_text_color: string | null
   secondary_text_color: string | null
   favicon_url: string | null
+  logo_url: string | null
   font_family: string | null
 }
 
@@ -41,11 +42,13 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
     primary_text_color: settings.primary_text_color ?? '#111827',
     secondary_text_color: settings.secondary_text_color ?? '#595959',
     favicon_url: settings.favicon_url ?? null,
+    logo_url: settings.logo_url ?? null,
     font_family: settings.font_family ?? 'Inter',
   })
   const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState<'favicon' | 'logo' | null>(null)
+  const faviconInputRef = useRef<HTMLInputElement>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
 
   async function handleSave() {
     if (!workshopId) return
@@ -57,6 +60,7 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
         primary_text_color: sanitizeText(form.primary_text_color || '#111827'),
         secondary_text_color: sanitizeText(form.secondary_text_color || '#595959'),
         favicon_url: form.favicon_url,
+        logo_url: form.logo_url,
         font_family: sanitizeText(form.font_family || 'Inter'),
       })
       onUpdate(form)
@@ -69,6 +73,23 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
     }
   }
 
+  async function uploadImage(file: File, path: string) {
+    const { error } = await supabase.storage
+      .from('logos')
+      .upload(path, file, { upsert: true })
+
+    if (error) {
+      console.error('Image upload error:', error)
+      throw error
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('logos')
+      .getPublicUrl(path)
+
+    return publicUrl
+  }
+
   async function handleFaviconUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -78,27 +99,48 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
       return
     }
 
-    setUploading(true)
+    setUploading('favicon')
     const path = `favicon-${Date.now()}`
 
-    const { error } = await supabase.storage
-      .from('logos')
-      .upload(path, file, { upsert: true })
-
-    if (error) {
-      console.error('Favicon upload error:', error)
+    try {
+      const publicUrl = await uploadImage(file, path)
+      setForm((prev) => ({ ...prev, favicon_url: publicUrl }))
+      toast.success('Favicon uploaded')
+    } catch {
       toast.error('Failed to upload favicon')
-      setUploading(false)
+    } finally {
+      setUploading(null)
+    }
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo must be less than 2MB')
       return
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('logos')
-      .getPublicUrl(path)
+    setUploading('logo')
+    const path = `logo-${Date.now()}`
 
-    setForm((prev) => ({ ...prev, favicon_url: publicUrl }))
-    setUploading(false)
-    toast.success('Favicon uploaded')
+    try {
+      const publicUrl = await uploadImage(file, path)
+      setForm((prev) => ({ ...prev, logo_url: publicUrl }))
+      toast.success('Logo uploaded')
+    } catch {
+      toast.error('Failed to upload logo')
+    } finally {
+      setUploading(null)
+    }
+  }
+
+  function handleRemoveLogo() {
+    setForm((prev) => ({ ...prev, logo_url: null }))
+    if (logoInputRef.current) {
+      logoInputRef.current.value = ''
+    }
   }
 
   return (
@@ -106,7 +148,7 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-bold text-grey-dark">Branding & Appearance</h3>
-          <p className="text-xs text-grey">Customize your shop colors and favicon.</p>
+          <p className="text-xs text-grey">Customize your shop colors, favicon, and site logo.</p>
         </div>
         <Button
           onClick={handleSave}
@@ -327,39 +369,89 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
         </div>
       </div>
 
-      {/* Favicon Upload */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold text-grey uppercase tracking-wide">Favicon</label>
-        <div className="flex items-center gap-4">
-          {form.favicon_url ? (
-            <img
-              src={form.favicon_url}
-              alt="Favicon preview"
-              className="h-10 w-10 object-contain rounded-base border border-grey-light bg-white"
-            />
-          ) : (
-            <div className="h-10 w-10 rounded-base border border-grey-light bg-grey-lightest flex items-center justify-center">
-              <ImageIcon size={20} className="text-grey-medium" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Favicon Upload */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold text-grey uppercase tracking-wide">Favicon</label>
+          <div className="flex items-center gap-4">
+            {form.favicon_url ? (
+              <img
+                src={form.favicon_url}
+                alt="Favicon preview"
+                className="h-10 w-10 object-contain rounded-base border border-grey-light bg-white"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-base border border-grey-light bg-grey-lightest flex items-center justify-center">
+                <ImageIcon size={20} className="text-grey-medium" />
+              </div>
+            )}
+            <div className="flex flex-col gap-1">
+              <input
+                ref={faviconInputRef}
+                type="file"
+                accept="image/png,image/x-icon,image/svg+xml"
+                onChange={handleFaviconUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => faviconInputRef.current?.click()}
+                disabled={uploading === 'favicon'}
+                className="flex items-center gap-2 px-4 py-2 rounded-base border border-grey-medium text-grey text-sm font-semibold hover:bg-primary/5 transition-colors disabled:opacity-50"
+              >
+                {uploading === 'favicon' ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                {uploading === 'favicon' ? 'Uploading...' : 'Upload Favicon'}
+              </button>
+              <p className="text-[10px] text-grey-medium">PNG, ICO, or SVG. Max 1MB.</p>
             </div>
-          )}
-          <div className="flex flex-col gap-1">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/x-icon,image/svg+xml"
-              onChange={handleFaviconUpload}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="flex items-center gap-2 px-4 py-2 rounded-base border border-grey-medium text-grey text-sm font-semibold hover:bg-primary/5 transition-colors disabled:opacity-50"
-            >
-              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-              {uploading ? 'Uploading...' : 'Upload Favicon'}
-            </button>
-            <p className="text-[10px] text-grey-medium">PNG, ICO, or SVG. Max 1MB.</p>
+          </div>
+        </div>
+
+        {/* Site Logo Upload */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold text-grey uppercase tracking-wide">Site Logo</label>
+          <div className="flex items-center gap-4">
+            {form.logo_url ? (
+              <img
+                src={form.logo_url}
+                alt="Site logo preview"
+                className="h-16 w-16 object-contain rounded-base border border-grey-light bg-white p-1"
+              />
+            ) : (
+              <div className="h-16 w-16 rounded-base border border-grey-light bg-grey-lightest flex items-center justify-center">
+                <ImageIcon size={24} className="text-grey-medium" />
+              </div>
+            )}
+            <div className="flex flex-col gap-1">
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml"
+                onChange={handleLogoUpload}
+                className="hidden"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={uploading === 'logo'}
+                  className="flex items-center gap-2 px-4 py-2 rounded-base border border-grey-medium text-grey text-sm font-semibold hover:bg-primary/5 transition-colors disabled:opacity-50"
+                >
+                  {uploading === 'logo' ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                  {uploading === 'logo' ? 'Uploading...' : 'Upload Logo'}
+                </button>
+                {form.logo_url && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveLogo}
+                    className="px-3 py-2 rounded-base border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-grey-medium">PNG, JPG, or SVG. Max 2MB.</p>
+            </div>
           </div>
         </div>
       </div>

@@ -7,9 +7,17 @@ export const dynamic = 'force-dynamic'
 
 export default async function IncomingPage() {
   const supabase = await createSupabaseServerClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  const workshopId = (() => {
+    try {
+      const payload = JSON.parse(atob(session!.access_token.split('.')[1]))
+      return payload?.app_metadata?.workshop_id as string
+    } catch { return '' }
+  })()
   const { data } = await supabase
     .from('quotes')
     .select('*')
+    .eq('workshop_id', workshopId)
     .eq('status', 'pending')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })

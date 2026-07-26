@@ -30,6 +30,7 @@ export default async function Home() {
   const { data: reviews } = await supabase
     .from('reviews')
     .select('*')
+    .eq('workshop_id', config.workshopId as string)
     .eq('status', 'approved')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })

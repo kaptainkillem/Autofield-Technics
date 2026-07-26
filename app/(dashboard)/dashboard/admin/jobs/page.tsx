@@ -45,14 +45,24 @@ export default function AdminJobsPage() {
   async function fetchData() {
     setLoading(true)
 
+    const { data: { session } } = await supabase.auth.getSession()
+    const workshopId = (() => {
+      try {
+        const payload = JSON.parse(atob(session!.access_token.split('.')[1]))
+        return payload?.app_metadata?.workshop_id as string
+      } catch { return '' }
+    })()
+
     const [apptsRes, blockedRes] = await Promise.all([
       (supabase as any)
         .from('appointments')
         .select('id, scheduled_date, scheduled_time, status, service_type, notes, duration_minutes, proposed_date, proposed_time, proposed_notes, quote_id, work_orders(*)')
+        .eq('workshop_id', workshopId)
         .order('scheduled_date', { ascending: true }),
       (supabase as any)
         .from('blocked_slots')
         .select('id, start_datetime, end_datetime, reason')
+        .eq('workshop_id', workshopId)
         .order('start_datetime', { ascending: true }),
     ])
 
