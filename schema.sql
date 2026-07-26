@@ -96,12 +96,13 @@ DROP POLICY IF EXISTS "Public Read Categories" ON public.categories;
 DROP POLICY IF EXISTS "Categories manage super admin" ON public.categories;
 DROP POLICY IF EXISTS "Categories read global" ON public.categories;
 DROP POLICY IF EXISTS "Categories read scoped" ON public.categories;
+DROP POLICY IF EXISTS "Categories read tenant isolated" ON public.categories;
+DROP POLICY IF EXISTS "Categories manage staff" ON public.categories;
 
-CREATE POLICY "Categories read scoped" ON public.categories
+CREATE POLICY "Categories read tenant isolated" ON public.categories
 FOR SELECT USING (
-  auth.uid() IS NULL
-  OR workshop_id = public.current_workshop_id()
-  OR public.is_super_admin()
+    workshop_id = public.current_workshop_id()
+    OR public.is_super_admin()
 );
 
 CREATE POLICY "Categories manage staff" ON public.categories FOR ALL USING (
@@ -128,10 +129,26 @@ CREATE TABLE IF NOT EXISTS public.services (
 ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Anyone can read active services" ON public.services;
-CREATE POLICY "Anyone can read active services" ON public.services FOR SELECT USING (is_active = true);
+DROP POLICY IF EXISTS "Services read tenant isolated" ON public.services;
+CREATE POLICY "Services read tenant isolated" ON public.services
+FOR SELECT USING (
+    is_active = true
+    AND (
+        workshop_id = public.current_workshop_id()
+        OR public.is_super_admin()
+    )
+);
 
 DROP POLICY IF EXISTS "Service role can manage services" ON public.services;
-CREATE POLICY "Service role can manage services" ON public.services FOR ALL USING (auth.role() = 'service_role');
+DROP POLICY IF EXISTS "Services manage tenant isolated" ON public.services;
+CREATE POLICY "Services manage tenant isolated" ON public.services FOR ALL USING (
+    workshop_id = public.current_workshop_id()
+    AND public.current_user_role() IN ('admin', 'super_admin')
+)
+WITH CHECK (
+    workshop_id = public.current_workshop_id()
+    AND public.current_user_role() IN ('admin', 'super_admin')
+);
 
 -- ─── Profiles (one-to-one with auth.users) ─────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -179,6 +196,10 @@ END $$;
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Profiles tenant isolated" ON public.profiles;
+DROP POLICY IF EXISTS "Profiles insert own" ON public.profiles;
+DROP POLICY IF EXISTS "Profiles update own or admin" ON public.profiles;
+DROP POLICY IF EXISTS "Profiles delete own" ON public.profiles;
 
 CREATE POLICY "Profiles tenant isolated" ON public.profiles
 FOR SELECT USING (
@@ -226,6 +247,10 @@ DROP POLICY IF EXISTS "Users can view own vehicles" ON public.vehicles;
 DROP POLICY IF EXISTS "Users can insert own vehicles" ON public.vehicles;
 DROP POLICY IF EXISTS "Users can update own vehicles" ON public.vehicles;
 DROP POLICY IF EXISTS "Users can delete own vehicles" ON public.vehicles;
+DROP POLICY IF EXISTS "Vehicles tenant isolated" ON public.vehicles;
+DROP POLICY IF EXISTS "Vehicles insert tenant isolated" ON public.vehicles;
+DROP POLICY IF EXISTS "Vehicles update tenant isolated" ON public.vehicles;
+DROP POLICY IF EXISTS "Vehicles delete tenant isolated" ON public.vehicles;
 
 CREATE POLICY "Vehicles tenant isolated" ON public.vehicles
 FOR SELECT USING (
@@ -289,6 +314,10 @@ ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own quotes" ON public.quotes;
 DROP POLICY IF EXISTS "Anyone can submit a quote" ON public.quotes;
 DROP POLICY IF EXISTS "Service role can manage quotes" ON public.quotes;
+DROP POLICY IF EXISTS "Quotes tenant isolated" ON public.quotes;
+DROP POLICY IF EXISTS "Quotes insert tenant isolated" ON public.quotes;
+DROP POLICY IF EXISTS "Quotes update tenant isolated" ON public.quotes;
+DROP POLICY IF EXISTS "Quotes delete tenant isolated" ON public.quotes;
 
 CREATE POLICY "Quotes tenant isolated" ON public.quotes
 FOR SELECT USING (
@@ -299,10 +328,10 @@ FOR SELECT USING (
     )
 );
 
-CREATE POLICY "Quotes insert valid workshop" ON public.quotes
+CREATE POLICY "Quotes insert tenant isolated" ON public.quotes
 FOR INSERT WITH CHECK (
     workshop_id IS NOT NULL
-    AND EXISTS (SELECT 1 FROM public.workshops WHERE id = workshop_id)
+    AND workshop_id = public.current_workshop_id()
 );
 
 CREATE POLICY "Quotes update tenant isolated" ON public.quotes
@@ -345,6 +374,9 @@ DROP POLICY IF EXISTS "Anyone can submit a review" ON public.reviews;
 DROP POLICY IF EXISTS "Service role can update reviews" ON public.reviews;
 DROP POLICY IF EXISTS "Admins can update reviews" ON public.reviews;
 DROP POLICY IF EXISTS "Admins can delete reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Reviews read tenant isolated" ON public.reviews;
+DROP POLICY IF EXISTS "Reviews insert tenant isolated" ON public.reviews;
+DROP POLICY IF EXISTS "Reviews admin tenant isolated" ON public.reviews;
 
 CREATE POLICY "Reviews read tenant isolated" ON public.reviews
 FOR SELECT USING (
@@ -352,7 +384,7 @@ FOR SELECT USING (
     AND deleted_at IS NULL
     AND (
         workshop_id = public.current_workshop_id()
-        OR auth.uid() IS NULL
+        OR public.is_super_admin()
     )
 );
 
@@ -398,6 +430,8 @@ ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own invoices" ON public.invoices;
 DROP POLICY IF EXISTS "Service role can manage invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Invoices tenant isolated" ON public.invoices;
+DROP POLICY IF EXISTS "Invoices modify tenant isolated" ON public.invoices;
 
 CREATE POLICY "Invoices tenant isolated" ON public.invoices
 FOR SELECT USING (
@@ -469,6 +503,8 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own notifications" ON public.notifications;
 DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
 DROP POLICY IF EXISTS "Service role can manage notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Notifications tenant isolated" ON public.notifications;
+DROP POLICY IF EXISTS "Notifications update tenant isolated" ON public.notifications;
 
 CREATE POLICY "Notifications tenant isolated" ON public.notifications
 FOR SELECT USING (
@@ -768,6 +804,9 @@ END $$;
 
 DROP POLICY IF EXISTS "Users can view own receipts" ON public.receipts;
 DROP POLICY IF EXISTS "Service role can manage receipts" ON public.receipts;
+DROP POLICY IF EXISTS "Receipts tenant isolated" ON public.receipts;
+DROP POLICY IF EXISTS "Receipts manage tenant scoped" ON public.receipts;
+DROP POLICY IF EXISTS "Receipts update tenant isolated" ON public.receipts;
 
 CREATE POLICY "Receipts tenant isolated" ON public.receipts
 FOR SELECT USING (
@@ -811,6 +850,9 @@ ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role can manage expenses" ON public.expenses;
 DROP POLICY IF EXISTS "Users can view own expenses" ON public.expenses;
+DROP POLICY IF EXISTS "Expenses tenant isolated" ON public.expenses;
+DROP POLICY IF EXISTS "Expenses manage tenant scoped" ON public.expenses;
+DROP POLICY IF EXISTS "Expenses update tenant isolated" ON public.expenses;
 
 CREATE POLICY "Expenses tenant isolated" ON public.expenses
 FOR SELECT USING (
@@ -973,12 +1015,17 @@ ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own appointments" ON public.appointments;
 DROP POLICY IF EXISTS "Service role can manage appointments" ON public.appointments;
 DROP POLICY IF EXISTS "Admins can view all appointments" ON public.appointments;
+DROP POLICY IF EXISTS "Appointments tenant isolated" ON public.appointments;
+DROP POLICY IF EXISTS "Appointments insert tenant isolated" ON public.appointments;
+DROP POLICY IF EXISTS "Appointments update tenant isolated" ON public.appointments;
+DROP POLICY IF EXISTS "Appointments update own" ON public.appointments;
+DROP POLICY IF EXISTS "Appointments delete tenant isolated" ON public.appointments;
 
 CREATE POLICY "Appointments tenant isolated" ON public.appointments
 FOR SELECT USING (workshop_id = public.current_workshop_id() AND (public.current_user_role() IN ('admin', 'super_admin') OR user_id = auth.uid()));
 
-CREATE POLICY "Appointments insert valid workshop" ON public.appointments
-FOR INSERT WITH CHECK (workshop_id IS NOT NULL AND EXISTS (SELECT 1 FROM public.workshops WHERE id = workshop_id) AND (auth.uid() IS NULL OR workshop_id = public.current_workshop_id() OR public.is_super_admin()));
+CREATE POLICY "Appointments insert tenant isolated" ON public.appointments
+FOR INSERT WITH CHECK (workshop_id IS NOT NULL AND workshop_id = public.current_workshop_id());
 
 CREATE POLICY "Appointments update tenant isolated" ON public.appointments
 FOR UPDATE USING (workshop_id = public.current_workshop_id() AND public.current_user_role() IN ('admin', 'super_admin'));
@@ -1196,9 +1243,11 @@ ALTER TABLE public.blocked_slots ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Service role can manage blocked slots" ON public.blocked_slots;
 DROP POLICY IF EXISTS "Admins can read blocked slots" ON public.blocked_slots;
+DROP POLICY IF EXISTS "Blocked slots read by workshop" ON public.blocked_slots;
+DROP POLICY IF EXISTS "Blocked slots tenant isolated" ON public.blocked_slots;
 
 CREATE POLICY "Blocked slots read by workshop" ON public.blocked_slots
-FOR SELECT USING (EXISTS (SELECT 1 FROM public.workshops WHERE id = workshop_id));
+FOR SELECT USING (workshop_id = public.current_workshop_id() OR public.is_super_admin());
 
 CREATE POLICY "Blocked slots tenant isolated" ON public.blocked_slots
 FOR ALL USING (workshop_id = public.current_workshop_id() AND public.current_user_role() IN ('admin', 'super_admin'));
@@ -1206,14 +1255,26 @@ FOR ALL USING (workshop_id = public.current_workshop_id() AND public.current_use
 -- ─── Auto-create profile row on signup ──────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_workshop_id UUID;
+    v_role        TEXT;
 BEGIN
-    -- Always create new users as clients. Admins must be promoted via service role.
-    INSERT INTO public.profiles (id, full_name, role)
+    v_role := COALESCE(NEW.raw_user_meta_data->>'role', 'client');
+
+    IF NEW.raw_user_meta_data->>'workshop_id' IS NOT NULL THEN
+        SELECT id INTO v_workshop_id
+        FROM public.workshops
+        WHERE id = (NEW.raw_user_meta_data->>'workshop_id')::uuid;
+    END IF;
+
+    INSERT INTO public.profiles (id, full_name, role, workshop_id)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-        COALESCE(NEW.raw_user_meta_data->>'role', 'client')
+        v_role,
+        CASE WHEN v_role = 'super_admin' THEN NULL ELSE v_workshop_id END
     );
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
