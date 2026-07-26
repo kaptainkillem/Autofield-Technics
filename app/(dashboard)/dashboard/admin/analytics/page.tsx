@@ -41,6 +41,13 @@ export default function AdminAnalyticsPage() {
       return
     }
 
+    const workshopId = (() => {
+      try {
+        const payload = JSON.parse(atob(session!.access_token.split('.')[1]))
+        return payload?.app_metadata?.workshop_id as string
+      } catch { return '' }
+    })()
+
     const [
       quotesRes,
       customersRes,
@@ -48,11 +55,11 @@ export default function AdminAnalyticsPage() {
       receiptsRes,
       appointmentsRes,
     ] = await Promise.all([
-      (supabase as any).from('quotes').select('status').is('deleted_at', null),
-      (supabase as any).from('profiles').select('id').eq('role', 'client'),
-      (supabase as any).from('reviews').select('status').is('deleted_at', null),
-      (supabase as any).from('receipts').select('amount_paid, job_date').is('deleted_at', null),
-      (supabase as any).from('appointments').select('status').is('deleted_at', null),
+      (supabase as any).from('quotes').select('status').eq('workshop_id', workshopId).is('deleted_at', null),
+      (supabase as any).from('profiles').select('id').eq('role', 'client').eq('workshop_id', workshopId),
+      (supabase as any).from('reviews').select('status').eq('workshop_id', workshopId).is('deleted_at', null),
+      (supabase as any).from('receipts').select('amount_paid, job_date').eq('workshop_id', workshopId).is('deleted_at', null),
+      (supabase as any).from('appointments').select('status').eq('workshop_id', workshopId).is('deleted_at', null),
     ])
 
     const quotes = quotesRes.data ?? []

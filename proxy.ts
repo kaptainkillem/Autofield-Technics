@@ -138,6 +138,26 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Cross-deployment workshop guard: block users whose workshop_id does not
+  // match the deployment's workshop. super_admin bypasses this check.
+  const deploymentSlug = process.env.NEXT_PUBLIC_DEFAULT_WORKSHOP_SLUG
+  if (deploymentSlug && role !== 'super_admin') {
+    const { data: deploymentWorkshop } = await (supabase as any)
+      .from('workshops')
+      .select('id')
+      .eq('slug', deploymentSlug)
+      .maybeSingle()
+
+    const deploymentWorkshopId = deploymentWorkshop?.id
+    if (deploymentWorkshopId && workshopId && deploymentWorkshopId !== workshopId) {
+      if (isAdminRoute || isSuperAdminRoute || isDashboardRoute || isOnboardingRoute) {
+        const signInUrl = new URL('/signin', request.url)
+        signInUrl.searchParams.set('error', 'wrong_workshop')
+        return NextResponse.redirect(signInUrl)
+      }
+    }
+  }
+
   // Authenticated users should not see auth pages
   if (isAuthRoute) {
     if (role === 'super_admin') {

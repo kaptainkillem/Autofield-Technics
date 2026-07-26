@@ -78,7 +78,26 @@ export async function POST(request: NextRequest) {
       .single();
 
     const isStaff = profile && (profile.role === 'admin' || profile.role === 'super_admin');
-    const workshopId = (profile as any)?.workshop_id;
+    const workshopId = (profile as any)?.workshop_id as string | null;
+
+    // Cross-deployment workshop guard: block users whose workshop_id does not
+    // match the deployment's workshop. super_admin bypasses this check.
+    const deploymentSlug = process.env.NEXT_PUBLIC_DEFAULT_WORKSHOP_SLUG
+    if (deploymentSlug && profile && profile.role !== 'super_admin' && workshopId) {
+      const { data: deploymentWorkshop } = await adminClient
+        .from('workshops')
+        .select('id')
+        .eq('slug', deploymentSlug)
+        .maybeSingle()
+
+      if (deploymentWorkshop && deploymentWorkshop.id !== workshopId) {
+        await supabase.auth.signOut();
+        return NextResponse.json(
+          { error: 'This account is not registered for this workshop.' },
+          { status: 403 }
+        );
+      }
+    }
 
     if (isStaff && workshopId) {
       const { data: workshop } = await adminClient

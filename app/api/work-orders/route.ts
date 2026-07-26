@@ -48,6 +48,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
     }
 
+    if (appointment.workshop_id !== auth.workshopId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     if (appointment.status !== 'confirmed') {
       return NextResponse.json({ error: 'Work orders can only be started from confirmed appointments' }, { status: 400 })
     }

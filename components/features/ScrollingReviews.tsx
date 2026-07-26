@@ -1,14 +1,17 @@
 import React from 'react'
 import { supabase } from '@/lib/supabase'
 import { ReviewCard } from '@/components/ReviewCard'
+import { getMergedSiteConfig } from '@/lib/get-site-config'
 import type { Database } from '@/types/database'
 
 type ReviewRow = Database['public']['Tables']['reviews']['Row']
 
 export async function ScrollingReviews() {
+  const config = await getMergedSiteConfig()
   const { data } = await (supabase as any)
     .from('reviews')
     .select('*')
+    .eq('workshop_id', config.workshopId)
     .eq('status', 'approved')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })

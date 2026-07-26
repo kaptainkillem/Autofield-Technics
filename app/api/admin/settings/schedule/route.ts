@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
       .from('blocked_slots')
       .delete()
       .eq('id', body.id)
+      .eq('workshop_id', workshopId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

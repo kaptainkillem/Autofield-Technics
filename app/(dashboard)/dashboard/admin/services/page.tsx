@@ -10,10 +10,17 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminServicesPage() {
   const supabase = await createSupabaseServerClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  const workshopId = (() => {
+    try {
+      const payload = JSON.parse(atob(session!.access_token.split('.')[1]))
+      return payload?.app_metadata?.workshop_id as string
+    } catch { return '' }
+  })()
 
   const [{ data: services }, { data: categories }] = await Promise.all([
-    supabase.from('services').select('*').order('name', { ascending: true }),
-    supabase.from('categories').select('*').order('display_order', { ascending: true }),
+    supabase.from('services').select('*').eq('workshop_id', workshopId).order('name', { ascending: true }),
+    supabase.from('categories').select('*').eq('workshop_id', workshopId).order('display_order', { ascending: true }),
   ])
 
   const items = (services ?? []) as ServiceRow[]

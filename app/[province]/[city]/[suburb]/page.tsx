@@ -54,7 +54,7 @@ export default async function DynamicLocationPage({ params }: LocationPageProps)
       }
       return query.limit(1).maybeSingle()
     })(),
-    (supabase as any).from('reviews').select('*').eq('status', 'approved').is('deleted_at', null).order('created_at', { ascending: false }).limit(5),
+    (supabase as any).from('reviews').select('*').eq('workshop_id', config.workshopId).eq('status', 'approved').is('deleted_at', null).order('created_at', { ascending: false }).limit(5),
   ])
 
   if (seoResult.error || !seoResult.data) notFound()

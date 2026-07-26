@@ -46,6 +46,7 @@ interface BusinessSettings {
   primary_text_color: string | null
   secondary_text_color: string | null
   favicon_url: string | null
+  logo_url: string | null
   font_family: string | null
   document_footer: string | null
 }
@@ -72,6 +73,7 @@ const defaultBusinessSettings: BusinessSettings = {
   primary_text_color: '#111827',
   secondary_text_color: '#595959',
   favicon_url: null,
+  logo_url: null,
   font_family: 'Inter',
   document_footer: null,
 }
@@ -170,6 +172,7 @@ function SettingsContent() {
           primary_text_color: s.primary_text_color ?? '#111827',
           secondary_text_color: s.secondary_text_color ?? '#595959',
           favicon_url: s.favicon_url ?? null,
+          logo_url: s.logo_url ?? null,
           font_family: s.font_family ?? 'Inter',
           document_footer: s.document_footer ?? null,
         })

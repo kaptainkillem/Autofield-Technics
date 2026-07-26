@@ -236,7 +236,7 @@ export default function SuperAdminWorkshopsPage() {
                 <input
                   type="text"
                   value={form.domain}
-                  onChange={(e) => setForm({ ...form, domain: e.target.value })}
+                  onChange={(e) => setForm({ ...form, domain: e.target.value.trim() })}
                   placeholder="mechanic.co.za"
                   className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
@@ -247,7 +247,7 @@ export default function SuperAdminWorkshopsPage() {
                   type="text"
                   required
                   value={form.ownerName}
-                  onChange={(e) => setForm({ ...form, ownerName: e.target.value })}
+                  onChange={(e) => setForm({ ...form, ownerName: e.target.value.trimStart() })}
                   className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
@@ -257,7 +257,7 @@ export default function SuperAdminWorkshopsPage() {
                   type="email"
                   required
                   value={form.ownerEmail}
-                  onChange={(e) => setForm({ ...form, ownerEmail: e.target.value })}
+                  onChange={(e) => setForm({ ...form, ownerEmail: e.target.value.trim() })}
                   className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
@@ -277,7 +277,17 @@ export default function SuperAdminWorkshopsPage() {
                 <input
                   type="text"
                   value={form.contactPhone}
-                  onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
+                  onChange={(e) => setForm({ ...form, contactPhone: e.target.value.trim() })}
+                  className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-grey mb-1">Contact Email (optional)</label>
+                <input
+                  type="email"
+                  value={form.contactEmail}
+                  onChange={(e) => setForm({ ...form, contactEmail: e.target.value.trim() })}
+                  placeholder="info@workshop.co.za"
                   className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>

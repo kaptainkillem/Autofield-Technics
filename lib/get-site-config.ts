@@ -227,12 +227,22 @@ function toArray(value: readonly string[] | string | null | undefined): string[]
 export async function getMergedSiteConfig(): Promise<MergedSiteConfig> {
   unstable_noStore()
   const slug = process.env.NEXT_PUBLIC_DEFAULT_WORKSHOP_SLUG
+
+  if (!slug) {
+    const msg = '[get-site-config] NEXT_PUBLIC_DEFAULT_WORKSHOP_SLUG is not set — no workshop will be resolved.'
+    console.error(msg)
+    if (process.env.NODE_ENV === 'development') throw new Error(msg)
+  }
+
   let dbSettings: Record<string, unknown> | null = null
   let dbWorkshop: { name: string; domain: string | null; status: string } | null = null
   let resolvedWorkshopId: string | null = null
 
   if (slug) {
     const workshopId = await resolveWorkshopId(slug)
+    if (!workshopId) {
+      console.error(`[get-site-config] Slug "${slug}" resolved to no workshop — falling back to defaults.`)
+    }
     if (workshopId) {
       resolvedWorkshopId = workshopId
       try {

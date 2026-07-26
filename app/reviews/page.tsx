@@ -25,6 +25,7 @@ export default async function ReviewsPage() {
   const { data: reviews } = await (supabase as any)
     .from('reviews')
     .select('*')
+    .eq('workshop_id', config.workshopId)
     .eq('status', 'approved')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })

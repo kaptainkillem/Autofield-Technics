@@ -40,9 +40,17 @@ export default function AdminFAQsPage() {
   })
 
   const fetchFAQs = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    const workshopId = (() => {
+      try {
+        const payload = JSON.parse(atob(session!.access_token.split('.')[1]))
+        return payload?.app_metadata?.workshop_id as string
+      } catch { return '' }
+    })()
     const { data } = await (supabase as any)
       .from('faqs')
       .select('*')
+      .eq('workshop_id', workshopId)
       .order('display_order', { ascending: true })
 
     setFaqs(data ?? [])
@@ -82,7 +90,16 @@ export default function AdminFAQsPage() {
 
     setSavingId(editingId)
 
+    const { data: { session } } = await supabase.auth.getSession()
+    const workshopId = (() => {
+      try {
+        const payload = JSON.parse(atob(session!.access_token.split('.')[1]))
+        return payload?.app_metadata?.workshop_id as string
+      } catch { return '' }
+    })()
+
     const payload = {
+      workshop_id: workshopId,
       question: form.question.trim(),
       answer: form.answer.trim(),
       category: form.category,

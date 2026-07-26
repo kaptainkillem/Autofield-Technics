@@ -66,6 +66,7 @@ export async function PATCH(
     .from('quotes')
     .select('id, quote_token')
     .eq('id', id)
+    .eq('workshop_id', auth.workshopId as string)
     .is('deleted_at', null)
     .single()
 
@@ -120,6 +121,7 @@ export async function PATCH(
     .from('quotes')
     .update(updates as never)
     .eq('id', id)
+    .eq('workshop_id', auth.workshopId as string)
     .select()
     .single()
 

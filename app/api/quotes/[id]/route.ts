@@ -23,11 +23,18 @@ async function verifyAdmin() {
   }
 
   const role = getRoleFromJWT(session)
+  const workshopId = (() => {
+    try {
+      const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+      return payload?.app_metadata?.workshop_id as string | null
+    } catch { return null }
+  })()
+
   if (role !== 'admin') {
     return { authorized: false as const, error: 'Forbidden', status: 403 }
   }
 
-  return { authorized: true as const, userId: user.id, workshopId: '' }
+  return { authorized: true as const, userId: user.id, workshopId }
 }
 
 export async function PATCH(
@@ -70,6 +77,7 @@ export async function PATCH(
     .from('quotes')
     .update({ status: body.status, updated_at: new Date().toISOString() } as never)
     .eq('id', id)
+    .eq('workshop_id', auth.workshopId as string)
     .is('deleted_at', null)
     .select()
     .single()
