@@ -30,6 +30,10 @@ export async function GET(
       .select('*, work_order_events(*), appointments(*), quotes(*)')
       .eq('id', id)
 
+    if (isAdmin && !workshopId) {
+      return NextResponse.json({ error: 'No workshop assigned' }, { status: 403 })
+    }
+
     if (isAdmin && workshopId) {
       query = query.eq('workshop_id', workshopId)
     }

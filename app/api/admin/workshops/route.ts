@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createSuperAdminClient } from '@/lib/super-admin'
 import { createSupabaseServerClient, getRoleFromJWT } from '@/lib/supabaseServer'
+import { checkRateLimit } from '@/lib/rate-limiter'
 import { createDefaultHomePageContent } from '@/lib/homepage-content'
 
 const CreateWorkshopSchema = z.object({
@@ -19,6 +20,21 @@ export async function POST(request: Request) {
   try {
     const sessionClient = await createSupabaseServerClient()
     const { data: { session } } = await sessionClient.auth.getSession()
+
+    const userId = session?.user?.id
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    const rateLimitKey = userId ?? ip
+
+    const { allowed, remaining } = checkRateLimit(`super-admin:workshops:${rateLimitKey}`, {
+      maxRequests: 10,
+      windowMs: 60_000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
+    }
 
     if (!session || getRoleFromJWT(session) !== 'super_admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -153,10 +169,25 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const sessionClient = await createSupabaseServerClient()
     const { data: { session } } = await sessionClient.auth.getSession()
+
+    const userId = session?.user?.id
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    const rateLimitKey = userId ?? ip
+
+    const { allowed, remaining } = checkRateLimit(`super-admin:workshops:${rateLimitKey}`, {
+      maxRequests: 10,
+      windowMs: 60_000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
+    }
 
     if (!session || getRoleFromJWT(session) !== 'super_admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -208,15 +239,34 @@ const UpdateWorkshopSchema = z.object({
   status: z.enum(['active', 'inactive', 'suspended']).optional(),
   billing_status: z.enum(['paid', 'past_due', 'cancelled']).optional(),
   suspension_reason: z.string().max(500).optional(),
-  domain: z.string().optional(),
-  name: z.string().min(1).optional(),
-  slug: z.string().min(1).optional(),
+  domain: z.string().max(255).optional(),
+  name: z.string().min(1).max(200).optional(),
+  slug: z.string().min(1).max(100).optional(),
+})
+
+const DeleteWorkshopSchema = z.object({
+  id: z.string().uuid('Invalid workshop ID'),
 })
 
 export async function PATCH(request: Request) {
   try {
     const sessionClient = await createSupabaseServerClient()
     const { data: { session } } = await sessionClient.auth.getSession()
+
+    const userId = session?.user?.id
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    const rateLimitKey = userId ?? ip
+
+    const { allowed, remaining } = checkRateLimit(`super-admin:workshops:${rateLimitKey}`, {
+      maxRequests: 10,
+      windowMs: 60_000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
+    }
 
     if (!session || getRoleFromJWT(session) !== 'super_admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -272,15 +322,32 @@ export async function DELETE(request: Request) {
     const sessionClient = await createSupabaseServerClient()
     const { data: { session } } = await sessionClient.auth.getSession()
 
+    const userId = session?.user?.id
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    const rateLimitKey = userId ?? ip
+
+    const { allowed, remaining } = checkRateLimit(`super-admin:workshops:${rateLimitKey}`, {
+      maxRequests: 10,
+      windowMs: 60_000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
+    }
+
     if (!session || getRoleFromJWT(session) !== 'super_admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const url = new URL(request.url)
-    const workshopId = url.searchParams.get('id')
-    if (!workshopId) {
-      return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 })
+    const workshopIdRaw = url.searchParams.get('id')
+    const parsed = DeleteWorkshopSchema.safeParse({ id: workshopIdRaw })
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
     }
+    const workshopId = parsed.data.id
 
     const adminClient = createSuperAdminClient()
 

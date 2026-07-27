@@ -3,6 +3,7 @@ import { SITE_CONFIG } from '@/lib/site-config'
 import { buildQuoteNotificationEmail } from '@/lib/email-templates'
 import { sendEmail, getWorkshopAdminEmail } from '@/lib/email'
 import { z } from 'zod'
+import { checkRateLimit } from '@/lib/rate-limiter'
 
 const WebhookPayloadSchema = z.object({
   record: z.object({
@@ -25,6 +26,18 @@ const WebhookPayloadSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    const { allowed, remaining } = checkRateLimit(`webhooks:quote:${ip}`, {
+      maxRequests: 30,
+      windowMs: 60_000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
+    }
+
     // 🛡️ 1. Security Check: Validate incoming headers to guarantee only Supabase calls this
     const webhookSecret = request.headers.get('x-supabase-webhook-secret')
     if (webhookSecret !== process.env.SUPABASE_WEBHOOK_SECRET) {

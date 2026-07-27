@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { z } from 'zod'
+import { checkRateLimit } from '@/lib/rate-limiter'
 
 const RespondBodySchema = z.object({
   action: z.enum(['accept', 'decline']),
@@ -19,6 +20,17 @@ export async function PATCH(
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { allowed, remaining } = checkRateLimit(`customer:appointment-respond:${user.id}`, {
+      maxRequests: 20,
+      windowMs: 60_000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
     }
 
     // 2. Validate body

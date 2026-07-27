@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { verifyStaffUser } from '@/lib/admin-auth'
+import { checkRateLimit } from '@/lib/rate-limiter'
 
 export async function GET(_request: NextRequest) {
   try {
     const auth = await verifyStaffUser()
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
+    }
+
+    const { allowed, remaining } = checkRateLimit(`admin:finance:${auth.userId}`, {
+      maxRequests: 20,
+      windowMs: 60_000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
     }
 
     const adminClient = await createSupabaseServerClient()

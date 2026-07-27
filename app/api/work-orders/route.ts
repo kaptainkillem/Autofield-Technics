@@ -154,7 +154,9 @@ export async function GET(request: NextRequest) {
       if (quoteError || !quote || quote.user_id !== session.user?.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
-    } else if (workshopId) {
+    } else if (!workshopId) {
+      return NextResponse.json({ error: 'No workshop assigned' }, { status: 403 })
+    } else {
       query = query.eq('workshop_id', workshopId)
     }
 

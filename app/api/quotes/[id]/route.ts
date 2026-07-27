@@ -30,7 +30,7 @@ async function verifyAdmin() {
     } catch { return null }
   })()
 
-  if (role !== 'admin') {
+  if (role !== 'admin' && role !== 'super_admin') {
     return { authorized: false as const, error: 'Forbidden', status: 403 }
   }
 

@@ -81,6 +81,7 @@ export async function POST(
     .from('quotes')
     .select('*')
     .eq('id', id)
+    .eq('workshop_id', auth.workshopId!)
     .is('deleted_at', null)
     .single() as any
 

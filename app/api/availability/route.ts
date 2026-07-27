@@ -91,11 +91,26 @@ export async function GET(request: NextRequest) {
 
     const { date, workshop_id } = parsed.data
 
+    const defaultSlug = process.env.NEXT_PUBLIC_DEFAULT_WORKSHOP_SLUG
+    if (!defaultSlug) {
+      return NextResponse.json({ error: 'Workshop not configured' }, { status: 403 })
+    }
+
+    const supabase = await createSupabaseServerClient()
+
+    const { data: defaultWorkshop } = await supabase
+      .from('workshops')
+      .select('id')
+      .eq('slug', defaultSlug)
+      .maybeSingle()
+
+    if (!defaultWorkshop || defaultWorkshop.id !== workshop_id) {
+      return NextResponse.json({ error: 'Invalid workshop' }, { status: 403 })
+    }
+
     // 2. Parse the SAST date and get day of week
     const sastDate = parseISO(date)
     const dayOfWeek = getDay(sastDate) // 0 = Sunday, 1 = Monday, ...
-
-    const supabase = await createSupabaseServerClient()
 
     // 3. Query working_hours for this day
     const { data: workingHour } = await supabase
