@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { verifyStaffUser } from '@/lib/admin-auth'
+import { checkRateLimit } from '@/lib/rate-limiter'
 import { z } from 'zod'
 
 const ProposeBodySchema = z.object({
@@ -15,25 +17,24 @@ export async function PATCH(
   try {
     const { id } = await params
 
-    // 1. Verify admin auth
-    const supabase = await createSupabaseServerClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await verifyStaffUser()
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    const { allowed, remaining } = checkRateLimit(`propose:${auth.userId}`, {
+      maxRequests: 20,
+      windowMs: 60_000,
+    })
 
-    if (!profile || profile.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
     }
 
-    // 2. Validate body
+    // Validate body
     let body: z.infer<typeof ProposeBodySchema>
     try {
       const raw = await request.json()
@@ -47,11 +48,12 @@ export async function PATCH(
 
     const adminClient = await createSupabaseServerClient()
 
-    // 3. Verify appointment exists and is in a valid state
+    // Verify appointment exists, is in a valid state, and belongs to the staff user's workshop
     const { data: appointment, error: fetchError } = await adminClient
       .from('appointments')
       .select('id, status, user_id')
       .eq('id', id)
+      .eq('workshop_id', auth.workshopId!)
       .single()
 
     if (fetchError || !appointment) {
@@ -65,7 +67,7 @@ export async function PATCH(
       )
     }
 
-    // 4. Update appointment with proposal
+    // Update appointment with proposal
     const { data: updated, error: updateError } = await adminClient
       .from('appointments')
       .update({
@@ -76,6 +78,7 @@ export async function PATCH(
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
+      .eq('workshop_id', auth.workshopId!)
       .select()
       .single()
 

@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { useSiteConfig } from '@/components/providers/SiteConfigProvider'
-import { sanitizePhone, sanitizeText, sanitizeEmail } from '@/lib/input-sanitizer'
 import Link from 'next/link'
 
 const SERVICE_OPTIONS = [
@@ -77,13 +76,36 @@ export function QuoteForm({ workshopId }: { workshopId?: string }) {
     )
   }
 
+  function validateForm(): string | null {
+    if (!form.customerName.trim()) return 'Please enter your full name.'
+    if (!form.customerPhone.trim()) return 'Please enter your WhatsApp number.'
+    const digitsOnly = form.customerPhone.replace(/\D/g, '')
+    if (digitsOnly.length < 10) return 'Please enter a valid 10-digit South African phone number.'
+    if (!form.service) return 'Please select a service.'
+    if (!form.description.trim()) return 'Please describe the problem with your vehicle.'
+    if (form.customerEmail.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(form.customerEmail)) return 'Please enter a valid email address.'
+    }
+    if (form.year) {
+      const yearNum = parseInt(form.year, 10)
+      if (isNaN(yearNum) || yearNum < 1900 || yearNum > 2030) return 'Please enter a valid vehicle year between 1900 and 2030.'
+    }
+    return null
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    setLoading(true)
 
-    // Append VIN metadata cleanly to your description or dedicated column if it exists
-    const integratedDescriptionText = `[Service: ${form.service}]${form.vin ? ` [VIN: ${form.vin}]` : ''} — ${form.description || 'No description provided.'}`
+    const validationError = validateForm()
+    if (validationError) {
+      setError(validationError)
+      toast.error(validationError)
+      return
+    }
+
+    setLoading(true)
 
     if (!workshopId) {
       setError('Could not determine your mechanic. Please use the workshop link.')
@@ -92,39 +114,40 @@ export function QuoteForm({ workshopId }: { workshopId?: string }) {
       return
     }
 
-    const { data, error: supabaseError } = await (supabase as any).from('quotes').insert({
-      workshop_id: workshopId,
-      customer_name: sanitizeText(form.customerName, 200),
-      customer_email: sanitizeEmail(form.customerEmail) || null,
-      customer_phone: sanitizePhone(form.customerPhone),
-      vehicle_make: sanitizeText(form.brand, 100),
-      vehicle_model: sanitizeText(form.model, 100),
-      vehicle_year: form.year ? parseInt(form.year) : null,
-      description: sanitizeText(integratedDescriptionText, 2000),
-      status: 'pending',
-    }).select('id, quote_token').single()
+    const response = await fetch('/api/quotes/new', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workshopId,
+        customerName: form.customerName,
+        customerEmail: form.customerEmail,
+        customerPhone: form.customerPhone,
+        brand: form.brand,
+        model: form.model,
+        year: form.year,
+        vin: form.vin,
+        service: form.service,
+        description: form.description,
+      }),
+    })
 
+    const result = await response.json()
     setLoading(false)
 
-    if (supabaseError) {
-      const msg = supabaseError.code === '42501'
-        ? 'You do not have permission to submit a quote. Please sign in.'
-        : supabaseError.code === '23502'
-          ? 'A required field is missing. Please check your details.'
-          : 'Could not save your request. Please try again.'
+    if (!response.ok) {
+      const msg = result.error || 'Could not save your request. Please try again.'
       setError(msg)
       toast.error(msg)
-      console.error(supabaseError)
+      console.error('Quote submission failed:', result)
       return
     }
 
     toast.success('Quote submitted successfully!')
 
-    // 🌟 If user is unauthenticated, store the quote ID and token locally for later mapping
-    if (isAnonymous && data?.id) {
-      localStorage.setItem('pending_quote_id', data.id)
-      if (data.quote_token) {
-        localStorage.setItem('pending_quote_token', data.quote_token)
+    if (isAnonymous && result.quoteId) {
+      localStorage.setItem('pending_quote_id', result.quoteId)
+      if (result.quoteToken) {
+        localStorage.setItem('pending_quote_token', result.quoteToken)
       }
     }
 
@@ -288,6 +311,7 @@ export function QuoteForm({ workshopId }: { workshopId?: string }) {
           name="description"
           placeholder="Describe the issue with your car..."
           rows={4}
+          required
           value={form.description}
           onChange={handleChange}
           className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark resize-none"

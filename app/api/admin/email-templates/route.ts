@@ -19,6 +19,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
+    const { allowed, remaining } = checkRateLimit(`admin:email-templates:read:${auth.userId}`, {
+      maxRequests: 20,
+      windowMs: 60_000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
+    }
+
     const workshopId = auth.role === 'super_admin'
       ? request.nextUrl.searchParams.get('workshopId')
       : auth.workshopId
@@ -121,6 +132,17 @@ export async function DELETE(request: NextRequest) {
     const auth = await verifyStaffUser()
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
+    }
+
+    const { allowed, remaining } = checkRateLimit(`admin:email-templates:delete:${auth.userId}`, {
+      maxRequests: 20,
+      windowMs: 60_000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
     }
 
     const templateKey = request.nextUrl.searchParams.get('key')

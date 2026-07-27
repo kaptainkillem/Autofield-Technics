@@ -58,6 +58,7 @@ export async function PATCH(
       .from('work_orders')
       .select('id, status, quote_id, workshop_id')
       .eq('id', id)
+      .eq('workshop_id', auth.workshopId!)
       .single()
 
     if (fetchError || !workOrder) {
@@ -83,6 +84,7 @@ export async function PATCH(
         updated_at: now,
       })
       .eq('id', id)
+      .eq('workshop_id', auth.workshopId!)
       .select()
       .single()
 

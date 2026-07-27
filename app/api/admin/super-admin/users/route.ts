@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSuperAdminClient } from '@/lib/super-admin'
 import { createSupabaseServerClient, getRoleFromJWT } from '@/lib/supabaseServer'
+import { checkRateLimit } from '@/lib/rate-limiter'
 
 export async function GET(request: NextRequest) {
   try {
     const sessionClient = await createSupabaseServerClient()
     const { data: { session } } = await sessionClient.auth.getSession()
+
+    const userId = session?.user?.id
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    const rateLimitKey = userId ?? ip
+
+    const { allowed, remaining } = checkRateLimit(`super-admin:users:${rateLimitKey}`, {
+      maxRequests: 10,
+      windowMs: 60_000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
+    }
 
     if (!session || getRoleFromJWT(session) !== 'super_admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

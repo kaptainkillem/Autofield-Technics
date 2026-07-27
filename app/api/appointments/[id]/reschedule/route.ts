@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { checkRateLimit } from '@/lib/rate-limiter'
+import { z } from 'zod'
+
+const RescheduleBodySchema = z.object({
+  reason: z.string().max(500).optional(),
+})
 
 export async function PATCH(
   request: NextRequest,
@@ -14,6 +20,27 @@ export async function PATCH(
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { allowed, remaining } = checkRateLimit(`customer:reschedule:${user.id}`, {
+      maxRequests: 20,
+      windowMs: 60_000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
+    }
+
+    let body: z.infer<typeof RescheduleBodySchema>
+    try {
+      body = RescheduleBodySchema.parse(await request.json())
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid body. Expected: { reason?: string }' },
+        { status: 400 }
+      )
     }
 
     const adminClient = await createSupabaseServerClient()
@@ -43,9 +70,10 @@ export async function PATCH(
 
     // 4. Update status to pending with reschedule note
     const existingNotes = appointment.notes ?? ''
+    const reasonPart = body.reason ? ` (${body.reason})` : ''
     const rescheduleNote = existingNotes
-      ? `${existingNotes}\n[Client requested reschedule]`
-      : '[Client requested reschedule]'
+      ? `${existingNotes}\n[Client requested reschedule${reasonPart}]`
+      : `[Client requested reschedule${reasonPart}]`
 
     const { data: updated, error: updateError } = await adminClient
       .from('appointments')

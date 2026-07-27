@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { createSuperAdminClient } from '@/lib/super-admin'
+import { checkRateLimit } from '@/lib/rate-limiter'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const { allowed, remaining } = checkRateLimit(`pdf:download:${ip}`, {
+    maxRequests: 10,
+    windowMs: 60_000,
+  })
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again shortly.' },
+      { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+    )
+  }
+
   const urlToken = request.nextUrl.searchParams.get('token')
 
   const adminClient = createSuperAdminClient()

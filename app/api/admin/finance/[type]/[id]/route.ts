@@ -50,6 +50,7 @@ export async function DELETE(
       .from(type)
       .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq('id', id)
+      .eq('workshop_id', auth.workshopId!)
 
     if (error) {
       console.error('Delete finance transaction error:', error)

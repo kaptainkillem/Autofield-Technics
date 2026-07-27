@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSuperAdminClient } from '@/lib/super-admin'
 import { createSupabaseServerClient, getRoleFromJWT } from '@/lib/supabaseServer'
 import { sanitizeText, sanitizePhone } from '@/lib/input-sanitizer'
+import { checkRateLimit } from '@/lib/rate-limiter'
 
 function getWorkshopIdFromJWT(session: { access_token?: string } | null): string | null {
   if (!session?.access_token) return null
@@ -86,6 +87,21 @@ export async function POST(request: NextRequest) {
     const workshopId = getWorkshopIdFromJWT(session)
     if (!workshopId) {
       return NextResponse.json({ error: 'No workshop assigned' }, { status: 400 })
+    }
+
+    const userId = session?.user?.id
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    const rateLimitKey = userId ?? ip
+
+    const { allowed, remaining } = checkRateLimit(`admin:settings:${rateLimitKey}`, {
+      maxRequests: 20,
+      windowMs: 60_000,
+    })
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again shortly.' },
+        { status: 429, headers: { 'X-RateLimit-Remaining': String(remaining) } }
+      )
     }
 
     const body = await request.json()
