@@ -213,6 +213,26 @@ export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }
 
   function applyAcceptedQuote(id: string) {
     setSelectedQuoteId(id)
+    if (!id) {
+      setCustomerName('')
+      setCustomerEmail('')
+      setCustomerPhone('')
+      setVehicleYear('')
+      setVehicleMake('')
+      setVehicleModel('')
+      setServiceType('')
+      setDescription('')
+      setNotes('')
+      setRows([emptyLine()])
+      setDiscountPercent(0)
+      setApplyCalloutFee(false)
+      setApplyDiagnosticFee(false)
+      setPaymentMethod(null)
+      setDepositPercent(0)
+      setDepositAmount('')
+      setExpiryDays(0)
+      return
+    }
     const quote = acceptedQuotes.find((item) => item.id === id)
     if (!quote) return
 
@@ -786,7 +806,7 @@ function QuoteTable({
                 <td className="py-3 px-3">
                   <div className="flex items-center gap-1">
                     <span className="text-grey">R</span>
-                    <input className="form-input w-28" type="number" min={0} value={row.unitPrice} onChange={(e) => updateRow(row.id, { unitPrice: Number(e.target.value) || 0 })} />
+                    <input className="form-input w-28" type="number" min={0} value={row.unitPrice || ''} onChange={(e) => updateRow(row.id, { unitPrice: Number(e.target.value) || 0 })} />
                   </div>
                 </td>
                 <td className="py-3 px-3 font-semibold text-grey-dark">{formatCurrency(row.qty * row.unitPrice)}</td>
@@ -863,7 +883,7 @@ function InvoicePaper({
                       R
                       <input
                         type="number"
-                        value={row.unitPrice}
+                        value={row.unitPrice || ''}
                         onChange={(e) => updateRow(row.id, { unitPrice: Number(e.target.value) || 0 })}
                         className="ml-0.5 w-20 border-0 border-b border-grey-medium bg-transparent p-0 text-grey focus:border-primary focus:shadow-none"
                       />

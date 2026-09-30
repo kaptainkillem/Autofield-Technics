@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Save, ArrowLeft, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Loader2, Save, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Database } from '@/types/database'
@@ -153,17 +153,21 @@ export default function AdminServiceForm({ service, categories }: AdminServiceFo
         />
       </div>
 
-      <div className="flex items-center justify-between py-3 px-4 bg-grey-lightest rounded-base border border-grey-medium/10">
+      <div className="flex items-center justify-between gap-4 py-3 px-4 bg-grey-lightest rounded-base border border-grey-medium/10">
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-grey-dark">Active</span>
-          <span className="text-xs text-grey">Inactive services are hidden from customers</span>
+          <span className={`text-sm font-bold ${form.is_active ? 'text-green-700' : 'text-grey'}`}>
+            {form.is_active ? 'Active — visible to customers' : 'Inactive — hidden from customers'}
+          </span>
         </div>
         <button
           type="button"
           onClick={() => setForm((prev) => ({ ...prev, is_active: !prev.is_active }))}
-          className="text-primary"
+          role="switch"
+          aria-checked={form.is_active}
+          aria-label="Service visibility"
+          className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${form.is_active ? 'bg-green-600' : 'bg-grey-medium'}`}
         >
-          {form.is_active ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
         </button>
       </div>
 

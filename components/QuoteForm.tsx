@@ -92,31 +92,35 @@ export function QuoteForm({ workshopId }: { workshopId?: string }) {
       return
     }
 
-    const { data, error: supabaseError } = await (supabase as any).from('quotes').insert({
-      workshop_id: workshopId,
-      customer_name: sanitizeText(form.customerName, 200),
-      customer_email: sanitizeEmail(form.customerEmail) || null,
-      customer_phone: sanitizePhone(form.customerPhone),
-      vehicle_make: sanitizeText(form.brand, 100),
-      vehicle_model: sanitizeText(form.model, 100),
-      vehicle_year: form.year ? parseInt(form.year) : null,
-      description: sanitizeText(integratedDescriptionText, 2000),
-      status: 'pending',
-    }).select('id, quote_token').single()
-
-    setLoading(false)
-
-    if (supabaseError) {
-      const msg = supabaseError.code === '42501'
-        ? 'You do not have permission to submit a quote. Please sign in.'
-        : supabaseError.code === '23502'
-          ? 'A required field is missing. Please check your details.'
-          : 'Could not save your request. Please try again.'
+    let data: { id: string; quote_token: string | null }
+    try {
+      const response = await fetch('/api/quotes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workshop_id: workshopId,
+          customer_name: sanitizeText(form.customerName, 200),
+          customer_email: sanitizeEmail(form.customerEmail) || null,
+          customer_phone: sanitizePhone(form.customerPhone),
+          vehicle_make: sanitizeText(form.brand, 100),
+          vehicle_model: sanitizeText(form.model, 100),
+          vehicle_year: form.year ? parseInt(form.year) : null,
+          description: sanitizeText(integratedDescriptionText, 2000),
+          service_type: sanitizeText(form.service, 100),
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not save your request. Please try again.')
+      data = result
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not save your request. Please try again.'
       setError(msg)
       toast.error(msg)
-      console.error(supabaseError)
+      setLoading(false)
       return
     }
+
+    setLoading(false)
 
     toast.success('Quote submitted successfully!')
 

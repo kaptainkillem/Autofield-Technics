@@ -57,6 +57,11 @@ export function VehicleFormModal({ userId, workshopId, vehicle, onClose, onSaved
       return
     }
 
+    if (!workshopId) {
+      toast.error('Could not determine your workshop. Please sign out and sign in again, then retry.')
+      return
+    }
+
     const yearNum = parseInt(form.year)
     if (isNaN(yearNum) || yearNum < 1900 || yearNum > 2030) {
       toast.error('Please enter a valid year between 1900 and 2030')

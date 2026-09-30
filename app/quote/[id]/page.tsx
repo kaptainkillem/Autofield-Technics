@@ -339,6 +339,7 @@ export default async function PublicQuotePage({ params, searchParams }: PageProp
           ) : (
             <QuoteActionButtons
               quoteId={id}
+              workshopId={quote.workshop_id}
               status={quote.status}
               pdfUrl={quote.pdf_url ?? null}
               existingAppointment={existingAppointment as any}

@@ -4,9 +4,10 @@ import { verifyStaffUser } from '@/lib/admin-auth'
 import { checkRateLimit } from '@/lib/rate-limiter'
 import { sendTemplateEmail } from '@/lib/email'
 import { z } from 'zod'
+import { normalizeDateOnly, isPastDate } from '@/lib/date-only'
 
 const CreateAppointmentSchema = z.object({
-  scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  scheduled_date: z.preprocess(normalizeDateOnly, z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a valid date.')),
   scheduled_time: z.string().regex(/^\d{2}:\d{2}$/, 'Time must be HH:mm'),
   service_type: z.string().trim().min(1),
   customer_name: z.string().trim().optional(),
@@ -35,7 +36,11 @@ export async function POST(request: NextRequest) {
     try {
       body = CreateAppointmentSchema.parse(await request.json())
     } catch {
-      return NextResponse.json({ error: 'Invalid appointment data' }, { status: 400 })
+      return NextResponse.json({ error: 'Please select a valid date and check the appointment details.' }, { status: 400 })
+    }
+
+    if (isPastDate(body.scheduled_date)) {
+      return NextResponse.json({ error: 'Please choose today or a future date for the appointment.' }, { status: 400 })
     }
 
     const adminClient = await createSupabaseServerClient()

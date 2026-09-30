@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { z } from 'zod'
+import { normalizeDateOnly, isPastDate } from '@/lib/date-only'
 
 const ProposeBodySchema = z.object({
-  proposed_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  proposed_date: z.preprocess(normalizeDateOnly, z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a valid date.')),
   proposed_time: z.string().regex(/^\d{2}:\d{2}$/, 'Time must be HH:mm'),
   proposed_notes: z.string().max(500, 'Notes must be under 500 characters').optional(),
 })
@@ -40,7 +41,14 @@ export async function PATCH(
       body = ProposeBodySchema.parse(raw)
     } catch {
       return NextResponse.json(
-        { error: 'Invalid body. Expected: { proposed_date: "YYYY-MM-DD", proposed_time: "HH:mm", proposed_notes?: string }' },
+        { error: 'Please select a valid date and time.' },
+        { status: 400 }
+      )
+    }
+
+    if (isPastDate(body.proposed_date)) {
+      return NextResponse.json(
+        { error: 'Please choose today or a future date for the proposal.' },
         { status: 400 }
       )
     }

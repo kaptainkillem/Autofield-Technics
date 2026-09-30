@@ -4,11 +4,12 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
 import { z } from 'zod'
 import { parseISO, getDay } from 'date-fns'
 import { fromZonedTime } from 'date-fns-tz'
+import { normalizeDateOnly, isPastDate } from '@/lib/date-only'
 
 const TIMEZONE = 'Africa/Johannesburg'
 
 const BookBodySchema = z.object({
-  scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  scheduled_date: z.preprocess(normalizeDateOnly, z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a valid date.')),
   scheduled_time: z.string().regex(/^\d{2}:\d{2}$/, 'Time must be HH:mm'),
   quote_token: z.string().uuid().optional(),
 })
@@ -80,12 +81,20 @@ export async function POST(
       body = BookBodySchema.parse(raw)
     } catch {
       return NextResponse.json(
-        { error: 'Invalid body. Expected: { scheduled_date: "YYYY-MM-DD", scheduled_time: "HH:mm", quote_token?: string }' },
+        { error: 'Please select a valid date and time.' },
         { status: 400 }
       )
     }
 
     const { scheduled_date, scheduled_time } = body
+
+    if (isPastDate(scheduled_date, TIMEZONE)) {
+      return NextResponse.json(
+        { error: 'Please choose today or a future date for your appointment.' },
+        { status: 400 }
+      )
+    }
+
     const supabase = await createSupabaseServerClient()
 
     // 2. Verify quote exists and is accepted
@@ -186,6 +195,7 @@ export async function POST(
       .from('working_hours')
       .select('start_time, end_time, is_active')
       .eq('day_of_week', dayOfWeek)
+      .eq('workshop_id', quote.workshop_id)
       .single()
 
     if (!workingHour || !workingHour.is_active) {
