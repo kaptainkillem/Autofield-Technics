@@ -73,6 +73,11 @@ function clampPercent(value: string) {
   return Math.min(100, Math.max(0, next))
 }
 
+function computeExpiryDate(expiryDays: number) {
+  if (expiryDays <= 0) return null
+  return new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+}
+
 export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }: QuoteBuilderProps) {
   const router = useRouter()
   const isInvoice = mode === 'invoice'
@@ -288,7 +293,7 @@ export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }
       discountPercent,
       depositPercent,
       depositAmount: depositAmount ? Number(depositAmount) : null,
-      expiryDate: expiryDays > 0 ? new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null,
+      expiryDate: computeExpiryDate(expiryDays),
       lineItems: cleanRows,
     }
 

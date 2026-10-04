@@ -65,9 +65,15 @@ export function EmailTemplatesForm({ workshopId }: EmailTemplatesFormProps) {
   const [previewing, setPreviewing] = useState(false)
   const [sampleVars, setSampleVars] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    fetchTemplates()
-  }, [workshopId])
+  function selectTemplate(t: TemplateData) {
+    setSelectedKey(t.template_key)
+    setSubject(t.subject)
+    setHtmlBody(t.html_body)
+    setTextBody(t.text_body || '')
+    const defaults = SAMPLE_DATA[t.template_key] || {}
+    setSampleVars(defaults)
+    setPreviewHtml('')
+  }
 
   async function fetchTemplates() {
     if (!workshopId) { setLoading(false); return }
@@ -87,15 +93,9 @@ export function EmailTemplatesForm({ workshopId }: EmailTemplatesFormProps) {
     }
   }
 
-  function selectTemplate(t: TemplateData) {
-    setSelectedKey(t.template_key)
-    setSubject(t.subject)
-    setHtmlBody(t.html_body)
-    setTextBody(t.text_body || '')
-    const defaults = SAMPLE_DATA[t.template_key] || {}
-    setSampleVars(defaults)
-    setPreviewHtml('')
-  }
+  useEffect(() => {
+    fetchTemplates()
+  }, [workshopId])
 
   function insertVariable(varName: string) {
     setHtmlBody((prev) => prev + `{{${varName}}}`)

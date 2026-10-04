@@ -213,13 +213,6 @@ export function HomepageContentForm({
     }
   }
 
-  const SectionHeader = ({ icon: Icon, title }: { icon: typeof Sparkles; title: string }) => (
-    <div className="flex items-center gap-2 pb-3 border-b border-grey-light">
-      <Icon size={18} className="text-primary" />
-      <h3 className="text-base font-bold text-grey-dark">{title}</h3>
-    </div>
-  )
-
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-8">
       {errors.length > 0 && (
@@ -677,6 +670,15 @@ export function HomepageContentForm({
         </Button>
       </div>
     </form>
+  )
+}
+
+function SectionHeader({ icon: Icon, title }: { icon: typeof Sparkles; title: string }) {
+  return (
+    <div className="flex items-center gap-2 pb-3 border-b border-grey-light">
+      <Icon size={18} className="text-primary" />
+      <h3 className="text-base font-bold text-grey-dark">{title}</h3>
+    </div>
   )
 }
 
