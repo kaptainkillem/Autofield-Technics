@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 
 interface QuoteActionButtonsProps {
   quoteId: string
+  workshopId: string
   quoteToken?: string | null
   status: string
   pdfUrl: string | null
@@ -21,7 +22,7 @@ interface QuoteActionButtonsProps {
   } | null
 }
 
-export function QuoteActionButtons({ quoteId, quoteToken, status, pdfUrl, existingAppointment }: QuoteActionButtonsProps) {
+export function QuoteActionButtons({ quoteId, workshopId, quoteToken, status, pdfUrl, existingAppointment }: QuoteActionButtonsProps) {
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState('')
   const [localStatus, setLocalStatus] = useState(status)
@@ -199,7 +200,7 @@ export function QuoteActionButtons({ quoteId, quoteToken, status, pdfUrl, existi
             <p className="text-xs text-grey mb-6">
               Your quote has been accepted. Select a date and time to schedule your service.
             </p>
-            <CustomerBookingForm quoteId={quoteId} quoteToken={quoteToken ?? undefined} />
+            <CustomerBookingForm quoteId={quoteId} workshopId={workshopId} quoteToken={quoteToken ?? undefined} />
           </div>
         </div>
       )

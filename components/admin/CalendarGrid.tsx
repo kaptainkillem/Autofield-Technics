@@ -116,6 +116,7 @@ export function CalendarGrid({ appointments, blockedSlots, view, onDateClick, on
   }
 
   const today = new Date()
+  const todayStart = startOfDay(today)
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
   return (
@@ -166,6 +167,7 @@ export function CalendarGrid({ appointments, blockedSlots, view, onDateClick, on
         {days.map((day, index) => {
           const isCurrentMonth = isSameMonth(day, currentDate)
           const isToday = isSameDay(day, today)
+          const isPast = startOfDay(day) < todayStart
           const dayAppointments = getAppointmentsForDate(day)
           const dayBlocked = getBlockedSlotsForDate(day)
           const isBlocked = dayBlocked.length > 0
@@ -173,14 +175,22 @@ export function CalendarGrid({ appointments, blockedSlots, view, onDateClick, on
           return (
             <div
               key={index}
-              onClick={() => onDateClick(day)}
-              className={`min-h-[100px] p-2 rounded-base border cursor-pointer transition-all hover:shadow-sm relative ${
+              onClick={() => {
+                if (isPast) return
+                onDateClick(day)
+              }}
+              className={`min-h-[100px] p-2 rounded-base border transition-all relative ${
+                isPast
+                  ? 'opacity-40 cursor-not-allowed'
+                  : 'cursor-pointer hover:shadow-sm'
+              } ${
                 isCurrentMonth
                   ? isBlocked
                     ? 'bg-grey-lightest/80 border-grey-medium/20'
                     : 'bg-white border-grey-medium/10'
                   : 'bg-grey-lightest/30 border-grey-light/20'
               } ${isToday ? 'ring-2 ring-primary/30' : ''}`}
+              title={isPast ? 'Past dates cannot be booked' : undefined}
             >
               {/* Blocked overlay indicator */}
               {isBlocked && (

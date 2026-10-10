@@ -6,12 +6,12 @@ import { z } from 'zod'
 
 const ServiceSchema = z.object({
   name: z.string().trim().min(1),
-  description: z.string().trim().optional(),
-  category_id: z.string().uuid().optional().or(z.literal('')),
-  category: z.string().trim().optional(),
+  description: z.string().trim().optional().nullable(),
+  category_id: z.string().uuid().optional().nullable().or(z.literal('')),
+  category: z.string().trim().optional().nullable(),
   base_price: z.number().min(0).optional().nullable(),
   is_active: z.boolean().default(true),
-  image_url: z.string().trim().url().optional().or(z.literal('')),
+  image_url: z.string().trim().url().optional().nullable().or(z.literal('')),
 })
 
 async function getWorkshopUserId(serverClient: Awaited<ReturnType<typeof createSupabaseServerClient>>) {

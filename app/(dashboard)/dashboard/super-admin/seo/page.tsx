@@ -90,7 +90,7 @@ export default function AdminSEOCommandPage() {
   }, [])
 
   async function fetchSEORegistry() {
-    let query = supabase.from('seo_registry').select('*').order('path_url', { ascending: true })
+    const query = supabase.from('seo_registry').select('*').order('path_url', { ascending: true })
     const { data } = await query
     setRecords(data || [])
   }

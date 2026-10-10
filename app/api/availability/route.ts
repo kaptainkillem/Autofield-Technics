@@ -4,12 +4,14 @@ import { checkRateLimit } from '@/lib/rate-limiter'
 import { z } from 'zod'
 import { parseISO, getDay, format } from 'date-fns'
 import { toZonedTime, fromZonedTime } from 'date-fns-tz'
+import { resolveWorkshopIdFromRequest } from '@/lib/workshop'
+import { normalizeDateOnly } from '@/lib/date-only'
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TIMEZONE || 'Africa/Johannesburg'
 
 const QuerySchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
-  workshop_id: z.string().uuid('Workshop ID is required'),
+  date: z.preprocess(normalizeDateOnly, z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a valid date.')),
+  workshop_id: z.string().uuid('Workshop ID must be a valid UUID').optional(),
 })
 
 /**
@@ -84,12 +86,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const rawDate = searchParams.get('date')
 
-    const parsed = QuerySchema.safeParse({ date: rawDate })
+    const parsed = QuerySchema.safeParse({ date: rawDate, workshop_id: searchParams.get('workshop_id') ?? undefined })
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid date format. Use YYYY-MM-DD.' }, { status: 400 })
+      return NextResponse.json({ error: 'Please select a valid date and try again.' }, { status: 400 })
     }
 
-    const { date, workshop_id } = parsed.data
+    const { date } = parsed.data
+    const workshopId = parsed.data.workshop_id ?? await resolveWorkshopIdFromRequest()
+    if (!workshopId) {
+      return NextResponse.json({ error: 'Workshop could not be determined. Please use the workshop booking link.' }, { status: 400 })
+    }
 
     // 2. Parse the SAST date and get day of week
     const sastDate = parseISO(date)
@@ -102,7 +108,7 @@ export async function GET(request: NextRequest) {
       .from('working_hours')
       .select('start_time, end_time, is_active')
       .eq('day_of_week', dayOfWeek)
-      .eq('workshop_id', workshop_id)
+      .eq('workshop_id', workshopId)
       .single()
 
     // If no working hours defined or closed, return empty
@@ -118,7 +124,7 @@ export async function GET(request: NextRequest) {
       .from('appointments')
       .select('scheduled_time, duration_minutes, status')
       .eq('scheduled_date', date)
-      .eq('workshop_id', workshop_id)
+      .eq('workshop_id', workshopId)
       .neq('status', 'cancelled')
 
     // 6. Remove slots occupied by appointments
@@ -142,7 +148,7 @@ export async function GET(request: NextRequest) {
     const { data: blockedSlots } = await supabase
       .from('blocked_slots')
       .select('start_datetime, end_datetime')
-      .eq('workshop_id', workshop_id)
+      .eq('workshop_id', workshopId)
       .lt('start_datetime', sastEnd.toISOString())
       .gt('end_datetime', sastStart.toISOString())
 

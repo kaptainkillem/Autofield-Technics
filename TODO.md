@@ -193,3 +193,18 @@ When modifying profile-related code, verify the column exists in the actual data
 
 ### vehicles table — schema.sql MISSING COLUMNS
 `license_plate` and `mileage` exist in `types/database.ts` but NOT in `schema.sql`.
+
+
+small fixes 28 september 2026
+
+client side my garage page --> need to fix the 'add vehicle' button  all it does is rerout to dashboard
+client already signed in  but when im tryna cook a new quote it says "You do not have permission to submit a quote. Please sign in."  also  quotes are not only for people with accounts   anyone should be able to submit quotes
+fix the date setting problem in appointment setting  (client side)
+
+in admin side
+when writing a code  in unit price theres always a 0 before the price   need to fix that bug
+fix the date setting problem in appointment setting  (admin side)
+when admin is adding a new service the active button needs to be better  (show which side means yes or no)
+it also needs to be able to be added without image url
+
+when creating a new invoice  when u click on the option "start blank" it should clear all the fields

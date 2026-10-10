@@ -17,9 +17,30 @@ export function SessionTimeoutProvider({ children }: SessionTimeoutProviderProps
   const [showWarning, setShowWarning] = useState(false)
   const [countdown, setCountdown] = useState(60)
   const [loggingOut, setLoggingOut] = useState(false)
-  const lastActivityRef = useRef(Date.now())
+  const lastActivityRef = useRef(0)
   const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const handleLogout = useCallback(async () => {
+    if (loggingOut) return
+    setLoggingOut(true)
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current)
+      countdownIntervalRef.current = null
+    }
+    if (warningTimerRef.current) {
+      clearTimeout(warningTimerRef.current)
+      warningTimerRef.current = null
+    }
+    try {
+      await fetch('/api/auth/signout', { method: 'POST' })
+    } catch {}
+    try {
+      await supabase.auth.signOut()
+    } catch {}
+    router.push('/signin')
+    router.refresh()
+  }, [loggingOut, router])
 
   const resetIdle = useCallback(() => {
     lastActivityRef.current = Date.now()
@@ -50,28 +71,7 @@ export function SessionTimeoutProvider({ children }: SessionTimeoutProviderProps
         }
       }, 1000)
     }, IDLE_TIMEOUT_MS - WARNING_BEFORE_MS)
-  }, [showWarning])
-
-  const handleLogout = useCallback(async () => {
-    if (loggingOut) return
-    setLoggingOut(true)
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current)
-      countdownIntervalRef.current = null
-    }
-    if (warningTimerRef.current) {
-      clearTimeout(warningTimerRef.current)
-      warningTimerRef.current = null
-    }
-    try {
-      await fetch('/api/auth/signout', { method: 'POST' })
-    } catch {}
-    try {
-      await supabase.auth.signOut()
-    } catch {}
-    router.push('/signin')
-    router.refresh()
-  }, [loggingOut, router])
+  }, [showWarning, handleLogout])
 
   const handleKeepAlive = useCallback(() => {
     resetIdle()

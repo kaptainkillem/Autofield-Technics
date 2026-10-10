@@ -10,10 +10,11 @@ import { format } from 'date-fns'
 
 interface CustomerBookingFormProps {
   quoteId: string
+  workshopId?: string
   quoteToken?: string
 }
 
-export function CustomerBookingForm({ quoteId, quoteToken }: CustomerBookingFormProps) {
+export function CustomerBookingForm({ quoteId, workshopId, quoteToken }: CustomerBookingFormProps) {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<string>('')
@@ -37,7 +38,10 @@ export function CustomerBookingForm({ quoteId, quoteToken }: CustomerBookingForm
     const dateStr = format(date, 'yyyy-MM-dd')
 
     try {
-      const res = await fetch(`/api/availability?date=${dateStr}`)
+      const availabilityUrl = new URL('/api/availability', window.location.origin)
+      availabilityUrl.searchParams.set('date', dateStr)
+      if (workshopId) availabilityUrl.searchParams.set('workshop_id', workshopId)
+      const res = await fetch(availabilityUrl)
       const data = await res.json()
 
       if (res.ok && data.slots) {
