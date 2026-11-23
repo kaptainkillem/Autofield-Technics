@@ -218,6 +218,10 @@ export type Database = {
           email_reply_to: string | null
           experience_tagline: string | null
           favicon_url: string | null
+          heading_color: string | null
+          hero_bg_color: string | null
+          hero_text_color: string | null
+          subtext_color: string | null
           footer_show_company_reg: boolean | null
           footer_show_email: boolean | null
           footer_show_social: boolean | null
@@ -290,7 +294,11 @@ export type Database = {
           footer_show_email?: boolean | null
           footer_show_social?: boolean | null
           font_family?: string | null
+          heading_color?: string | null
+          hero_bg_color?: string | null
+          hero_text_color?: string | null
           hero_description?: string | null
+          subtext_color?: string | null
           hero_image_url?: string | null
           hero_title?: string | null
           home_page_content?: Json | null
@@ -356,7 +364,11 @@ export type Database = {
           footer_show_email?: boolean | null
           footer_show_social?: boolean | null
           font_family?: string | null
+          heading_color?: string | null
+          hero_bg_color?: string | null
+          hero_text_color?: string | null
           hero_description?: string | null
+          subtext_color?: string | null
           hero_image_url?: string | null
           hero_title?: string | null
           home_page_content?: Json | null
