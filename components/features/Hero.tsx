@@ -32,7 +32,8 @@ export const Hero: React.FC<HeroProps> = ({
 }) => {
   return (
     <section
-      className={`bg-grey-light px-4 pt-28 pb-20 md:px-20 md:pt-32 md:pb-20 ${className ?? ''}`}
+      className={`px-4 pt-28 pb-20 md:px-20 md:pt-32 md:pb-20 ${className ?? ''}`}
+      style={{ backgroundColor: 'var(--theme-hero-bg, var(--color-grey-light))' }}
       {...props}
     >
       <div
@@ -41,8 +42,8 @@ export const Hero: React.FC<HeroProps> = ({
         }`}
       >
         <div className="flex flex-col items-center md:items-start gap-6 w-full">
-          <h1 className="heading-1">{title}</h1>
-          <p className="text-base font-normal heading-1">{description}</p>
+          <h1 className="heading-1" style={{ color: 'var(--theme-hero-text, var(--color-black))' }}>{title}</h1>
+          <p className="text-base font-normal" style={{ color: 'var(--theme-hero-text, var(--color-grey-deep))' }}>{description}</p>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             {primaryCTA.href ? (
               <Link href={primaryCTA.href} className="w-full sm:w-auto">

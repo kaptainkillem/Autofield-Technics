@@ -1438,6 +1438,13 @@ ALTER TABLE public.business_settings
   ADD COLUMN IF NOT EXISTS primary_text_color TEXT DEFAULT '#111827',
   ADD COLUMN IF NOT EXISTS secondary_text_color TEXT DEFAULT '#595959';
 
+-- ─── Expanded Theme Colors ──────────────────────────────────────────────────
+ALTER TABLE public.business_settings
+  ADD COLUMN IF NOT EXISTS heading_color TEXT DEFAULT '#111827',
+  ADD COLUMN IF NOT EXISTS subtext_color TEXT DEFAULT '#595959',
+  ADD COLUMN IF NOT EXISTS hero_bg_color TEXT DEFAULT '#E8E8E8',
+  ADD COLUMN IF NOT EXISTS hero_text_color TEXT DEFAULT '#111827';
+
 -- ─── Public Business Settings View ────────────────────────────────────────────
 -- Exposes only tenant-safe columns; SMTP credentials are physically excluded.
 -- Public and standard admins query this view. Super-admins use the base table.
@@ -1462,6 +1469,7 @@ SELECT
   vat_number, registration_number, bank_name, account_holder, account_number, branch_code,
   terms_conditions, hourly_rate, callout_fee, diagnostic_fee, default_deposit_percent,
   primary_text_color, secondary_text_color,
+  heading_color, subtext_color, hero_bg_color, hero_text_color,
   created_at, updated_at
 FROM public.business_settings;
 

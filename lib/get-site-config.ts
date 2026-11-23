@@ -1,4 +1,4 @@
-import { unstable_noStore } from 'next/cache'
+import { cache } from 'react'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { SITE_CONFIG, replaceVars } from './site-config'
 import {
@@ -39,6 +39,11 @@ export interface MergedSiteConfig {
   accentColor: string
   primaryTextColor: string
   secondaryTextColor: string
+  headingColor: string
+  textColor: string
+  subtextColor: string
+  heroBgColor: string
+  heroTextColor: string
   faviconUrl: string | null
   ogImageUrl: string | null
   heroImageUrl: string | null
@@ -141,7 +146,7 @@ export interface MergedSiteConfig {
   workshopActive: boolean
 }
 
-async function resolveWorkshopId(slug: string): Promise<string | null> {
+const resolveWorkshopId = cache(async function resolveWorkshopId(slug: string): Promise<string | null> {
   try {
     const supabase = await createSupabaseServerClient()
     const { data } = await supabase
@@ -155,7 +160,7 @@ async function resolveWorkshopId(slug: string): Promise<string | null> {
     if (process.env.NODE_ENV === 'development') throw err
     return null
   }
-}
+})
 
 function normalizePhone(raw: string | null | undefined): string {
   if (!raw) return ''
@@ -224,8 +229,7 @@ function toArray(value: readonly string[] | string | null | undefined): string[]
   return []
 }
 
-export async function getMergedSiteConfig(): Promise<MergedSiteConfig> {
-  unstable_noStore()
+export const getMergedSiteConfig = cache(async function getMergedSiteConfig(): Promise<MergedSiteConfig> {
   const slug = process.env.NEXT_PUBLIC_DEFAULT_WORKSHOP_SLUG
 
   if (!slug) {
@@ -401,6 +405,11 @@ export async function getMergedSiteConfig(): Promise<MergedSiteConfig> {
     accentColor: get('accent_color', '#10B981'),
     primaryTextColor: get('primary_text_color', '#111827'),
     secondaryTextColor: get('secondary_text_color', '#595959'),
+    headingColor: get('heading_color', get('primary_text_color', '#111827')),
+    textColor: get('primary_text_color', '#111827'),
+    subtextColor: get('subtext_color', get('secondary_text_color', '#595959')),
+    heroBgColor: get('hero_bg_color', '#E8E8E8'),
+    heroTextColor: get('hero_text_color', get('primary_text_color', '#111827')),
     faviconUrl: get('favicon_url', null),
     ogImageUrl: get('og_image_url', SITE_CONFIG.seo.ogImage),
     heroImageUrl: get('hero_image_url', SITE_CONFIG.images.heroImage),
@@ -489,4 +498,4 @@ export async function getMergedSiteConfig(): Promise<MergedSiteConfig> {
     privacy: { ...SITE_CONFIG.privacy },
     workshopActive: dbWorkshop ? dbWorkshop.status === 'active' : true,
   }
-}
+})

@@ -22,11 +22,19 @@
   --brand-text-primary: #111827;
   --brand-text-secondary: #595959;
 
+  /* Theme tokens — defaults unless TenantThemeWrapper provides workshop values */
+  --theme-primary: var(--brand-primary);
+  --theme-heading: var(--brand-text-primary);
+  --theme-text: var(--brand-text-primary);
+  --theme-subtext: var(--brand-text-secondary);
+  --theme-hero-bg: #E8E8E8;
+  --theme-hero-text: var(--brand-text-primary);
+
   /* Colors - Neutral */
   --color-white: #FFFFFF;
-  --color-black: var(--brand-text-primary, #111827);
+  --color-black: var(--theme-heading, var(--brand-text-primary, #111827));
   --color-grey-dark: #333333;
-  --color-grey-deep: var(--brand-text-secondary, #595959);
+  --color-grey-deep: var(--theme-text, var(--brand-text-secondary, #595959));
   --color-grey-light: #E8E8E8;
   --color-grey-lightest: #F5F5F5;
   --color-grey-medium: #767676;
@@ -119,14 +127,11 @@
   --z-tooltip: 1070;
 }
 
-/* Dark mode (future enhancement) */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-black: #ffffff;
-    --color-grey-light: #333333;
-    --color-grey-medium: #666666;
-  }
-}
+/* Dark mode (future enhancement)
+   NOTE: Intentionally disabled. The public site is light-only; previously this
+   forced --color-black to #ffffff, producing white-on-white heading text for
+   users whose OS is in dark mode. Super-admin dark theming is handled via
+   html[data-theme="motion-grid"] in styles/super-admin-theme.css. */
 
 /* Reduced motion for accessibility */
 @media (prefers-reduced-motion: reduce) {

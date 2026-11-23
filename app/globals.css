@@ -5,18 +5,18 @@
 @theme inline {
   /* Brand Colors — dynamic via CSS variables set by app/layout.tsx.
      Fallbacks match variables.css defaults so utilities work offline. */
-  --color-primary: var(--brand-primary, #3B82F6);
-  --color-primary-dark: var(--brand-primary-dark, #2563EB);
-  --color-primary-light: var(--brand-primary-light, #BFDBFE);
-  --color-accent: var(--brand-accent, #10B981);
-  --color-accent-dark: var(--brand-accent-dark, #059669);
-  --color-accent-light: var(--brand-accent-light, #D1FAE5);
+  --color-primary: var(--theme-primary, var(--brand-primary, #3B82F6));
+  --color-primary-dark: var(--theme-primary-dark, var(--brand-primary-dark, #2563EB));
+  --color-primary-light: var(--theme-primary-light, var(--brand-primary-light, #BFDBFE));
+  --color-accent: var(--theme-accent, var(--brand-accent, #10B981));
+  --color-accent-dark: var(--theme-accent-dark, var(--brand-accent-dark, #059669));
+  --color-accent-light: var(--theme-accent-light, var(--brand-accent-light, #D1FAE5));
 
   /* Neutrals — fallbacks keep site legible if no DB value has loaded */
   --color-white: var(--color-white, #FFFFFF);
-  --color-black: var(--color-black, #000000);
+  --color-black: var(--theme-heading, var(--color-black, #000000));
 
-  --color-grey: var(--color-grey, #595959);
+  --color-grey: var(--theme-subtext, #595959);
   --color-grey-dark: var(--color-grey-dark, #333333);
   --color-grey-light: var(--color-grey-light, #E8E8E8);
   --color-grey-lightest: var(--color-grey-lightest, #F5F5F5);
@@ -139,10 +139,10 @@ body {
 
 @layer base {
   h1, h2, h3 {
-    color: var(--color-black);
+    color: var(--theme-heading, var(--color-black));
   }
   h4 {
-    color: var(--color-grey);
+    color: var(--theme-subtext, var(--color-grey));
   }
 
   input::placeholder,

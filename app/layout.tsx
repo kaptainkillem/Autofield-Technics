@@ -3,8 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ConditionalLayout } from "@/components/common/ConditionalLayout";
 import { SiteConfigProvider } from "@/components/providers/SiteConfigProvider";
+import { TenantThemeWrapper } from "@/components/providers/TenantThemeWrapper";
 import { getMergedSiteConfig } from "@/lib/get-site-config";
-import { deriveThemeColors } from '@/lib/color-utils';
 import { getFontFamilyStack } from '@/lib/homepage-content';
 import "./globals.css";
 import "@/styles/super-admin-theme.css";
@@ -45,46 +45,30 @@ function getGoogleFontLink(fontFamily: string): string | null {
   }
 }
 
-function buildBrandingCss(primaryColor: string, accentColor: string, fontFamily: string, primaryTextColor: string, secondaryTextColor: string) {
-  const colors = deriveThemeColors(primaryColor, accentColor)
-  const fontStack = getFontFamilyStack(fontFamily || 'Inter')
-  return `
-    :root {
-      --brand-primary: ${colors.primary};
-      --brand-primary-dark: ${colors.primaryDark};
-      --brand-primary-light: ${colors.primaryLight};
-      --brand-accent: ${colors.accent};
-      --brand-accent-dark: ${colors.accentDark};
-      --brand-accent-light: ${colors.accentLight};
-      --brand-text-primary: ${primaryTextColor};
-      --brand-text-secondary: ${secondaryTextColor};
-      --brand-font-sans: ${fontStack};
-    }
-  `
-}
-
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const siteConfig = await getMergedSiteConfig()
-  const brandingCss = buildBrandingCss(siteConfig.primaryColor, siteConfig.accentColor, siteConfig.fontFamily, siteConfig.primaryTextColor, siteConfig.secondaryTextColor)
   const googleFontLink = getGoogleFontLink(siteConfig.fontFamily)
+  const fontStack = getFontFamilyStack(siteConfig.fontFamily || 'Inter')
 
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      style={{ '--brand-font-sans': fontStack } as React.CSSProperties}
     >
       <head>
         {googleFontLink && <link rel="stylesheet" href={googleFontLink} />}
-        <style dangerouslySetInnerHTML={{ __html: brandingCss }} />
       </head>
       <body className="min-h-full flex flex-col m-0 p-0">
         <Toaster position="top-right" richColors closeButton />
         <SiteConfigProvider config={siteConfig}>
-          <ConditionalLayout>{children}</ConditionalLayout>
+          <TenantThemeWrapper config={siteConfig}>
+            <ConditionalLayout>{children}</ConditionalLayout>
+          </TenantThemeWrapper>
         </SiteConfigProvider>
       </body>
     </html>

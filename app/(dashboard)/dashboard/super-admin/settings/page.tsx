@@ -43,8 +43,12 @@ interface BusinessSettings {
   smtp_secure: boolean | null
   primary_color: string
   accent_color: string
+  heading_color: string | null
   primary_text_color: string | null
   secondary_text_color: string | null
+  subtext_color: string | null
+  hero_bg_color: string | null
+  hero_text_color: string | null
   favicon_url: string | null
   logo_url: string | null
   font_family: string | null
@@ -70,8 +74,12 @@ const defaultBusinessSettings: BusinessSettings = {
   smtp_secure: true,
   primary_color: '#3B82F6',
   accent_color: '#10B981',
+  heading_color: '#111827',
   primary_text_color: '#111827',
   secondary_text_color: '#595959',
+  subtext_color: '#595959',
+  hero_bg_color: '#E8E8E8',
+  hero_text_color: '#111827',
   favicon_url: null,
   logo_url: null,
   font_family: 'Inter',
@@ -169,8 +177,12 @@ function SettingsContent() {
           smtp_secure: s.smtp_secure ?? true,
           primary_color: s.primary_color ?? '#3B82F6',
           accent_color: s.accent_color ?? '#10B981',
+          heading_color: s.heading_color ?? '#111827',
           primary_text_color: s.primary_text_color ?? '#111827',
           secondary_text_color: s.secondary_text_color ?? '#595959',
+          subtext_color: s.subtext_color ?? '#595959',
+          hero_bg_color: s.hero_bg_color ?? '#E8E8E8',
+          hero_text_color: s.hero_text_color ?? '#111827',
           favicon_url: s.favicon_url ?? null,
           logo_url: s.logo_url ?? null,
           font_family: s.font_family ?? 'Inter',

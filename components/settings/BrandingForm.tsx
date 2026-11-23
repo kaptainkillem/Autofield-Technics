@@ -8,15 +8,23 @@ import { toast } from 'sonner'
 import { Palette, Upload, Save, Loader2, ImageIcon, Type } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { allowedFontFamilies } from '@/lib/homepage-content'
+import { ThemeCustomizerPreview, type ThemePreviewValue } from '@/components/settings/ThemeCustomizerPreview'
 
-interface BrandingSettings {
-  primary_color: string
+interface BrandingSettings extends ThemePreviewValue {
   accent_color: string
-  primary_text_color: string | null
   secondary_text_color: string | null
   favicon_url: string | null
   logo_url: string | null
   font_family: string | null
+}
+
+const DEFAULT_THEME: ThemePreviewValue = {
+  primary_color: '#3B82F6',
+  heading_color: '#111827',
+  primary_text_color: '#111827',
+  subtext_color: '#595959',
+  hero_bg_color: '#E8E8E8',
+  hero_text_color: '#111827',
 }
 
 interface BrandingFormProps {
@@ -30,17 +38,16 @@ const PRESET_COLORS = [
   '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1',
 ]
 
-const PRESET_TEXT_COLORS = [
-  '#111827', '#1f2937', '#374151', '#4b5563', '#6b7280',
-  '#9ca3af', '#ffffff', '#f3f4f6',
-]
-
 export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormProps) {
   const [form, setForm] = useState<BrandingSettings>({
     primary_color: settings.primary_color ?? '#3B82F6',
     accent_color: settings.accent_color ?? '#10B981',
+    heading_color: settings.heading_color ?? '#111827',
     primary_text_color: settings.primary_text_color ?? '#111827',
     secondary_text_color: settings.secondary_text_color ?? '#595959',
+    subtext_color: settings.subtext_color ?? '#595959',
+    hero_bg_color: settings.hero_bg_color ?? '#E8E8E8',
+    hero_text_color: settings.hero_text_color ?? '#111827',
     favicon_url: settings.favicon_url ?? null,
     logo_url: settings.logo_url ?? null,
     font_family: settings.font_family ?? 'Inter',
@@ -57,8 +64,12 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
       await saveSuperAdminSettings(workshopId, {
         primary_color: sanitizeText(form.primary_color),
         accent_color: sanitizeText(form.accent_color),
+        heading_color: sanitizeText(form.heading_color || '#111827'),
         primary_text_color: sanitizeText(form.primary_text_color || '#111827'),
         secondary_text_color: sanitizeText(form.secondary_text_color || '#595959'),
+        subtext_color: sanitizeText(form.subtext_color || '#595959'),
+        hero_bg_color: sanitizeText(form.hero_bg_color || '#E8E8E8'),
+        hero_text_color: sanitizeText(form.hero_text_color || '#111827'),
         favicon_url: form.favicon_url,
         logo_url: form.logo_url,
         font_family: sanitizeText(form.font_family || 'Inter'),
@@ -71,6 +82,14 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
     } finally {
       setSaving(false)
     }
+  }
+
+  function handleResetDefaults() {
+    setForm((prev) => ({
+      ...prev,
+      ...DEFAULT_THEME,
+      secondary_text_color: '#595959',
+    }))
   }
 
   async function uploadImage(file: File, path: string) {
@@ -162,40 +181,6 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
         </Button>
       </div>
 
-      {/* Primary Color */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold text-grey uppercase tracking-wide flex items-center gap-1">
-          <Palette size={12} />
-          Primary Color
-        </label>
-        <div className="flex items-center gap-3">
-          <input
-            type="color"
-            value={form.primary_color}
-            onChange={(e) => setForm((prev) => ({ ...prev, primary_color: e.target.value }))}
-            className="w-12 h-10 rounded-base border border-grey-medium/20 cursor-pointer"
-          />
-          <input
-            type="text"
-            value={form.primary_color}
-            onChange={(e) => setForm((prev) => ({ ...prev, primary_color: e.target.value }))}
-            className="w-28 rounded-base border border-grey-medium/20 py-2 px-3 text-sm text-grey-dark font-mono focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-          />
-          <div className="flex items-center gap-1">
-            {PRESET_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setForm((prev) => ({ ...prev, primary_color: c }))}
-                className="w-6 h-6 rounded-full border border-grey-light/50 hover:scale-110 transition-transform"
-                style={{ backgroundColor: c }}
-                title={c}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Accent Color */}
       <div className="flex flex-col gap-2">
         <label className="text-xs font-semibold text-grey uppercase tracking-wide flex items-center gap-1">
@@ -230,76 +215,6 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
         </div>
       </div>
 
-      {/* Primary Text Color */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold text-grey uppercase tracking-wide flex items-center gap-1">
-          <Palette size={12} />
-          Primary Text Color
-        </label>
-        <div className="flex items-center gap-3">
-          <input
-            type="color"
-            value={form.primary_text_color ?? '#111827'}
-            onChange={(e) => setForm((prev) => ({ ...prev, primary_text_color: e.target.value }))}
-            className="w-12 h-10 rounded-base border border-grey-medium/20 cursor-pointer"
-          />
-          <input
-            type="text"
-            value={form.primary_text_color ?? '#111827'}
-            onChange={(e) => setForm((prev) => ({ ...prev, primary_text_color: e.target.value }))}
-            className="w-28 rounded-base border border-grey-medium/20 py-2 px-3 text-sm text-grey-dark font-mono focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-          />
-          <div className="flex items-center gap-1">
-            {PRESET_TEXT_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setForm((prev) => ({ ...prev, primary_text_color: c }))}
-                className="w-6 h-6 rounded-full border border-grey-light/50 hover:scale-110 transition-transform"
-                style={{ backgroundColor: c }}
-                title={c}
-              />
-            ))}
-          </div>
-        </div>
-        <p className="text-[10px] text-grey-medium">Headings and emphasis text across the public site.</p>
-      </div>
-
-      {/* Secondary Text Color */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold text-grey uppercase tracking-wide flex items-center gap-1">
-          <Palette size={12} />
-          Secondary Text Color
-        </label>
-        <div className="flex items-center gap-3">
-          <input
-            type="color"
-            value={form.secondary_text_color ?? '#595959'}
-            onChange={(e) => setForm((prev) => ({ ...prev, secondary_text_color: e.target.value }))}
-            className="w-12 h-10 rounded-base border border-grey-medium/20 cursor-pointer"
-          />
-          <input
-            type="text"
-            value={form.secondary_text_color ?? '#595959'}
-            onChange={(e) => setForm((prev) => ({ ...prev, secondary_text_color: e.target.value }))}
-            className="w-28 rounded-base border border-grey-medium/20 py-2 px-3 text-sm text-grey-dark font-mono focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-          />
-          <div className="flex items-center gap-1">
-            {PRESET_TEXT_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setForm((prev) => ({ ...prev, secondary_text_color: c }))}
-                className="w-6 h-6 rounded-full border border-grey-light/50 hover:scale-110 transition-transform"
-                style={{ backgroundColor: c }}
-                title={c}
-              />
-            ))}
-          </div>
-        </div>
-        <p className="text-[10px] text-grey-medium">Body text and descriptions across the public site.</p>
-      </div>
-
       {/* Font Family */}
       <div className="flex flex-col gap-2">
         <label className="text-xs font-semibold text-grey uppercase tracking-wide flex items-center gap-1">
@@ -322,51 +237,20 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
         </p>
       </div>
 
-      {/* Live Preview */}
-      <div className="bg-grey-lightest rounded-base p-4 border border-grey-light flex flex-col gap-3">
-        <p className="text-xs font-bold text-grey-dark uppercase tracking-wide">Live Preview</p>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="px-4 py-2 rounded-base text-white text-sm font-bold shadow-sm"
-            style={{ backgroundColor: form.primary_color }}
-          >
-            Primary Button
-          </button>
-          <button
-            type="button"
-            className="px-4 py-2 rounded-base text-white text-sm font-bold shadow-sm"
-            style={{ backgroundColor: form.accent_color }}
-          >
-            Accent Button
-          </button>
-          <span
-            className="text-sm font-bold"
-            style={{ color: form.primary_color }}
-          >
-            Primary Text
-          </span>
-          <span
-            className="text-sm font-bold"
-            style={{ color: form.accent_color }}
-          >
-            Accent Text
-          </span>
+      {/* Theme Colors + Live Preview */}
+      <div className="bg-grey-lightest rounded-base p-4 border border-grey-light flex flex-col gap-4">
+        <div>
+          <p className="text-xs font-bold text-grey-dark uppercase tracking-wide">Theme Colors & Live Preview</p>
+          <p className="text-[11px] text-grey-medium mt-1">
+            Customize every color the public site uses. Changes preview before you save.
+          </p>
         </div>
-        <div className="flex flex-col gap-1 pt-2 border-t border-grey-light">
-          <span
-            className="text-base font-bold"
-            style={{ color: form.primary_text_color ?? '#111827' }}
-          >
-            Heading Text Preview
-          </span>
-          <span
-            className="text-sm"
-            style={{ color: form.secondary_text_color ?? '#595959' }}
-          >
-            Body text preview — this is how paragraphs and descriptions will look on the public site.
-          </span>
-        </div>
+        <ThemeCustomizerPreview
+          value={form}
+          defaults={DEFAULT_THEME}
+          onChange={(next) => setForm((prev) => ({ ...prev, ...next }))}
+          onReset={handleResetDefaults}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
