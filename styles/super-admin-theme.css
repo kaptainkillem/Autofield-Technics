@@ -1,70 +1,135 @@
-/* styles/super-admin-theme.css */
-/* Motion Grid dark theme — applied to /dashboard/super-admin/* via the
-   SuperAdminThemeProvider wrapper. Uses html[data-theme] for higher
-   specificity than :root defaults from variables.css or layout.tsx. */
+/*
+ * SuperAdmin form-control colours (Motion Grid).
+ * Hardcoded on purpose: no --theme-*, --brand-* or --color-* references, so
+ * tenant branding cannot change them. Edit the values below to change colours.
+ *
+ * Scope: html[data-theme="motion-grid"] (set for /dashboard/super-admin/*).
+ * Keep this file unlayered (no @layer wrapper).
+ */
 
 html[data-theme="motion-grid"] {
-  --color-primary: #E67E22;
-  --color-primary-dark: #c96a1a;
-  --color-primary-light: #f2a56e;
-  --color-accent: #E67E22;
-  --color-accent-dark: #c96a1a;
-  --color-accent-light: #f2a56e;
+  --sa-field-bg: #121212;
+  --sa-field-text: #ffffff;
+  --sa-field-placeholder: #9ca3af;
+  --sa-field-border: rgba(255, 255, 255, 0.1);
+  --sa-field-focus: #e67e22;
 
-  --color-white: #050505;
-  --color-black: #F8F9FA;
-
-  --color-grey-dark: #F8F9FA;
-  --color-grey: #A0AAB2;
-  --color-grey-medium: #6c757d;
-  --color-grey-light: #2a2a2a;
-  --color-grey-lightest: #121212;
-
-  --color-success: #2ecc71;
-  --color-error: #e74c3c;
-  --color-warning: #E67E22;
-
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-
-  --shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-
-  background-color: #050505;
-  color: #F8F9FA;
+  /* Read by the autofill rule in app/globals.css */
+  --autofill-text: #ffffff;
 }
 
-/* Override common Tailwind border utilities for dark theme */
-html[data-theme="motion-grid"] .border-grey-medium\/10 {
-  border-color: rgba(255, 255, 255, 0.06);
+html[data-theme="motion-grid"] :is(input:not([type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="image"]), textarea, select) {
+  background-color: var(--sa-field-bg);
+  color: var(--sa-field-text);
+  -webkit-text-fill-color: var(--sa-field-text);
+  caret-color: var(--sa-field-text);
+  border-color: var(--sa-field-border);
+  color-scheme: dark;
 }
 
-html[data-theme="motion-grid"] .border-grey-medium\/20 {
+html[data-theme="motion-grid"] :is(input, textarea)::placeholder {
+  color: var(--sa-field-placeholder);
+  -webkit-text-fill-color: var(--sa-field-placeholder);
+  opacity: 1;
+}
+
+html[data-theme="motion-grid"] select :is(option, optgroup) {
+  background-color: var(--sa-field-bg);
+  color: var(--sa-field-text);
+  -webkit-text-fill-color: var(--sa-field-text);
+}
+
+html[data-theme="motion-grid"] :is(input:not([type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="image"]), textarea, select):focus-visible {
+  outline: 2px solid var(--sa-field-focus);
+  outline-offset: 1px;
+}
+
+html[data-theme="motion-grid"] :is(input:not([type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="image"]), textarea, select):disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Autofill. Kept as two rules: a browser that rejects one selector drops the whole rule. */
+html[data-theme="motion-grid"] :is(input, textarea, select):-webkit-autofill {
+  -webkit-text-fill-color: var(--sa-field-text);
+  -webkit-box-shadow: 0 0 0 1000px var(--sa-field-bg) inset;
+  caret-color: var(--sa-field-text);
+}
+
+html[data-theme="motion-grid"] :is(input, textarea, select):autofill {
+  -webkit-text-fill-color: var(--sa-field-text);
+  box-shadow: 0 0 0 1000px var(--sa-field-bg) inset;
+  caret-color: var(--sa-field-text);
+}
+
+/* ---------- Whole SuperAdmin dashboard: dark mode ---------- */
+
+html[data-theme="motion-grid"] {
+  color-scheme: dark;
+
+  /* Text variables that super-admin-theme.css does not set */
+  --color-grey-deep: #f8f9fa;
+  --theme-heading: #ffffff;
+  --theme-text: #f8f9fa;
+  --theme-subtext: #a0aab2;
+}
+
+html[data-theme="motion-grid"] body {
+  color: #f8f9fa;
+}
+
+/* Black page background, including full-height page wrappers.
+   !important so page-level background classes cannot override it. */
+html[data-theme="motion-grid"],
+html[data-theme="motion-grid"] :is(body, main, .min-h-screen, .min-h-dvh, .h-screen) {
+  background-color: #000000 !important;
+}
+
+/* White headings */
+html[data-theme="motion-grid"] :is(h1, h2, h3, h4, h5, h6) {
+  color: #ffffff !important;
+}
+
+/* Cards, panels, modals, table surfaces */
+html[data-theme="motion-grid"] :is(.bg-white, .bg-gray-50, .bg-slate-50, .bg-\[\#FFFFFF\], .bg-\[\#ffffff\]) {
+  background-color: #121212;
+}
+
+/* Raised areas and hover states */
+html[data-theme="motion-grid"] :is(.bg-gray-100, .bg-gray-200, .bg-slate-100),
+html[data-theme="motion-grid"] .hover\:bg-white:hover,
+html[data-theme="motion-grid"] .hover\:bg-gray-50:hover,
+html[data-theme="motion-grid"] .hover\:bg-gray-100:hover {
+  background-color: #1c1c1c;
+}
+
+/* Main text */
+html[data-theme="motion-grid"] :is(.text-gray-900, .text-gray-800, .text-gray-700, .text-slate-900, .text-slate-800, .text-\[\#0D0D0D\], .text-\[\#333333\], .text-\[\#333\]) {
+  color: #f8f9fa;
+}
+
+/* Secondary text */
+html[data-theme="motion-grid"] :is(.text-gray-600, .text-gray-500, .text-slate-600, .text-slate-500) {
+  color: #a0aab2;
+}
+
+/* Borders and dividers */
+html[data-theme="motion-grid"] :is(.border-gray-100, .border-gray-200, .border-gray-300),
+html[data-theme="motion-grid"] :is(.divide-gray-100, .divide-gray-200) > * {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-html[data-theme="motion-grid"] .border-grey-medium\/30 {
-  border-color: rgba(255, 255, 255, 0.15);
+/* --color-black is light in this theme, so keep modal backdrops dark */
+html[data-theme="motion-grid"] :is(.bg-black\/40, .bg-black\/50, .bg-black\/60) {
+  background-color: rgba(0, 0, 0, 0.7);
 }
 
-html[data-theme="motion-grid"] .border-grey-light {
-  border-color: #2a2a2a;
-}
-
-html[data-theme="motion-grid"] .border-grey-light\/50 {
-  border-color: rgba(255, 255, 255, 0.05);
-}
-
-html[data-theme="motion-grid"] .border-b,
-html[data-theme="motion-grid"] .border-t {
-  border-color: rgba(255, 255, 255, 0.06);
-}
-
-/* Shadow overrides */
-html[data-theme="motion-grid"] .shadow-sm {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-}
-
-html[data-theme="motion-grid"] .shadow-lg {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+/* Workshop slug in the Overview table (add className "sa-slug" to it).
+   The light background keeps black text readable on the dark table. */
+html[data-theme="motion-grid"] .sa-slug {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 4px;
+  background-color: #e5e7eb;
+  color: #000000 !important;
 }

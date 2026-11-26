@@ -7,6 +7,10 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { TableSearch } from '@/components/ui/TableSearch'
 import { PageWrapper } from '@/components/layout/PageWrapper'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+
 
 type SEORecord = {
   id: string
@@ -321,7 +325,7 @@ export default function AdminSEOCommandPage() {
             <select
               value={selectedWorkshopId}
               onChange={(e) => setSelectedWorkshopId(e.target.value)}
-              className="rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark focus:ring-2 focus:ring-primary/10 bg-white min-w-[200px]"
+              className="w-auto min-w-[200px] px-3 py-2"
             >
               <option value="__global__">Global Defaults (NULL)</option>
               {workshops.map(w => (
@@ -335,8 +339,7 @@ export default function AdminSEOCommandPage() {
             <select
               value={filterProvince}
               onChange={(e) => setFilterProvince(e.target.value)}
-              className="rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark focus:ring-2 focus:ring-primary/10 bg-white"
-            >
+              className="w-auto px-3 py-2">
               <option value="">All Provinces</option>
               {GEO_PROVINCES.map(p => (
                 <option key={p} value={p}>{p}</option>
@@ -349,8 +352,7 @@ export default function AdminSEOCommandPage() {
             <select
               value={filterActive}
               onChange={(e) => setFilterActive(e.target.value as 'all' | 'active' | 'inactive')}
-              className="rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark focus:ring-2 focus:ring-primary/10 bg-white"
-            >
+              className="w-auto px-3 py-2"   >
               <option value="all">All</option>
               <option value="active">Active Only</option>
               <option value="inactive">Inactive Only</option>
@@ -366,34 +368,35 @@ export default function AdminSEOCommandPage() {
             </h3>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-grey uppercase">Province</label>
-              <select value={geoForm.province} onChange={(e) => setGeoForm(p=>({...p, province: e.target.value}))} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm h-[38px] text-grey-dark focus:ring-2 focus:ring-primary/10 bg-white">
+              <Select value={geoForm.province} onChange={(e) => setGeoForm(p => ({ ...p, province: e.target.value }))} className="h-[38px] px-3 py-2">
                 {GEO_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
+              </Select>
+
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-grey uppercase">City / Town</label>
-              <input type="text" required placeholder="e.g. Cape Town" value={geoForm.city} onChange={(e)=>setGeoForm(p=>({...p, city: e.target.value}))} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark" />
+              <Input type="text" required placeholder="e.g. Cape Town" value={geoForm.city} onChange={(e) => setGeoForm(p => ({ ...p, city: e.target.value }))} className="px-3 py-2" />
+
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-grey uppercase">Suburb / Area</label>
-              <input type="text" required placeholder="e.g. Claremont" value={geoForm.suburb} onChange={(e)=>setGeoForm(p=>({...p, suburb: e.target.value}))} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark" />
+              <Input type="text" required placeholder="e.g. Claremont" value={geoForm.suburb} onChange={(e) => setGeoForm(p => ({ ...p, suburb: e.target.value }))} className="px-3 py-2" />
             </div>
             <div className="flex flex-col gap-1 md:col-span-2">
               <label className="text-xs font-bold text-grey uppercase">SEO Meta Title</label>
-              <input type="text" required placeholder="Mobile Mechanic in Claremont | Best Rates" value={geoForm.title} onChange={(e)=>setGeoForm(p=>({...p, title: e.target.value}))} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark" />
+             <Input type="text" required placeholder="Mobile Mechanic in Claremont | Best Rates" value={geoForm.title} onChange={(e) => setGeoForm(p => ({ ...p, title: e.target.value }))} className="px-3 py-2" />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-grey uppercase">H1 Main Heading</label>
-              <input type="text" required placeholder="Professional Mobile Mechanics in Claremont" value={geoForm.h1} onChange={(e)=>setGeoForm(p=>({...p, h1: e.target.value}))} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark" />
+              <Input type="text" required placeholder="Professional Mobile Mechanics in Claremont" value={geoForm.h1} onChange={(e) => setGeoForm(p => ({ ...p, h1: e.target.value }))} className="px-3 py-2" />
             </div>
             <div className="flex flex-col gap-1 md:col-span-3">
               <label className="text-xs font-bold text-grey uppercase">Keywords (Comma Separated)</label>
-              <input type="text" placeholder="mechanic claremont, mobile car repair, clutch fix" value={geoForm.keywords} onChange={(e)=>setGeoForm(p=>({...p, keywords: e.target.value}))} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark" />
+              <Input type="text" placeholder="mechanic claremont, mobile car repair, clutch fix" value={geoForm.keywords} onChange={(e) => setGeoForm(p => ({ ...p, keywords: e.target.value }))} className="px-3 py-2" />
             </div>
             <div className="flex flex-col gap-1 md:col-span-3">
               <label className="text-xs font-bold text-grey uppercase">SEO Meta Description</label>
-              <textarea required rows={2} placeholder="Need elite automotive assistance on-site in Claremont? Our mechanics come straight to you..." value={geoForm.desc} onChange={(e)=>setGeoForm(p=>({...p, desc: e.target.value}))} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark resize-none" />
-            </div>
+              <Textarea required rows={2} placeholder="Need elite automotive assistance on-site in Claremont? Our mechanics come straight to you..." value={geoForm.desc} onChange={(e) => setGeoForm(p => ({ ...p, desc: e.target.value }))} className="px-3 py-2" />            </div>
             <div className="col-span-full flex justify-end gap-2 border-t border-grey-light pt-3">
               <Button type="button" variant="ghost" size="sm" onClick={() => setShowGeoForm(false)} className="text-grey text-xs">Cancel</Button>
               <Button type="submit" size="sm" disabled={saving} className="bg-primary text-white font-bold text-xs px-4 flex items-center gap-1 shadow-sm">
@@ -544,24 +547,23 @@ export default function AdminSEOCommandPage() {
               <form onSubmit={handleUpdateMetadata} className="p-6 flex flex-col gap-4 overflow-y-auto max-h-[75vh]">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-black text-grey uppercase tracking-wide">Meta Title</label>
-                  <input type="text" required value={editingRecord.meta_title} onChange={(e)=>setEditingRecord(p => p ? ({...p, meta_title: e.target.value}) : null)} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark focus:ring-2 focus:ring-primary/10" />
+                  <Input type="text" required value={editingRecord.meta_title} onChange={(e) => setEditingRecord(p => p ? ({ ...p, meta_title: e.target.value }) : null)} className="px-3 py-2" />
                   <span className="text-[10px] text-grey-medium text-right font-medium">{editingRecord.meta_title.length}/60 chars</span>
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-black text-grey uppercase tracking-wide">H1 Heading</label>
-                  <input type="text" required value={editingRecord.h1_heading ?? ''} onChange={(e)=>setEditingRecord(p => p ? ({...p, h1_heading: e.target.value}) : null)} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark" />
+                  <Input type="text" required value={editingRecord.h1_heading ?? ''} onChange={(e) => setEditingRecord(p => p ? ({ ...p, h1_heading: e.target.value }) : null)} className="px-3 py-2" />
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-black text-grey uppercase tracking-wide">Keywords</label>
-                  <input type="text" placeholder="brake service, mechanic near me" value={editingRecord.meta_keywords ?? ''} onChange={(e)=>setEditingRecord(p => p ? ({...p, meta_keywords: e.target.value}) : null)} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark" />
+                 <Input type="text" placeholder="brake service, mechanic near me" value={editingRecord.meta_keywords ?? ''} onChange={(e) => setEditingRecord(p => p ? ({ ...p, meta_keywords: e.target.value }) : null)} className="px-3 py-2" />
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-black text-grey uppercase tracking-wide">Meta Description</label>
-                  <textarea required rows={4} value={editingRecord.meta_description} onChange={(e)=>setEditingRecord(p => p ? ({...p, meta_description: e.target.value}) : null)} className="w-full rounded-base border border-grey-light py-2 px-3 text-sm text-grey-dark resize-none" />
-                  <span className="text-[10px] text-grey-medium text-right font-medium">{editingRecord.meta_description.length}/160 chars</span>
+                  <Textarea required rows={4} value={editingRecord.meta_description} onChange={(e) => setEditingRecord(p => p ? ({ ...p, meta_description: e.target.value }) : null)} className="px-3 py-2" />                  <span className="text-[10px] text-grey-medium text-right font-medium">{editingRecord.meta_description.length}/160 chars</span>
                 </div>
 
                 <div className="flex justify-end gap-2 border-t border-grey-light pt-4 mt-2">

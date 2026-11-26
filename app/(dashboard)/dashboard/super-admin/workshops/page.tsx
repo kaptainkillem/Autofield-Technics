@@ -5,6 +5,8 @@ import { Loader2, Plus, Mail, Phone, User, Building2, Users, FileText, Banknote,
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { PageWrapper } from '@/components/layout/PageWrapper'
+import { Input } from '@/components/ui/input'
+
 
 interface Workshop {
   id: string
@@ -204,113 +206,159 @@ export default function SuperAdminWorkshopsPage() {
           </button>
         </div>
 
-        {showForm && (
-          <div className="bg-white border border-grey-light rounded-base p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-grey mb-4">Create Workshop</h2>
-            <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-grey mb-1">Workshop Name</label>
-                <input
-                  type="text"
-                  required
-                  value={form.workshopName}
-                  onChange={(e) => {
-                    const name = e.target.value
-                    setForm({ ...form, workshopName: name, workshopSlug: generateSlug(name) })
-                  }}
-                  className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-grey mb-1">URL Slug</label>
-                <input
-                  type="text"
-                  required
-                  value={form.workshopSlug}
-                  onChange={(e) => setForm({ ...form, workshopSlug: e.target.value })}
-                  className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-grey mb-1">Domain (optional)</label>
-                <input
-                  type="text"
-                  value={form.domain}
-                  onChange={(e) => setForm({ ...form, domain: e.target.value.trim() })}
-                  placeholder="mechanic.co.za"
-                  className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-grey mb-1">Owner Name</label>
-                <input
-                  type="text"
-                  required
-                  value={form.ownerName}
-                  onChange={(e) => setForm({ ...form, ownerName: e.target.value.trimStart() })}
-                  className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-grey mb-1">Owner Email</label>
-                <input
-                  type="email"
-                  required
-                  value={form.ownerEmail}
-                  onChange={(e) => setForm({ ...form, ownerEmail: e.target.value.trim() })}
-                  className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-grey mb-1">Owner Password</label>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  value={form.ownerPassword}
-                  onChange={(e) => setForm({ ...form, ownerPassword: e.target.value })}
-                  className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-grey mb-1">Contact Phone</label>
-                <input
-                  type="text"
-                  value={form.contactPhone}
-                  onChange={(e) => setForm({ ...form, contactPhone: e.target.value.trim() })}
-                  className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-grey mb-1">Contact Email (optional)</label>
-                <input
-                  type="email"
-                  value={form.contactEmail}
-                  onChange={(e) => setForm({ ...form, contactEmail: e.target.value.trim() })}
-                  placeholder="info@workshop.co.za"
-                  className="w-full rounded-base border border-grey-light px-3 py-2 text-grey focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                />
-              </div>
-              <div className="md:col-span-2 flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="px-4 py-2 text-sm font-semibold text-grey border border-grey-light rounded-base hover:bg-grey-light/20 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-base font-semibold text-sm hover:bg-primary-dark transition-colors disabled:opacity-50"
-                >
-                  {creating && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {creating ? 'Creating...' : 'Create Workshop'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+      
+{showForm && (
+  <div className="bg-white border border-grey-light rounded-base p-6 shadow-sm">
+    <h2 className="text-lg font-bold text-grey mb-4">Create Workshop</h2>
+
+    <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-semibold text-grey mb-1">
+          Workshop Name
+        </label>
+        <Input
+          type="text"
+          required
+          value={form.workshopName}
+          onChange={(e) => {
+            const name = e.target.value
+            setForm({
+              ...form,
+              workshopName: name,
+              workshopSlug: generateSlug(name),
+            })
+          }}
+          className="w-full"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-grey mb-1">
+          URL Slug
+        </label>
+        <Input
+          type="text"
+          required
+          value={form.workshopSlug}
+          onChange={(e) =>
+            setForm({ ...form, workshopSlug: e.target.value })
+          }
+          className="w-full"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-grey mb-1">
+          Domain (optional)
+        </label>
+        <Input
+          type="text"
+          value={form.domain}
+          onChange={(e) =>
+            setForm({ ...form, domain: e.target.value.trim() })
+          }
+          placeholder="mechanic.co.za"
+          className="w-full"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-grey mb-1">
+          Owner Name
+        </label>
+        <Input
+          type="text"
+          required
+          value={form.ownerName}
+          onChange={(e) =>
+            setForm({ ...form, ownerName: e.target.value.trimStart() })
+          }
+          className="w-full"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-grey mb-1">
+          Owner Email
+        </label>
+        <Input
+          type="email"
+          required
+          value={form.ownerEmail}
+          onChange={(e) =>
+            setForm({ ...form, ownerEmail: e.target.value.trim() })
+          }
+          className="w-full"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-grey mb-1">
+          Owner Password
+        </label>
+        <Input
+          type="password"
+          required
+          minLength={8}
+          value={form.ownerPassword}
+          onChange={(e) =>
+            setForm({ ...form, ownerPassword: e.target.value })
+          }
+          className="w-full"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-grey mb-1">
+          Contact Phone
+        </label>
+        <Input
+          type="text"
+          value={form.contactPhone}
+          onChange={(e) =>
+            setForm({ ...form, contactPhone: e.target.value.trim() })
+          }
+          className="w-full"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-grey mb-1">
+          Contact Email (optional)
+        </label>
+        <Input
+          type="email"
+          value={form.contactEmail}
+          onChange={(e) =>
+            setForm({ ...form, contactEmail: e.target.value.trim() })
+          }
+          placeholder="info@workshop.co.za"
+          className="w-full"
+        />
+      </div>
+
+      <div className="md:col-span-2 flex gap-3 justify-end">
+        <button
+          type="button"
+          onClick={() => setShowForm(false)}
+          className="px-4 py-2 text-sm font-semibold text-grey border border-grey-light rounded-base hover:bg-grey-light/20 transition-colors"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          disabled={creating}
+          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-base font-semibold text-sm hover:bg-primary-dark transition-colors disabled:opacity-50"
+        >
+          {creating && <Loader2 className="h-4 w-4 animate-spin" />}
+          {creating ? 'Creating...' : 'Create Workshop'}
+        </button>
+      </div>
+    </form>
+  </div>
+)}
+ 
 
         {loading ? (
           <div className="flex justify-center py-12">

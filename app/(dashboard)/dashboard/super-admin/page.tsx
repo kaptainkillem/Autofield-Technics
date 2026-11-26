@@ -163,7 +163,7 @@ export default function SuperAdminDashboardPage() {
                         <Building2 className="h-4 w-4 text-primary shrink-0" />
                         <div>
                           <p className="text-sm font-semibold text-grey">{w.name}</p>
-                          <code className="text-xs text-grey-medium">/{w.slug}</code>
+                          <code className="text-xs sa-slug">/{w.slug}</code>
                         </div>
                       </div>
                     </td>

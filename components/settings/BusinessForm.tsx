@@ -1,8 +1,11 @@
+
 'use client'
 
 import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Upload, Loader2, ImageIcon } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 
 interface BusinessFormProps {
   values: {
@@ -57,70 +60,89 @@ export function BusinessForm({ values, onChange, userId }: BusinessFormProps) {
     <div className="flex flex-col gap-6">
       {/* Account Profile Section */}
       <div className="flex flex-col gap-1">
-        <h3 className="text-sm font-bold text-grey-dark uppercase tracking-wide">Account Profile</h3>
-        <p className="text-xs text-grey">Your primary contact information</p>
+        <h3 className="text-sm font-bold text-grey-dark uppercase tracking-wide">
+          Account Profile
+        </h3>
+        <p className="text-xs text-grey">
+          Your primary contact information
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-bold text-grey uppercase tracking-wide">Full Name</label>
-          <input
+          <label className="text-xs font-bold text-grey uppercase tracking-wide">
+            Full Name
+          </label>
+          <Input
             type="text"
             value={values.full_name}
             onChange={(e) => onChange('full_name', e.target.value)}
-            className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark"
           />
         </div>
+
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-bold text-grey uppercase tracking-wide">Phone Number</label>
-          <input
+          <label className="text-xs font-bold text-grey uppercase tracking-wide">
+            Phone Number
+          </label>
+          <Input
             type="tel"
             value={values.phone}
             onChange={(e) => onChange('phone', e.target.value)}
-            className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark font-mono"
+            className="font-mono"
           />
         </div>
       </div>
 
       <div className="border-t border-grey-light pt-6 flex flex-col gap-6">
         <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-bold text-grey-dark uppercase tracking-wide">Business Identity</h3>
-          <p className="text-xs text-grey">Your workshop branding and contact details</p>
+          <h3 className="text-sm font-bold text-grey-dark uppercase tracking-wide">
+            Business Identity
+          </h3>
+          <p className="text-xs text-grey">
+            Your workshop branding and contact details
+          </p>
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-bold text-grey uppercase tracking-wide">Company Name</label>
-          <input
+          <label className="text-xs font-bold text-grey uppercase tracking-wide">
+            Company Name
+          </label>
+          <Input
             type="text"
             value={values.company_name}
             onChange={(e) => onChange('company_name', e.target.value)}
-            className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-bold text-grey uppercase tracking-wide">Company Address</label>
-          <textarea
+          <label className="text-xs font-bold text-grey uppercase tracking-wide">
+            Company Address
+          </label>
+          <Textarea
             rows={3}
             value={values.address}
             onChange={(e) => onChange('address', e.target.value)}
-            className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark resize-none"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-bold text-grey uppercase tracking-wide">WhatsApp Business Number</label>
-          <input
+          <label className="text-xs font-bold text-grey uppercase tracking-wide">
+            WhatsApp Business Number
+          </label>
+          <Input
             type="tel"
             value={values.whatsapp_number}
             onChange={(e) => onChange('whatsapp_number', e.target.value)}
             placeholder="e.g. 27821234567"
-            className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark font-mono"
+            className="font-mono"
           />
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-bold text-grey uppercase tracking-wide">Company Logo</label>
+          <label className="text-xs font-bold text-grey uppercase tracking-wide">
+            Company Logo
+          </label>
+
           <div className="flex items-center gap-4">
             {values.logo_url ? (
               <img
@@ -133,6 +155,7 @@ export function BusinessForm({ values, onChange, userId }: BusinessFormProps) {
                 <ImageIcon size={24} className="text-grey-medium" />
               </div>
             )}
+
             <div className="flex flex-col gap-1">
               <input
                 ref={fileInputRef}
@@ -141,16 +164,25 @@ export function BusinessForm({ values, onChange, userId }: BusinessFormProps) {
                 onChange={handleLogoUpload}
                 className="hidden"
               />
+
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
                 className="flex items-center gap-2 px-4 py-2 rounded-base border border-grey-medium text-grey text-sm font-semibold hover:bg-primary/5 transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                {uploading ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Upload size={14} />
+                )}
+
                 {uploading ? 'Uploading...' : 'Upload Logo'}
               </button>
-              <p className="text-[10px] text-grey-medium">Recommended: PNG or JPG, max 2MB</p>
+
+              <p className="text-[10px] text-grey-medium">
+                Recommended: PNG or JPG, max 2MB
+              </p>
             </div>
           </div>
         </div>

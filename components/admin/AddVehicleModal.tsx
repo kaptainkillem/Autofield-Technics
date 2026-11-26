@@ -1,7 +1,9 @@
+
 'use client'
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { Input } from '@/components/ui/input'
 import { X, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -75,24 +77,24 @@ export function AddVehicleModal({ userId, workshopId, onClose, onSaved }: AddVeh
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-grey uppercase tracking-wide">Make *</label>
-              <input
+              <Input
                 type="text"
                 required
                 value={form.make}
                 onChange={(e) => handleChange('make', e.target.value)}
                 placeholder="e.g. Toyota"
-                className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark"
+                className="w-full"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-grey uppercase tracking-wide">Model *</label>
-              <input
+              <Input
                 type="text"
                 required
                 value={form.model}
                 onChange={(e) => handleChange('model', e.target.value)}
                 placeholder="e.g. Corolla"
-                className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark"
+                className="w-full"
               />
             </div>
           </div>
@@ -100,35 +102,35 @@ export function AddVehicleModal({ userId, workshopId, onClose, onSaved }: AddVeh
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-grey uppercase tracking-wide">Year *</label>
-              <input
+              <Input
                 type="number"
                 required
                 value={form.year}
                 onChange={(e) => handleChange('year', e.target.value)}
                 placeholder="e.g. 2019"
-                className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark font-mono"
+                className="w-full font-mono"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-grey uppercase tracking-wide">License Plate</label>
-              <input
+              <Input
                 type="text"
                 value={form.license_plate}
                 onChange={(e) => handleChange('license_plate', e.target.value)}
                 placeholder="e.g. JHB 123 GP"
-                className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark font-mono"
+                className="w-full font-mono"
               />
             </div>
           </div>
 
           <div className="flex flex-col gap-1">
             <label className="text-xs font-bold text-grey uppercase tracking-wide">Mileage</label>
-            <input
+            <Input
               type="text"
               value={form.mileage}
               onChange={(e) => handleChange('mileage', e.target.value)}
               placeholder="e.g. 85,000 km"
-              className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark font-mono"
+              className="w-full font-mono"
             />
           </div>
 

@@ -1,8 +1,11 @@
+
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, Plus, Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import type { WorkOrder } from '@/components/admin/WorkOrderPanel'
 
 function generateId(): string {
@@ -27,10 +30,16 @@ function formatCurrency(amount: number): string {
   return `R${amount.toFixed(2)}`
 }
 
-export function AdditionalWorkModal({ isOpen, onClose, workOrder, onSuccess }: AdditionalWorkModalProps) {
+export function AdditionalWorkModal({
+  isOpen,
+  onClose,
+  workOrder,
+  onSuccess,
+}: AdditionalWorkModalProps) {
   const [items, setItems] = useState<LineItem[]>([
     { id: generateId(), name: '', qty: 1, unitPrice: 0 },
   ])
+
   const [clientVisibleNotes, setClientVisibleNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const prevIsOpen = useRef(false)
@@ -44,19 +53,33 @@ export function AdditionalWorkModal({ isOpen, onClose, workOrder, onSuccess }: A
     if (isOpen && !prevIsOpen.current) {
       resetForm()
     }
+
     prevIsOpen.current = isOpen
   }, [isOpen, resetForm])
 
-  const updateItem = (id: string, field: keyof LineItem, value: string | number) => {
+  const updateItem = (
+    id: string,
+    field: keyof LineItem,
+    value: string | number
+  ) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item
+
         if (field === 'qty') {
-          return { ...item, qty: Math.max(1, Number(value)) }
+          return {
+            ...item,
+            qty: Math.max(1, Number(value)),
+          }
         }
+
         if (field === 'unitPrice') {
-          return { ...item, unitPrice: Math.max(0, Number(value)) }
+          return {
+            ...item,
+            unitPrice: Math.max(0, Number(value)),
+          }
         }
+
         return { ...item, [field]: value }
       })
     )
@@ -67,35 +90,54 @@ export function AdditionalWorkModal({ isOpen, onClose, workOrder, onSuccess }: A
   }
 
   const addItem = () => {
-    setItems((prev) => [...prev, { id: generateId(), name: '', qty: 1, unitPrice: 0 }])
+    setItems((prev) => [
+      ...prev,
+      { id: generateId(), name: '', qty: 1, unitPrice: 0 },
+    ])
   }
 
-  const total = items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0)
+  const total = items.reduce(
+    (sum, item) => sum + item.qty * item.unitPrice,
+    0
+  )
+
   const isValid = items.every((item) => item.name.trim().length > 0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
     if (!isValid) return
 
     setSubmitting(true)
+
     try {
-      const res = await fetch(`/api/work-orders/${workOrder.id}/revision`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items,
-          client_visible_notes: clientVisibleNotes || undefined,
-        }),
-      })
+      const res = await fetch(
+        `/api/work-orders/${workOrder.id}/revision`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            items,
+            client_visible_notes: clientVisibleNotes || undefined,
+          }),
+        }
+      )
 
       const data = await res.json()
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to submit additional work')
+        toast.error(
+          data.error || 'Failed to submit additional work'
+        )
         return
       }
 
-      toast.success('Additional work request submitted. Client will be notified.')
+      toast.success(
+        'Additional work request submitted. Client will be notified.'
+      )
+
       onSuccess()
     } catch {
       toast.error('Network error. Please try again.')
@@ -108,58 +150,93 @@ export function AdditionalWorkModal({ isOpen, onClose, workOrder, onSuccess }: A
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
       <div className="relative bg-white rounded-base shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-grey-medium/20">
           <div>
-            <h2 className="text-lg font-bold text-grey-dark">Request Additional Work</h2>
+            <h2 className="text-lg font-bold text-grey-dark">
+              Request Additional Work
+            </h2>
+
             <p className="text-xs text-grey mt-0.5">
               Items will be added to the quote if the client accepts.
             </p>
           </div>
-          <button onClick={onClose} className="text-grey hover:text-grey-dark transition-colors p-1">
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-grey hover:text-grey-dark transition-colors p-1"
+          >
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-5">
+        <form
+          onSubmit={handleSubmit}
+          className="p-5 flex flex-col gap-5"
+        >
           <div className="flex flex-col gap-3">
             {items.map((item) => (
-              <div key={item.id} className="grid grid-cols-12 gap-2 items-start bg-grey-lightest rounded-base p-3">
+              <div
+                key={item.id}
+                className="grid grid-cols-12 gap-2 items-start bg-grey-lightest rounded-base p-3"
+              >
                 <div className="col-span-6 flex flex-col gap-1">
-                  <label className="text-xs font-medium text-grey-dark">Item name</label>
-                  <input
+                  <label className="text-xs font-medium text-grey-dark">
+                    Item name
+                  </label>
+
+                  <Input
                     type="text"
                     value={item.name}
-                    onChange={(e) => updateItem(item.id, 'name', e.target.value)}
+                    onChange={(e) =>
+                      updateItem(item.id, 'name', e.target.value)
+                    }
                     placeholder="e.g. Rear brake rotors"
-                    className="w-full rounded-base border border-grey-medium/20 py-2 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    className="w-full text-sm"
                     required
                   />
                 </div>
+
                 <div className="col-span-2 flex flex-col gap-1">
-                  <label className="text-xs font-medium text-grey-dark">Qty</label>
-                  <input
+                  <label className="text-xs font-medium text-grey-dark">
+                    Qty
+                  </label>
+
+                  <Input
                     type="number"
                     min={1}
                     value={item.qty}
-                    onChange={(e) => updateItem(item.id, 'qty', e.target.value)}
-                    className="w-full rounded-base border border-grey-medium/20 py-2 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    onChange={(e) =>
+                      updateItem(item.id, 'qty', e.target.value)
+                    }
+                    className="w-full text-sm"
                   />
                 </div>
+
                 <div className="col-span-3 flex flex-col gap-1">
-                  <label className="text-xs font-medium text-grey-dark">Unit price</label>
-                  <input
+                  <label className="text-xs font-medium text-grey-dark">
+                    Unit price
+                  </label>
+
+                  <Input
                     type="number"
                     min={0}
                     step="0.01"
                     value={item.unitPrice || ''}
-                    onChange={(e) => updateItem(item.id, 'unitPrice', e.target.value)}
+                    onChange={(e) =>
+                      updateItem(item.id, 'unitPrice', e.target.value)
+                    }
                     placeholder="0.00"
-                    className="w-full rounded-base border border-grey-medium/20 py-2 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    className="w-full text-sm"
                   />
                 </div>
+
                 <div className="col-span-1 flex items-end justify-end h-full pb-1">
                   {items.length > 1 && (
                     <button
@@ -185,21 +262,32 @@ export function AdditionalWorkModal({ isOpen, onClose, workOrder, onSuccess }: A
           </div>
 
           <div className="flex items-center justify-between py-2 border-t border-grey-light">
-            <span className="text-sm text-grey">Additional total:</span>
-            <span className="text-lg font-bold text-grey-dark">{formatCurrency(total)}</span>
+            <span className="text-sm text-grey">
+              Additional total:
+            </span>
+
+            <span className="text-lg font-bold text-grey-dark">
+              {formatCurrency(total)}
+            </span>
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-grey-dark">Note to Client (optional)</label>
-            <textarea
+            <label className="text-sm font-semibold text-grey-dark">
+              Note to Client (optional)
+            </label>
+
+            <Textarea
               value={clientVisibleNotes}
               onChange={(e) => setClientVisibleNotes(e.target.value)}
               placeholder="e.g. The rotors are below minimum thickness and must be replaced for safety."
               maxLength={500}
               rows={3}
-              className="w-full rounded-base border border-grey-medium/20 py-2.5 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+              className="w-full text-sm"
             />
-            <p className="text-xs text-grey text-right">{clientVisibleNotes.length}/500</p>
+
+            <p className="text-xs text-grey text-right">
+              {clientVisibleNotes.length}/500
+            </p>
           </div>
 
           <button
@@ -207,8 +295,15 @@ export function AdditionalWorkModal({ isOpen, onClose, workOrder, onSuccess }: A
             disabled={!isValid || submitting}
             className="bg-primary text-white font-bold py-3 px-6 rounded-base shadow-sm hover:bg-primary-dark transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
-            <span>{submitting ? 'Submitting...' : 'Submit Additional Work'}</span>
+            {submitting ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : null}
+
+            <span>
+              {submitting
+                ? 'Submitting...'
+                : 'Submit Additional Work'}
+            </span>
           </button>
         </form>
       </div>

@@ -4,6 +4,9 @@ import { useMemo, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { FileDown, Loader2, Plus, Save, Send, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { supabase, getWorkshopIdFromSession } from '@/lib/supabase'
 
@@ -419,7 +422,7 @@ export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }
         {isInvoice && (
           <div className="mt-5">
             <label htmlFor="acceptedQuote">Pull from accepted quote</label>
-            <select
+            <Select
               id="acceptedQuote"
               value={selectedQuoteId}
               onChange={(event) => applyAcceptedQuote(event.target.value)}
@@ -431,46 +434,46 @@ export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }
                   {(quote.quoteNumber ?? 'Accepted quote')} - {quote.customerName}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="customerName">Customer name</label>
-            <input id="customerName" className="form-input" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+            <Input id="customerName" className="form-input" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
           </div>
           <div>
             <label htmlFor="customerPhone">Customer phone</label>
-            <input id="customerPhone" className="form-input" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+            <Input id="customerPhone" className="form-input" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
           </div>
           <div>
             <label htmlFor="customerEmail">Customer email</label>
-            <input id="customerEmail" className="form-input" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} />
+            <Input id="customerEmail" className="form-input" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} />
           </div>
           <div>
             <label htmlFor="serviceType">Service type</label>
-            <input id="serviceType" className="form-input" value={serviceType} onChange={(e) => setServiceType(e.target.value)} />
+            <Input id="serviceType" className="form-input" value={serviceType} onChange={(e) => setServiceType(e.target.value)} />
           </div>
           <div>
             <label htmlFor="vehicleYear">Vehicle year</label>
-            <input id="vehicleYear" className="form-input" type="number" value={vehicleYear} onChange={(e) => setVehicleYear(e.target.value)} />
+            <Input id="vehicleYear" className="form-input" type="number" value={vehicleYear} onChange={(e) => setVehicleYear(e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="vehicleMake">Make</label>
-              <input id="vehicleMake" className="form-input" value={vehicleMake} onChange={(e) => setVehicleMake(e.target.value)} />
+              <Input id="vehicleMake" className="form-input" value={vehicleMake} onChange={(e) => setVehicleMake(e.target.value)} />
             </div>
             <div>
               <label htmlFor="vehicleModel">Model</label>
-              <input id="vehicleModel" className="form-input" value={vehicleModel} onChange={(e) => setVehicleModel(e.target.value)} />
+              <Input id="vehicleModel" className="form-input" value={vehicleModel} onChange={(e) => setVehicleModel(e.target.value)} />
             </div>
           </div>
         </div>
 
         <div className="mt-4">
           <label htmlFor="description">Job description</label>
-          <textarea id="description" className="form-textarea min-h-24" value={description} onChange={(e) => setDescription(e.target.value)} />
+          <Textarea id="description" className="form-textarea min-h-24" value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
       </div>
 
@@ -504,14 +507,14 @@ export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }
         <div className="flex flex-col gap-4">
           <div>
             <label htmlFor="notes">Notes</label>
-            <textarea id="notes" className="form-textarea min-h-20" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <Textarea id="notes" className="form-textarea min-h-20" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <div>
               <label htmlFor="discount">Discount</label>
               <div className="flex items-center gap-2">
-                <input
+                <Input
                   id="discount"
                   className="form-input"
                   type="number"
@@ -528,7 +531,7 @@ export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }
               <div>
                 <label htmlFor="depositPercent">Deposit %</label>
                 <div className="flex items-center gap-2">
-                  <input
+                  <Input
                     id="depositPercent"
                     className="form-input"
                     type="number"
@@ -545,7 +548,7 @@ export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }
             {!isInvoice && (
               <div>
                 <label htmlFor="depositAmount">Deposit Amount (R)</label>
-                <input
+                <Input
                   id="depositAmount"
                   className="form-input"
                   type="number"
@@ -561,7 +564,7 @@ export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }
             {!isInvoice && (
               <div>
                 <label htmlFor="expiryDays">Expiry</label>
-                <select
+                <Select
                   id="expiryDays"
                   className="form-select"
                   value={expiryDays}
@@ -571,7 +574,7 @@ export function QuoteBuilder({ mode, acceptedQuotes = [], quoteId, initialData }
                   <option value={7}>7 days</option>
                   <option value={14}>14 days</option>
                   <option value={30}>30 days</option>
-                </select>
+                </Select>
               </div>
             )}
 
@@ -803,15 +806,15 @@ function QuoteTable({
             {rows.map((row) => (
               <tr key={row.id}>
                 <td className="py-3 pr-3 min-w-56">
-                  <input className="form-input" value={row.name} onChange={(e) => updateRow(row.id, { name: e.target.value })} placeholder="e.g. Brake pads" />
+                  <Input className="form-input" value={row.name} onChange={(e) => updateRow(row.id, { name: e.target.value })} placeholder="e.g. Brake pads" />
                 </td>
                 <td className="py-3 px-3">
-                  <input className="form-input w-20" type="number" min={1} value={row.qty} onChange={(e) => updateRow(row.id, { qty: Number(e.target.value) || 1 })} />
+                  <Input className="form-input w-20" type="number" min={1} value={row.qty} onChange={(e) => updateRow(row.id, { qty: Number(e.target.value) || 1 })} />
                 </td>
                 <td className="py-3 px-3">
                   <div className="flex items-center gap-1">
                     <span className="text-grey">R</span>
-                    <input className="form-input w-28" type="number" min={0} value={row.unitPrice || ''} onChange={(e) => updateRow(row.id, { unitPrice: Number(e.target.value) || 0 })} />
+                    <Input className="form-input w-28" type="number" min={0} value={row.unitPrice || ''} onChange={(e) => updateRow(row.id, { unitPrice: Number(e.target.value) || 0 })} />
                   </div>
                 </td>
                 <td className="py-3 px-3 font-semibold text-grey-dark">{formatCurrency(row.qty * row.unitPrice)}</td>
@@ -877,8 +880,8 @@ function InvoicePaper({
             {rows.map((row) => (
               <div key={row.id} className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <input
-                    className="w-full border-0 border-b border-transparent bg-transparent p-0 text-[13px] focus:border-primary focus:shadow-none print:border-transparent"
+                  <Input
+                    className="w-full border-0 border-b border-transparent bg-white text-[#0D0D0D] p-0 text-[13px] focus:border-primary focus:shadow-none print:border-transparent"
                     value={row.name}
                     onChange={(e) => updateRow(row.id, { name: e.target.value })}
                     placeholder="Line item"
@@ -886,20 +889,20 @@ function InvoicePaper({
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-grey">
                     <span className="flex items-center">
                       R
-                      <input
+                      <Input
                         type="number"
                         value={row.unitPrice || ''}
                         onChange={(e) => updateRow(row.id, { unitPrice: Number(e.target.value) || 0 })}
-                        className="ml-0.5 w-20 border-0 border-b border-grey-medium bg-transparent p-0 text-grey focus:border-primary focus:shadow-none"
+                        className="ml-0.5 w-20 border-0 border-b border-grey-medium bg-white text-[#0D0D0D] p-0 focus:border-primary focus:shadow-none"
                       />
                     </span>
                     <span>x</span>
-                    <input
+                    <Input
                       type="number"
                       min={1}
                       value={row.qty}
                       onChange={(e) => updateRow(row.id, { qty: Number(e.target.value) || 1 })}
-                      className="w-14 border border-grey-medium bg-white px-2 py-1 text-center text-xs"
+                      className="w-14 border border-grey-medium bg-white text-[#0D0D0D] px-2 py-1 text-center text-xs"
                     />
                   </div>
                 </div>

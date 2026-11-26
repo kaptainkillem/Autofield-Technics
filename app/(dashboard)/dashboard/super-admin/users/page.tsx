@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { Loader2, Users, Search, User, Mail, Phone, Building2, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageWrapper } from '@/components/layout/PageWrapper'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 
 interface UserData {
   id: string
@@ -117,14 +119,14 @@ export default function SuperAdminUsersPage() {
           <div className="flex-1 flex items-center gap-2">
             <div className="relative flex-1">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-medium" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Search by name..."
-                className="w-full pl-9 pr-3 py-2 rounded-base border border-grey-light text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 text-grey-dark"
-              />
+             <Input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="Search by name..."
+                  className="pl-9 pr-3 py-2"
+                />
             </div>
             <button
               onClick={handleSearch}
@@ -136,15 +138,15 @@ export default function SuperAdminUsersPage() {
 
           <div className="flex items-center gap-2">
             <div className="relative">
-              <select
+            <Select
                 value={roleFilter}
                 onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
-                className="appearance-none rounded-base border border-grey-light bg-white py-2 pl-3 pr-8 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 text-grey-dark"
+                className="w-auto appearance-none py-2 pl-3 pr-8"
               >
                 {ROLES.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
-              </select>
+              </Select>
               <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-grey pointer-events-none" />
             </div>
 

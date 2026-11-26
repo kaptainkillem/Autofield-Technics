@@ -66,25 +66,27 @@
   @apply text-sm font-normal leading-normal;
 }
 
+
 @utility form-input {
-  @apply w-full border border-grey-medium rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 transition-colors;
+  @apply w-full bg-white text-[#0D0D0D] placeholder:text-gray-500 border border-gray-300 rounded-base px-4 py-2.5 text-sm focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 transition-colors;
 }
 
 @utility form-input-error {
-  @apply w-full border border-error rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-error focus-visible:ring-2 focus-visible:ring-error/30 transition-colors;
+  @apply w-full bg-white text-[#0D0D0D] placeholder:text-gray-500 border border-error rounded-base px-4 py-2.5 text-sm focus:outline-none focus:border-error focus-visible:ring-2 focus-visible:ring-error/30 transition-colors;
 }
 
 @utility form-input-success {
-  @apply w-full border border-success rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-success focus-visible:ring-2 focus-visible:ring-success/30 transition-colors;
+  @apply w-full bg-white text-[#0D0D0D] placeholder:text-gray-500 border border-success rounded-base px-4 py-2.5 text-sm focus:outline-none focus:border-success focus-visible:ring-2 focus-visible:ring-success/30 transition-colors;
 }
 
 @utility form-select {
-  @apply w-full border border-grey-medium rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 transition-colors bg-white;
+  @apply w-full bg-white text-[#0D0D0D] border border-gray-300 rounded-base px-4 py-2.5 text-sm focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 transition-colors;
 }
 
 @utility form-textarea {
-  @apply w-full border border-grey-medium rounded-base px-4 py-2.5 text-sm text-grey focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 transition-colors resize-none;
+  @apply w-full bg-white text-[#0D0D0D] placeholder:text-gray-500 border border-gray-300 rounded-base px-4 py-2.5 text-sm resize-none focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 transition-colors;
 }
+
 
 @utility card {
   @apply bg-white rounded-base shadow-base p-6 transition-shadow;
@@ -137,18 +139,35 @@ body {
   }
 }
 
+
 @layer base {
   h1, h2, h3 {
     color: var(--theme-heading, var(--color-black));
   }
+
   h4 {
     color: var(--theme-subtext, var(--color-grey));
   }
 
+  input,
+  textarea,
+  select {
+    color: #0D0D0D;
+  }
+
   input::placeholder,
-  textarea::placeholder,
-  select::placeholder {
-    color: var(--color-grey-medium);
-    opacity: 0.6;
+  textarea::placeholder {
+    color: #6B7280;
+    opacity: 1;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: #0D0D0D !important;
+    transition: background-color 5000s ease-in-out 0s;
   }
 }
+

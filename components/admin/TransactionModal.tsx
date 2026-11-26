@@ -1,9 +1,13 @@
+
 'use client'
 
 import { useState } from 'react'
 import { X, Loader2, DollarSign, TrendingDown, Calendar, FileText, User, Tag } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 
 type TransactionType = 'revenue' | 'expense'
 
@@ -135,13 +139,13 @@ export function TransactionModal({ onClose, onSaved }: TransactionModalProps) {
                   <User size={12} />
                   Customer Name
                 </label>
-                <input
+                <Input
                   type="text"
                   required
                   value={revenueForm.customer_name}
                   onChange={(e) => setRevenueForm((p) => ({ ...p, customer_name: e.target.value }))}
                   placeholder="e.g. John Doe"
-                  className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark"
+                  className="w-full"
                 />
               </div>
 
@@ -151,7 +155,7 @@ export function TransactionModal({ onClose, onSaved }: TransactionModalProps) {
                     <DollarSign size={12} />
                     Amount (R)
                   </label>
-                  <input
+                  <Input
                     type="number"
                     required
                     min="0.01"
@@ -159,7 +163,7 @@ export function TransactionModal({ onClose, onSaved }: TransactionModalProps) {
                     value={revenueForm.amount_paid}
                     onChange={(e) => setRevenueForm((p) => ({ ...p, amount_paid: e.target.value }))}
                     placeholder="0.00"
-                    className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark font-mono"
+                    className="w-full font-mono"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -167,12 +171,12 @@ export function TransactionModal({ onClose, onSaved }: TransactionModalProps) {
                     <Calendar size={12} />
                     Job Date
                   </label>
-                  <input
+                  <Input
                     type="date"
                     required
                     value={revenueForm.job_date}
                     onChange={(e) => setRevenueForm((p) => ({ ...p, job_date: e.target.value }))}
-                    className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark"
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -182,15 +186,15 @@ export function TransactionModal({ onClose, onSaved }: TransactionModalProps) {
                   <Tag size={12} />
                   Payment Method
                 </label>
-                <select
+                <Select
                   value={revenueForm.payment_method}
                   onChange={(e) => setRevenueForm((p) => ({ ...p, payment_method: e.target.value }))}
-                  className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark h-[40px]"
+                  className="w-full"
                 >
                   {PAYMENT_METHODS.map((m) => (
                     <option key={m} value={m}>{m}</option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="flex flex-col gap-1">
@@ -198,12 +202,12 @@ export function TransactionModal({ onClose, onSaved }: TransactionModalProps) {
                   <FileText size={12} />
                   Notes
                 </label>
-                <textarea
+                <Textarea
                   value={revenueForm.notes}
                   onChange={(e) => setRevenueForm((p) => ({ ...p, notes: e.target.value }))}
                   placeholder="Optional details about the job..."
                   rows={2}
-                  className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark resize-none"
+                  className="w-full"
                 />
               </div>
             </>
@@ -215,7 +219,7 @@ export function TransactionModal({ onClose, onSaved }: TransactionModalProps) {
                     <DollarSign size={12} />
                     Amount (R)
                   </label>
-                  <input
+                  <Input
                     type="number"
                     required
                     min="0.01"
@@ -223,7 +227,7 @@ export function TransactionModal({ onClose, onSaved }: TransactionModalProps) {
                     value={expenseForm.amount}
                     onChange={(e) => setExpenseForm((p) => ({ ...p, amount: e.target.value }))}
                     placeholder="0.00"
-                    className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark font-mono"
+                    className="w-full font-mono"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -231,12 +235,12 @@ export function TransactionModal({ onClose, onSaved }: TransactionModalProps) {
                     <Calendar size={12} />
                     Date
                   </label>
-                  <input
+                  <Input
                     type="date"
                     required
                     value={expenseForm.expense_date}
                     onChange={(e) => setExpenseForm((p) => ({ ...p, expense_date: e.target.value }))}
-                    className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark"
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -246,15 +250,15 @@ export function TransactionModal({ onClose, onSaved }: TransactionModalProps) {
                   <Tag size={12} />
                   Category
                 </label>
-                <select
+                <Select
                   value={expenseForm.category}
                   onChange={(e) => setExpenseForm((p) => ({ ...p, category: e.target.value }))}
-                  className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark h-[40px]"
+                  className="w-full"
                 >
                   {EXPENSE_CATEGORIES.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="flex flex-col gap-1">
@@ -262,13 +266,13 @@ export function TransactionModal({ onClose, onSaved }: TransactionModalProps) {
                   <FileText size={12} />
                   Description
                 </label>
-                <textarea
+                <Textarea
                   required
                   value={expenseForm.description}
                   onChange={(e) => setExpenseForm((p) => ({ ...p, description: e.target.value }))}
                   placeholder="e.g. Brake pads for BMW M4"
                   rows={2}
-                  className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark resize-none"
+                  className="w-full"
                 />
               </div>
             </>

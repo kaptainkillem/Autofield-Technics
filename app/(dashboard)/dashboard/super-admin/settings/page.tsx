@@ -1,5 +1,6 @@
 'use client'
 
+import { Select } from '@/components/ui/select'
 import { Suspense, useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Loader2, Building2, Bell, MessageCircle, Mail, Palette, Type, Scale, ArrowLeft, ChevronDown, Layout } from 'lucide-react'
@@ -249,18 +250,16 @@ function SettingsContent() {
                 Select Workshop
               </label>
               <div className="relative">
-                <select
-                  value={selectedWorkshopId ?? ''}
-                  onChange={(e) => setSelectedWorkshopId(e.target.value || null)}
-                  className="w-full appearance-none rounded-base border border-grey-light bg-white py-2.5 pl-3 pr-10 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark"
-                >
-                  <option value="">-- Choose a workshop --</option>
-                  {workshops.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name} (/{w.slug})
-                    </option>
-                  ))}
-                </select>
+                <Select
+                      value={selectedWorkshopId ?? ''}
+                      onChange={(e) => setSelectedWorkshopId(e.target.value || null)}
+                      className="appearance-none py-2.5 pl-3 pr-10"
+                    >
+                      <option value="">-- Choose a workshop --</option>
+                      {workshops.map((w) => (
+                        <option key={w.id} value={w.id}>{w.name} (/{w.slug})</option>
+                      ))}
+                    </Select>
                 <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-grey pointer-events-none" />
               </div>
             </div>

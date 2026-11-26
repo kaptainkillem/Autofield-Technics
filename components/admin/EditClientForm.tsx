@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState } from 'react'
@@ -5,6 +6,9 @@ import { X, Loader2, Save } from 'lucide-react'
 import { Database } from '@/types/database'
 import { toast } from 'sonner'
 import { sanitizeName, sanitizePhone, sanitizeText } from '@/lib/input-sanitizer'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Select } from '@/components/ui/select'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 
@@ -82,42 +86,42 @@ export function EditClientForm({ profile, onClose, onSaved }: EditClientFormProp
           {/* Contact */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-bold text-grey uppercase tracking-wide">Full Name</label>
-            <input
+            <Input
               type="text"
               value={form.full_name}
               onChange={(e) => handleChange('full_name', e.target.value)}
-              className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark"
+              className="w-full"
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-grey uppercase tracking-wide">Phone</label>
-              <input
+              <Input
                 type="tel"
                 value={form.phone}
                 onChange={(e) => handleChange('phone', e.target.value)}
-                className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark font-mono"
+                className="w-full font-mono"
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-grey uppercase tracking-wide">Alternate Phone</label>
-              <input
+              <Input
                 type="tel"
                 value={form.alternate_phone}
                 onChange={(e) => handleChange('alternate_phone', e.target.value)}
-                className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark font-mono"
+                className="w-full font-mono"
               />
             </div>
           </div>
 
           <div className="flex flex-col gap-1">
             <label className="text-xs font-bold text-grey uppercase tracking-wide">Physical Address</label>
-            <textarea
+            <Textarea
               rows={2}
               value={form.physical_address}
               onChange={(e) => handleChange('physical_address', e.target.value)}
-              className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark resize-none"
+              className="w-full"
             />
           </div>
 
@@ -159,24 +163,24 @@ export function EditClientForm({ profile, onClose, onSaved }: EditClientFormProp
             <h3 className="text-sm font-bold text-grey-dark">CRM Status</h3>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-grey uppercase tracking-wide">Client Status</label>
-              <select
+              <Select
                 value={form.client_status}
                 onChange={(e) => handleChange('client_status', e.target.value)}
-                className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark"
+                className="w-full"
               >
                 <option value="active">Active</option>
                 <option value="vip">VIP</option>
                 <option value="blacklisted">Blacklisted</option>
-              </select>
+              </Select>
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-bold text-grey uppercase tracking-wide">Internal Notes</label>
-              <textarea
+              <Textarea
                 rows={4}
                 value={form.internal_notes}
                 onChange={(e) => handleChange('internal_notes', e.target.value)}
                 placeholder="Private notes about this client..."
-                className="w-full rounded-base border border-grey-light bg-white py-2.5 px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors text-grey-dark resize-none"
+                className="w-full"
               />
             </div>
           </div>

@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useRef } from 'react'
@@ -7,6 +8,8 @@ import { saveSuperAdminSettings } from '@/lib/settings-api'
 import { toast } from 'sonner'
 import { Palette, Upload, Save, Loader2, ImageIcon, Type } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { allowedFontFamilies } from '@/lib/homepage-content'
 import { ThemeCustomizerPreview, type ThemePreviewValue } from '@/components/settings/ThemeCustomizerPreview'
 
@@ -52,14 +55,18 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
     logo_url: settings.logo_url ?? null,
     font_family: settings.font_family ?? 'Inter',
   })
+
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState<'favicon' | 'logo' | null>(null)
+
   const faviconInputRef = useRef<HTMLInputElement>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
 
   async function handleSave() {
     if (!workshopId) return
+
     setSaving(true)
+
     try {
       await saveSuperAdminSettings(workshopId, {
         primary_color: sanitizeText(form.primary_color),
@@ -74,6 +81,7 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
         logo_url: form.logo_url,
         font_family: sanitizeText(form.font_family || 'Inter'),
       })
+
       onUpdate(form)
       toast.success('Branding saved! Refresh the page to see changes.')
     } catch (err: any) {
@@ -157,6 +165,7 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
 
   function handleRemoveLogo() {
     setForm((prev) => ({ ...prev, logo_url: null }))
+
     if (logoInputRef.current) {
       logoInputRef.current.value = ''
     }
@@ -166,9 +175,14 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-bold text-grey-dark">Branding & Appearance</h3>
-          <p className="text-xs text-grey">Customize your shop colors, favicon, and site logo.</p>
+          <h3 className="text-lg font-bold text-grey-dark">
+            Branding & Appearance
+          </h3>
+          <p className="text-xs text-grey">
+            Customize your shop colors, favicon, and site logo.
+          </p>
         </div>
+
         <Button
           onClick={handleSave}
           disabled={saving}
@@ -176,7 +190,11 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
           aria-busy={saving}
           className="bg-primary text-white font-bold py-2 px-4 rounded-base shadow-sm hover:bg-primary-dark transition-all flex items-center gap-2"
         >
-          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          {saving ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <Save size={16} />
+          )}
           <span>{saving ? 'Saving...' : 'Save Branding'}</span>
         </Button>
       </div>
@@ -187,25 +205,45 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
           <Palette size={12} />
           Accent Color
         </label>
+
         <div className="flex items-center gap-3">
+          {/* Native color picker retained */}
           <input
             type="color"
             value={form.accent_color}
-            onChange={(e) => setForm((prev) => ({ ...prev, accent_color: e.target.value }))}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                accent_color: e.target.value,
+              }))
+            }
             className="w-12 h-10 rounded-base border border-grey-medium/20 cursor-pointer"
           />
-          <input
+
+          {/* Migrated to reusable Input */}
+          <Input
             type="text"
             value={form.accent_color}
-            onChange={(e) => setForm((prev) => ({ ...prev, accent_color: e.target.value }))}
-            className="w-28 rounded-base border border-grey-medium/20 py-2 px-3 text-sm text-grey-dark font-mono focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                accent_color: e.target.value,
+              }))
+            }
+            className="w-28 font-mono"
           />
+
           <div className="flex items-center gap-1">
             {PRESET_COLORS.map((c) => (
               <button
                 key={c}
                 type="button"
-                onClick={() => setForm((prev) => ({ ...prev, accent_color: c }))}
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    accent_color: c,
+                  }))
+                }
                 className="w-6 h-6 rounded-full border border-grey-light/50 hover:scale-110 transition-transform"
                 style={{ backgroundColor: c }}
                 title={c}
@@ -221,17 +259,25 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
           <Type size={12} />
           Font Family
         </label>
-        <select
+
+        {/* Migrated to reusable Select */}
+        <Select
           value={form.font_family || 'Inter'}
-          onChange={(e) => setForm((prev) => ({ ...prev, font_family: e.target.value }))}
-          className="w-full max-w-xs rounded-base border border-grey-medium/20 py-2 px-3 text-sm text-grey-dark bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          onChange={(e) =>
+            setForm((prev) => ({
+              ...prev,
+              font_family: e.target.value,
+            }))
+          }
+          className="w-full max-w-xs"
         >
           {allowedFontFamilies.map((font) => (
             <option key={font.value} value={font.value}>
               {font.label}
             </option>
           ))}
-        </select>
+        </Select>
+
         <p className="text-[10px] text-grey-medium">
           Choose a font that matches your brand personality. The site will load the selected font automatically.
         </p>
@@ -240,11 +286,14 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
       {/* Theme Colors + Live Preview */}
       <div className="bg-grey-lightest rounded-base p-4 border border-grey-light flex flex-col gap-4">
         <div>
-          <p className="text-xs font-bold text-grey-dark uppercase tracking-wide">Theme Colors & Live Preview</p>
+          <p className="text-xs font-bold text-grey-dark uppercase tracking-wide">
+            Theme Colors & Live Preview
+          </p>
           <p className="text-[11px] text-grey-medium mt-1">
             Customize every color the public site uses. Changes preview before you save.
           </p>
         </div>
+
         <ThemeCustomizerPreview
           value={form}
           defaults={DEFAULT_THEME}
@@ -256,7 +305,10 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Favicon Upload */}
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-grey uppercase tracking-wide">Favicon</label>
+          <label className="text-xs font-semibold text-grey uppercase tracking-wide">
+            Favicon
+          </label>
+
           <div className="flex items-center gap-4">
             {form.favicon_url ? (
               <img
@@ -269,6 +321,7 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
                 <ImageIcon size={20} className="text-grey-medium" />
               </div>
             )}
+
             <div className="flex flex-col gap-1">
               <input
                 ref={faviconInputRef}
@@ -277,23 +330,35 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
                 onChange={handleFaviconUpload}
                 className="hidden"
               />
+
               <button
                 type="button"
                 onClick={() => faviconInputRef.current?.click()}
                 disabled={uploading === 'favicon'}
                 className="flex items-center gap-2 px-4 py-2 rounded-base border border-grey-medium text-grey text-sm font-semibold hover:bg-primary/5 transition-colors disabled:opacity-50"
               >
-                {uploading === 'favicon' ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                {uploading === 'favicon' ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Upload size={14} />
+                )}
+
                 {uploading === 'favicon' ? 'Uploading...' : 'Upload Favicon'}
               </button>
-              <p className="text-[10px] text-grey-medium">PNG, ICO, or SVG. Max 1MB.</p>
+
+              <p className="text-[10px] text-grey-medium">
+                PNG, ICO, or SVG. Max 1MB.
+              </p>
             </div>
           </div>
         </div>
 
         {/* Site Logo Upload */}
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-grey uppercase tracking-wide">Site Logo</label>
+          <label className="text-xs font-semibold text-grey uppercase tracking-wide">
+            Site Logo
+          </label>
+
           <div className="flex items-center gap-4">
             {form.logo_url ? (
               <img
@@ -306,6 +371,7 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
                 <ImageIcon size={24} className="text-grey-medium" />
               </div>
             )}
+
             <div className="flex flex-col gap-1">
               <input
                 ref={logoInputRef}
@@ -314,6 +380,7 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
                 onChange={handleLogoUpload}
                 className="hidden"
               />
+
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -321,9 +388,15 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
                   disabled={uploading === 'logo'}
                   className="flex items-center gap-2 px-4 py-2 rounded-base border border-grey-medium text-grey text-sm font-semibold hover:bg-primary/5 transition-colors disabled:opacity-50"
                 >
-                  {uploading === 'logo' ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                  {uploading === 'logo' ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Upload size={14} />
+                  )}
+
                   {uploading === 'logo' ? 'Uploading...' : 'Upload Logo'}
                 </button>
+
                 {form.logo_url && (
                   <button
                     type="button"
@@ -334,7 +407,10 @@ export function BrandingForm({ settings, workshopId, onUpdate }: BrandingFormPro
                   </button>
                 )}
               </div>
-              <p className="text-[10px] text-grey-medium">PNG, JPG, or SVG. Max 2MB.</p>
+
+              <p className="text-[10px] text-grey-medium">
+                PNG, JPG, or SVG. Max 2MB.
+              </p>
             </div>
           </div>
         </div>

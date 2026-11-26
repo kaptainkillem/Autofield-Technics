@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Star, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { supabase, getWorkshopIdFromSession } from '@/lib/supabase'
 import { Database } from '@/types/database'
 import { sanitizeText } from '@/lib/input-sanitizer'
@@ -152,7 +154,7 @@ export function ReviewForm() {
       {/* Full Name */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-grey">Full Name</label>
-        <input
+        <Input
           name="customerName"
           type="text"
           placeholder="John Doe"
@@ -166,7 +168,7 @@ export function ReviewForm() {
       {/* Vehicle Serviced */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-grey">Vehicle Serviced</label>
-        <input
+        <Input
           name="vehicleServiced"
           type="text"
           placeholder="e.g. BMW M4 2021"
@@ -207,7 +209,7 @@ export function ReviewForm() {
       {/* Review Text */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-semibold text-grey">Your Review</label>
-        <textarea
+        <Textarea
           name="reviewText"
           placeholder="Tell us about your experience..."
           required

@@ -1,8 +1,10 @@
+
 'use client'
 
 import { useState } from 'react'
 import { X, Loader2, User, Phone, Mail, Car, Calendar, Hash } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 
 interface AddNewCustomerModalProps {
@@ -103,12 +105,12 @@ export function AddNewCustomerModal({ onClose, onSuccess }: AddNewCustomerModalP
               <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
                 <User size={12} /> Full Name *
               </label>
-              <input
+              <Input
                 type="text"
                 value={profile.full_name}
                 onChange={(e) => updateProfile('full_name', e.target.value)}
                 placeholder="e.g., John Smith"
-                className="w-full rounded-base border border-grey-medium/20 py-2.5 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full"
               />
             </div>
 
@@ -116,12 +118,12 @@ export function AddNewCustomerModal({ onClose, onSuccess }: AddNewCustomerModalP
               <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
                 <Phone size={12} /> Phone *
               </label>
-              <input
+              <Input
                 type="tel"
                 value={profile.phone}
                 onChange={(e) => updateProfile('phone', e.target.value)}
                 placeholder="e.g., +27 78 480 2796"
-                className="w-full rounded-base border border-grey-medium/20 py-2.5 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full"
               />
             </div>
 
@@ -129,23 +131,23 @@ export function AddNewCustomerModal({ onClose, onSuccess }: AddNewCustomerModalP
               <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
                 <Mail size={12} /> Email
               </label>
-              <input
+              <Input
                 type="email"
                 value={profile.email}
                 onChange={(e) => updateProfile('email', e.target.value)}
                 placeholder="Optional — used for login"
-                className="w-full rounded-base border border-grey-medium/20 py-2.5 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide">Address</label>
-              <input
+              <Input
                 type="text"
                 value={profile.physical_address}
                 onChange={(e) => updateProfile('physical_address', e.target.value)}
                 placeholder="Physical address"
-                className="w-full rounded-base border border-grey-medium/20 py-2.5 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full"
               />
             </div>
 
@@ -167,25 +169,25 @@ export function AddNewCustomerModal({ onClose, onSuccess }: AddNewCustomerModalP
                 <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
                   <Calendar size={12} /> Year
                 </label>
-                <input
+                <Input
                   type="number"
                   value={vehicle.year}
                   onChange={(e) => updateVehicle('year', parseInt(e.target.value) || new Date().getFullYear())}
                   min="1900"
                   max="2030"
-                  className="w-full rounded-base border border-grey-medium/20 py-2.5 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  className="w-full"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
                   <Hash size={12} /> License Plate
                 </label>
-                <input
+                <Input
                   type="text"
                   value={vehicle.license_plate}
                   onChange={(e) => updateVehicle('license_plate', e.target.value)}
                   placeholder="ABC 123 GP"
-                  className="w-full rounded-base border border-grey-medium/20 py-2.5 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  className="w-full"
                 />
               </div>
             </div>
@@ -194,34 +196,34 @@ export function AddNewCustomerModal({ onClose, onSuccess }: AddNewCustomerModalP
               <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide flex items-center gap-1">
                 <Car size={12} /> Make *
               </label>
-              <input
+              <Input
                 type="text"
                 value={vehicle.make}
                 onChange={(e) => updateVehicle('make', e.target.value)}
                 placeholder="e.g., Toyota"
-                className="w-full rounded-base border border-grey-medium/20 py-2.5 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide">Model *</label>
-              <input
+              <Input
                 type="text"
                 value={vehicle.model}
                 onChange={(e) => updateVehicle('model', e.target.value)}
                 placeholder="e.g., Corolla"
-                className="w-full rounded-base border border-grey-medium/20 py-2.5 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-grey-dark uppercase tracking-wide">Mileage</label>
-              <input
+              <Input
                 type="text"
                 value={vehicle.mileage}
                 onChange={(e) => updateVehicle('mileage', e.target.value)}
                 placeholder="e.g., 85,000 km"
-                className="w-full rounded-base border border-grey-medium/20 py-2.5 px-3 text-sm text-grey-dark focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full"
               />
             </div>
 
